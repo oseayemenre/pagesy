@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	// "strings"
+	"strings"
 	"time"
 )
 
@@ -73,27 +73,27 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionGetAllBooks,
 				},
 			}
-			// header := r.Header.Get("Authorization")
-			//
-			// if header == "" {
-			// 	s.Server.Logger.Error("check permission", "status", "authorization header cannot be empty")
-			//
-			// 	w.Header().Set("Content-Type", "application/json")
-			// 	w.WriteHeader(http.StatusNotFound)
-			// 	json.NewEncoder(w).Encode(map[string]string{"error": "authorization header cannot be empty"})
-			// 	return
-			// }
-			//
-			// headerSplit := strings.Split(header, " ")
-			//
-			// if len(headerSplit) < 2 || headerSplit[0] != "Bearer" {
-			// 	s.Server.Logger.Error("check permission", "status", "malformed header")
-			//
-			// 	w.Header().Set("Content-Type", "application/json")
-			// 	w.WriteHeader(http.StatusBadRequest)
-			// 	json.NewEncoder(w).Encode(map[string]string{"error": "malformed header"})
-			// 	return
-			// }
+			header := r.Header.Get("Authorization")
+
+			if header == "" {
+				s.Server.Logger.Error("check permission", "status", "authorization header cannot be empty")
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				json.NewEncoder(w).Encode(map[string]string{"error": "authorization header cannot be empty"})
+				return
+			}
+
+			headerSplit := strings.Split(header, " ")
+
+			if len(headerSplit) < 2 || headerSplit[0] != "Bearer" {
+				s.Server.Logger.Error("check permission", "status", "malformed header")
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{"error": "malformed header"})
+				return
+			}
 
 			//TODO: add jwt check here, using dummy user for now
 
