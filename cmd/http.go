@@ -15,17 +15,19 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/oseayemenre/pagesy/internal/logger"
 	"github.com/oseayemenre/pagesy/internal/routes"
+	"github.com/oseayemenre/pagesy/internal/shared"
 	"github.com/spf13/cobra"
 )
 
 type Server struct {
-	Router *chi.Mux
-	Logger logger.Logger
+	*shared.Server
 }
 
 func NewServer(logger logger.Logger) *Server {
 	return &Server{
-		Logger: logger,
+		Server: &shared.Server{
+			Logger: logger,
+		},
 	}
 }
 
@@ -40,11 +42,12 @@ func (s *Server) Mount() *chi.Mux {
 		w.Write([]byte("woosh! 🚀🚀\n"))
 	})
 
-	server := routes.NewServer()
+	s.Server.Router = r
+
+	server := routes.NewServer(s.Server)
 
 	server.RegisterRoutes()
 
-	s.Router = r
 	return r
 }
 

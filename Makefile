@@ -2,13 +2,13 @@ ADDR ?= 8080
 ENV ?= dev
 
 build:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/pagesly main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/pagesy main.go
 
 run: build
-	./bin/pagesly
+	./bin/pagesy
 
 run-http: build
-	./bin/pagesly http --addr=$(ADDR) --env=$(ENV)
+	./bin/pagesy http --addr=$(ADDR) --env=$(ENV)
 
 curl-healthz:
 	curl -iX GET localhost:$(ADDR)/healthz

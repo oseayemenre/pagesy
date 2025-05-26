@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/oseayemenre/pagesy/cmd"
+	"github.com/oseayemenre/pagesy/internal/shared"
 )
 
 const (
@@ -28,15 +28,16 @@ const (
 )
 
 type Server struct {
-	*cmd.Server
+	*shared.Server
 }
 
-func NewServer(server *cmd.Server) *Server {
+func NewServer(server *shared.Server) *Server {
 	return &Server{Server: server}
 }
 
 func (s *Server) RegisterRoutes() {
 	s.Server.Router.Route("/api/v1", func(r chi.Router) {
+		r.Use(s.LoggingMiddleware)
 		r.Route("/books", func(r chi.Router) {
 			r.With(s.CheckPermission(PermissionUploadBooks)).Post("/", s.HandleUploadBooks)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks, PermissionGetAllBooks)).Get("/", s.HandleGetBooks)
