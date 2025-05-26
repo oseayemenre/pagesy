@@ -14,15 +14,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/oseayemenre/pagesy/internal/logger"
+	"github.com/oseayemenre/pagesy/internal/routes"
 	"github.com/spf13/cobra"
 )
 
 type Server struct {
 	Router *chi.Mux
+	Logger logger.Logger
 }
 
-func NewServer() *Server {
-	return &Server{}
+func NewServer(logger logger.Logger) *Server {
+	return &Server{
+		Logger: logger,
+	}
 }
 
 func (s *Server) Mount() *chi.Mux {
@@ -35,6 +39,10 @@ func (s *Server) Mount() *chi.Mux {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("woosh! 🚀🚀\n"))
 	})
+
+	server := routes.NewServer()
+
+	server.RegisterRoutes()
 
 	s.Router = r
 	return r
@@ -50,16 +58,6 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sig := make(chan os.Signal, 1)
 			signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-			baseServer := NewServer()
-
-			httpServer := &http.Server{
-				Addr:         fmt.Sprintf(":%d", addr),
-				Handler:      baseServer.Mount(),
-				ReadTimeout:  15 * time.Second,
-				WriteTimeout: 10 * time.Second,
-			}
-			errCh := make(chan error, 1)
 
 			var handler slog.Handler
 
@@ -84,6 +82,16 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 			)
 
 			logger := logger.NewSlogLogger(baseLogger)
+
+			baseServer := NewServer(logger)
+
+			httpServer := &http.Server{
+				Addr:         fmt.Sprintf(":%d", addr),
+				Handler:      baseServer.Mount(),
+				ReadTimeout:  15 * time.Second,
+				WriteTimeout: 10 * time.Second,
+			}
+			errCh := make(chan error, 1)
 
 			logger.Info("server startup", "status", fmt.Sprintf("server starting on port: %d", addr))
 			go func() {
