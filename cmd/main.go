@@ -1,13 +1,23 @@
-package main
+package cmd
 
 import (
-	"fmt"
-	"os"
+	"context"
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+func Run() error {
+	ctx := context.Background()
+
+	cmd := &cobra.Command{
+		Use:   "pagesy",
+		Short: "reading(put a better description here)",
 	}
+
+	cmd.AddCommand(HTTPCommand(ctx))
+
+	if err := cmd.Execute(); err != nil {
+		return err
+	}
+
+	return nil
 }
