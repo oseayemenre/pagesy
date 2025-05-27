@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"context"
@@ -126,4 +126,21 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&env, "env", "e", "dev", "current working environment")
 
 	return cmd
+}
+
+func run() error {
+	ctx := context.Background()
+
+	cmd := &cobra.Command{
+		Use:   "pagesy",
+		Short: "reading(put a better description here)",
+	}
+
+	cmd.AddCommand(HTTPCommand(ctx))
+
+	if err := cmd.Execute(); err != nil {
+		return err
+	}
+
+	return nil
 }

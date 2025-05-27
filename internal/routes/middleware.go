@@ -76,7 +76,7 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 			header := r.Header.Get("Authorization")
 
 			if header == "" {
-				s.Server.Logger.Error("check permission", "status", "authorization header cannot be empty")
+				s.Server.Logger.Warn("check permission", "status", "authorization header cannot be empty")
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNotFound)
@@ -87,7 +87,7 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 			headerSplit := strings.Split(header, " ")
 
 			if len(headerSplit) < 2 || headerSplit[0] != "Bearer" {
-				s.Server.Logger.Error("check permission", "status", "malformed header")
+				s.Server.Logger.Warn("check permission", "status", "malformed header")
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusBadRequest)
@@ -118,7 +118,7 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 			}
 
 			if !hasPermission {
-				s.Server.Logger.Error("check permission", "status", "permission denied")
+				s.Server.Logger.Warn("check permission", "status", "permission denied")
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusForbidden)

@@ -2,7 +2,7 @@ ADDR ?= 8080
 ENV ?= dev
 
 build:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/pagesy main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/pagesy cmd/*.go
 
 run: build
 	./bin/pagesy

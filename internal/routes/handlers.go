@@ -1,8 +1,74 @@
 package routes
 
-import "net/http"
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
 
-func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {}
+	"github.com/oseayemenre/pagesy/internal/shared"
+)
+
+func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
+	book := &struct {
+		Name        string   `json:"name" validate:"required"`
+		Description string   `json:"description" validate:"required"`
+		Genre       []string `json:"genre" validate:"required,min=1"`
+	}{}
+
+	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
+		s.Server.Logger.Warn("error decoding json", "service", "HandleUploadBooks")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "error decoding json"})
+		return
+	}
+
+	if err := shared.Validate.Struct(&book); err != nil {
+		s.Server.Logger.Warn(fmt.Sprintf("validation error: %v", err), "service", "HandleUploadBooks")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("validation error: %v", err)})
+		return
+	}
+
+	if err := r.ParseMultipartForm(3 << 20); err != nil {
+		s.Server.Logger.Warn("file is too large", "service", "HandleUploadBooks")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "file is too large"})
+		return
+	}
+
+	file, _, err := r.FormFile("book_picture")
+
+	if err != nil {
+		s.Server.Logger.Error(fmt.Sprintf("error uploading image: %v", err), "service", "HandleUploadBooks")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("error uploading image: %v", err)})
+		return
+	}
+
+	fileData, err := io.ReadAll(file)
+
+	if err != nil {
+		s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleUploadBooks")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": fmt.Sprintf("error reading bytes: %v", err)})
+		return
+	}
+
+	if contentType := http.DetectContentType(fileData); strings.HasPrefix(contentType, "image/") {
+		s.Server.Logger.Warn("invalid file type", "service", "HandleUploadBooks")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid file type"})
+		return
+	}
+}
 
 func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {}
 
