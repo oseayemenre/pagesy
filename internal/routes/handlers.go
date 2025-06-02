@@ -6,24 +6,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/oseayemenre/pagesy/internal/shared"
+	"github.com/oseayemenre/pagesy/internal/store"
 )
-
-type Schedule struct {
-	Day      string `json:"day"`
-	Chapters int    `json:"chapters"`
-}
-
-type Book struct {
-	Name             string     `json:"name"`
-	Description      string     `json:"description"`
-	Genres           []string   `json:"genres"`
-	Chapter_Draft    string     `json:"chapter_draft"`
-	Release_schedule []Schedule `json:"release_schedule"`
-	CreatedAt        time.Time  `json:"CreatedAt"`
-}
 
 func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
@@ -37,12 +23,15 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	defer r.MultipartForm.RemoveAll()
 
 	book := struct {
-		Name             string     `validate:"required"`
-		Description      string     `validate:"required"`
-		Genres           []string   `validate:"required,min=1"`
-		Release_schedule []Schedule `validate:"required,min=1"`
-		Languages        []string   `validate:"required,min=1"`
-		ChapterDraft     string     `validate:"required"`
+		Name             string   `validate:"required"`
+		Description      string   `validate:"required"`
+		Genres           []string `validate:"required,min=1"`
+		Release_schedule []struct {
+			Day      string
+			Chapters int
+		} `validate:"required,min=1"`
+		Languages    []string `validate:"required,min=1"`
+		ChapterDraft string   `validate:"required"`
 	}{
 		Name:         r.FormValue("name"),
 		Description:  r.FormValue("description"),
@@ -69,12 +58,16 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		schedule := Schedule{
+		schedule := struct {
+			Day      string
+			Chapters int
+		}{
 			Day:      days[i],
 			Chapters: ch,
 		}
 
-		book.Release_schedule = append(book.Release_schedule, schedule)
+		book.Release_schedule = append(book.Release_schedule,
+			schedule)
 	}
 
 	if err := shared.Validate.Struct(&book); err != nil {
@@ -110,6 +103,36 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
 		s.Server.Logger.Warn("invalid file type", "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
+		return
+	}
+
+	url, err := s.Server.ObjectStore.UploadFile(r.Context(), "", "")
+
+	if err != nil {
+		s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	schedules := make([]store.Schedule, len(book.Release_schedule))
+	for i, rs := range book.Release_schedule {
+		schedules[i] = store.Schedule{
+			Day:      rs.Day,
+			Chapters: rs.Chapters,
+		}
+	}
+
+	if err := s.Server.Store.UploadBook(r.Context(), &store.Book{
+		Name:             book.Name,
+		Description:      book.Description,
+		Image:            url,
+		Author_Id:        "", //TODO: add an actual author id here
+		Genres:           book.Genres,
+		Chapter_Draft:    book.ChapterDraft,
+		Release_schedule: schedules,
+	}); err != nil {
+		s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 }

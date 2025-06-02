@@ -11,22 +11,28 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/oseayemenre/pagesy/internal/config"
 	"github.com/oseayemenre/pagesy/internal/logger"
 	"github.com/oseayemenre/pagesy/internal/routes"
 	"github.com/oseayemenre/pagesy/internal/shared"
+	"github.com/oseayemenre/pagesy/internal/store"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type Server struct {
 	*shared.Server
 }
 
-func NewServer(logger logger.Logger) *Server {
+func NewServer(logger logger.Logger, objectStore store.ObjectStore, store store.Store) *Server {
 	return &Server{
 		Server: &shared.Server{
-			Logger: logger,
+			Logger:      logger,
+			ObjectStore: objectStore,
+			Store:       store,
 		},
 	}
 }
@@ -84,9 +90,34 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 				slog.String("version", "1.0"),
 			)
 
-			logger := logger.NewSlogLogger(baseLogger)
+			viper.SetConfigFile(".env")
+			viper.AutomaticEnv()
 
-			baseServer := NewServer(logger)
+			if err := viper.ReadInConfig(); err != nil {
+				return fmt.Errorf("error reading in config: %v", err)
+			}
+
+			var cfg config.Config
+
+			if err := viper.Unmarshal(&cfg); err != nil {
+				return fmt.Errorf("error unmarshalling config: %v", err)
+			}
+
+			cloudinaryCfg, err := cloudinary.NewFromParams(cfg.Cloudinary_cloud, cfg.Cloudinary_key, cfg.Cloudinary_secret)
+
+			if err != nil {
+				return fmt.Errorf("error configuring cloudinary: %v", err)
+			}
+
+			logger := logger.NewSlogLogger(baseLogger)
+			objectStore := store.NewCloudinaryStore(cloudinaryCfg)
+			db, err := store.NewPostgresStore(cfg.Db_conn)
+
+			if err != nil {
+				return err
+			}
+
+			baseServer := NewServer(logger, objectStore, db)
 
 			httpServer := &http.Server{
 				Addr:         fmt.Sprintf(":%d", addr),

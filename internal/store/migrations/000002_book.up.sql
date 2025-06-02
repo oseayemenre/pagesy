@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS books(
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   description TEXT NOT NULL,
+  image TEXT,
   views INT DEFAULT 0,
   author_id UUID REFERENCES users(id) ON DELETE CASCADE,
   completed BOOLEAN DEFAULT FALSE,
