@@ -4,10 +4,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/oseayemenre/pagesy/internal/shared"
 )
+
+type Schedule struct {
+	Day      string `json:"day"`
+	Chapters int    `json:"chapters"`
+}
+
+type Book struct {
+	Name             string     `json:"name"`
+	Description      string     `json:"description"`
+	Genres           []string   `json:"genres"`
+	Chapter_Draft    string     `json:"chapter_draft"`
+	Release_schedule []Schedule `json:"release_schedule"`
+	CreatedAt        time.Time  `json:"CreatedAt"`
+}
 
 func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
@@ -20,16 +36,45 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 
 	defer r.MultipartForm.RemoveAll()
 
-	book := &struct {
-		Name         string   `json:"name" validate:"required"`
-		Description  string   `json:"description" validate:"required"`
-		Genre        []string `json:"genre" validate:"required,min=1"`
-		ChapterDraft string   `json:"chapter_draft" validate:"required"`
+	book := struct {
+		Name             string     `validate:"required"`
+		Description      string     `validate:"required"`
+		Genres           []string   `validate:"required,min=1"`
+		Release_schedule []Schedule `validate:"required,min=1"`
+		Languages        []string   `validate:"required,min=1"`
+		ChapterDraft     string     `validate:"required"`
 	}{
 		Name:         r.FormValue("name"),
 		Description:  r.FormValue("description"),
-		Genre:        r.Form["genre"],
+		Genres:       r.Form["genre"],
+		Languages:    r.Form["language"],
 		ChapterDraft: r.FormValue("chapter_draft"),
+	}
+
+	days := r.Form["release_schedule_day"]
+	chapters := r.Form["release_schedule_chapter"]
+
+	if len(days) != len(chapters) {
+		s.Server.Logger.Warn("chapter length and days length must be the same", "service", "HandleUploadBooks")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("chapter length and days length must be the same"))
+		return
+	}
+
+	for i := range days {
+		ch, err := strconv.Atoi(chapters[i])
+
+		if err != nil {
+			s.Server.Logger.Warn("error converting type string to int", "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusBadRequest, fmt.Errorf("error converting type string to int"))
+			return
+		}
+
+		schedule := Schedule{
+			Day:      days[i],
+			Chapters: ch,
+		}
+
+		book.Release_schedule = append(book.Release_schedule, schedule)
 	}
 
 	if err := shared.Validate.Struct(&book); err != nil {

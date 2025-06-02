@@ -20,7 +20,7 @@ func newResponseWriterWrapper(w http.ResponseWriter) *responseWriterWrapper {
 
 func (w *responseWriterWrapper) WriteHeader(code int) {
 	w.statusCode = code
-	w.WriteHeader(code)
+	w.ResponseWriter.WriteHeader(code)
 }
 
 func (s *Server) LoggingMiddleware(next http.Handler) http.Handler {
