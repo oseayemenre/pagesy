@@ -105,10 +105,18 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *Book) error {
 			ON CONFLICT DO NOTHING;
 		`, strings.Join(valueStrings, ",")), valueArgs...)
 
+	if err != nil {
+		return fmt.Errorf("error inserting into book_genres: %v", err)
+	}
+
 	_, err = tx.ExecContext(ctx, `
 			INSERT INTO chapters(name, content)
 			VALUES ('Draft Chapter', $1);
 		`, book.Chapter_Draft)
+
+	if err != nil {
+		return fmt.Errorf("error inserting draft chapter: %v", err)
+	}
 
 	err = tx.Commit()
 
