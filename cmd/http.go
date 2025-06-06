@@ -90,7 +90,7 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 				slog.String("version", "1.0"),
 			)
 
-			viper.SetConfigFile(".env")
+			viper.SetConfigFile("internal/config/.env")
 			viper.AutomaticEnv()
 
 			if err := viper.ReadInConfig(); err != nil {
@@ -120,10 +120,10 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 			baseServer := NewServer(logger, objectStore, db)
 
 			httpServer := &http.Server{
-				Addr:         fmt.Sprintf(":%d", addr),
-				Handler:      baseServer.Mount(),
-				ReadTimeout:  15 * time.Second,
-				WriteTimeout: 10 * time.Second,
+				Addr:    fmt.Sprintf(":%d", addr),
+				Handler: baseServer.Mount(),
+				// ReadTimeout:  15 * time.Second,
+				// WriteTimeout: 10 * time.Second,
 			}
 			errCh := make(chan error, 1)
 

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS books(
   description TEXT NOT NULL,
   image TEXT,
   views INT DEFAULT 0,
+  language TEXT NOT NULL DEFAULT 'English',
   author_id UUID REFERENCES users(id) ON DELETE CASCADE,
   completed BOOLEAN DEFAULT FALSE,
   approved BOOLEAN DEFAULT FALSE,

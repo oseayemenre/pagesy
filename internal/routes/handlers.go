@@ -1,12 +1,15 @@
 package routes
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/shared"
 	"github.com/oseayemenre/pagesy/internal/store"
 )
@@ -22,7 +25,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 
 	defer r.MultipartForm.RemoveAll()
 
-	book := struct {
+	params := struct {
 		Name             string   `validate:"required"`
 		Description      string   `validate:"required"`
 		Genres           []string `validate:"required,min=1"`
@@ -30,13 +33,13 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 			Day      string
 			Chapters int
 		} `validate:"required,min=1"`
-		Languages    []string `validate:"required,min=1"`
-		ChapterDraft string   `validate:"required"`
+		Language     string `validate:"required"`
+		ChapterDraft string `validate:"required"`
 	}{
 		Name:         r.FormValue("name"),
 		Description:  r.FormValue("description"),
 		Genres:       r.Form["genre"],
-		Languages:    r.Form["language"],
+		Language:     r.FormValue("language"),
 		ChapterDraft: r.FormValue("chapter_draft"),
 	}
 
@@ -66,11 +69,11 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 			Chapters: ch,
 		}
 
-		book.Release_schedule = append(book.Release_schedule,
+		params.Release_schedule = append(params.Release_schedule,
 			schedule)
 	}
 
-	if err := shared.Validate.Struct(&book); err != nil {
+	if err := shared.Validate.Struct(&params); err != nil {
 		s.Server.Logger.Warn(fmt.Sprintf("validation error: %v", err), "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("validation error: %v", err))
 		return
@@ -106,7 +109,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := s.Server.ObjectStore.UploadFile(r.Context(), "", "")
+	url, err := s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%v", header.Filename, time.Now().Unix()))
 
 	if err != nil {
 		s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
@@ -114,27 +117,42 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schedules := make([]store.Schedule, len(book.Release_schedule))
-	for i, rs := range book.Release_schedule {
+	schedules := make([]store.Schedule, len(params.Release_schedule))
+	for i, rs := range params.Release_schedule {
 		schedules[i] = store.Schedule{
 			Day:      rs.Day,
 			Chapters: rs.Chapters,
 		}
 	}
 
+	//Dummy id here. Would handle this properly later
+	authorId, err := uuid.Parse("4d272c0f-7516-440b-9cbc-7f88a74a1886")
+
+	if err != nil {
+		s.Server.Logger.Error(fmt.Sprintf("error parsing uuid: %v", err), "service", "HandleUploadBooks")
+		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error parsing uuid: %v", err))
+		return
+	}
+
 	if err := s.Server.Store.UploadBook(r.Context(), &store.Book{
-		Name:             book.Name,
-		Description:      book.Description,
+		Name:             params.Name,
+		Description:      params.Description,
 		Image:            url,
-		Author_Id:        "", //TODO: add an actual author id here
-		Genres:           book.Genres,
-		Chapter_Draft:    book.ChapterDraft,
+		Author_Id:        authorId,
+		Genres:           params.Genres,
+		Chapter_Draft:    params.ChapterDraft,
+		Language:         params.Language,
 		Release_schedule: schedules,
 	}); err != nil {
 		s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
+
+	fmt.Println("start writing response")
+	respondWithSuccess(w, http.StatusCreated, map[string]string{"message": "new book created"})
+
+	fmt.Println("finish writing response")
 }
 
 func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {}

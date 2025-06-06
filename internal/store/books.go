@@ -3,8 +3,10 @@ package store
 import (
 	"context"
 	"fmt"
-	"github.com/lib/pq"
 	"strings"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 type Schedule struct {
@@ -16,9 +18,10 @@ type Book struct {
 	Name             string     `json:"name"`
 	Description      string     `json:"description"`
 	Image            string     `json:"image"`
-	Author_Id        string     `json:"author_id"`
+	Author_Id        uuid.UUID  `json:"author_id"`
 	Genres           []string   `json:"genres"`
 	Chapter_Draft    string     `json:"chapter_draft"`
+	Language         string     `json:"language"`
 	Release_schedule []Schedule `json:"release_schedule"`
 }
 
@@ -38,9 +41,9 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *Book) error {
 	var bookID string
 
 	err = tx.QueryRowContext(ctx, `
-			INSERT INTO books (name, description, image, author_id)
-			VALUES ($1, $2, $3) RETURNING id;
-		`, book.Name, book.Description, book.Image, book.Author_Id).Scan(&bookID)
+			INSERT INTO books (name, description, image, author_id, language)
+			VALUES ($1, $2, $3, $4, $5) RETURNING id;
+		`, book.Name, book.Description, book.Image, book.Author_Id, book.Language).Scan(&bookID)
 
 	if err != nil {
 		return fmt.Errorf("error inserting into book table: %v", err)
@@ -110,9 +113,9 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *Book) error {
 	}
 
 	_, err = tx.ExecContext(ctx, `
-			INSERT INTO chapters(name, content)
-			VALUES ('Draft Chapter', $1);
-		`, book.Chapter_Draft)
+			INSERT INTO chapters(name, content, book_id)
+			VALUES ('Draft Chapter', $1, $2);
+		`, book.Chapter_Draft, bookID)
 
 	if err != nil {
 		return fmt.Errorf("error inserting draft chapter: %v", err)
