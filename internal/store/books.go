@@ -14,13 +14,18 @@ type Schedule struct {
 	Chapters int    `json:"chapters"`
 }
 
+type Chapter struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
 type Book struct {
 	Name             string     `json:"name"`
 	Description      string     `json:"description"`
 	Image            string     `json:"image"`
 	Author_Id        uuid.UUID  `json:"author_id"`
 	Genres           []string   `json:"genres"`
-	Chapter_Draft    string     `json:"chapter_draft"`
+	Chapter_Draft    Chapter    `json:"chapter_draft"`
 	Language         string     `json:"language"`
 	Release_schedule []Schedule `json:"release_schedule"`
 }
@@ -113,9 +118,9 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *Book) error {
 	}
 
 	_, err = tx.ExecContext(ctx, `
-			INSERT INTO chapters(name, content, book_id)
-			VALUES ('Draft Chapter', $1, $2);
-		`, book.Chapter_Draft, bookID)
+			INSERT INTO chapters(title, content, book_id)
+			VALUES ($1, $2, $3);
+		`, book.Chapter_Draft.Title, book.Chapter_Draft.Content, bookID)
 
 	if err != nil {
 		return fmt.Errorf("error inserting draft chapter: %v", err)

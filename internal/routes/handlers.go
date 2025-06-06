@@ -34,13 +34,22 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 			Chapters int
 		} `validate:"required,min=1"`
 		Language     string `validate:"required"`
-		ChapterDraft string `validate:"required"`
+		ChapterDraft struct {
+			Title   string
+			Content string
+		} `validate:"required"`
 	}{
-		Name:         r.FormValue("name"),
-		Description:  r.FormValue("description"),
-		Genres:       r.Form["genre"],
-		Language:     r.FormValue("language"),
-		ChapterDraft: r.FormValue("chapter_draft"),
+		Name:        r.FormValue("name"),
+		Description: r.FormValue("description"),
+		Genres:      r.Form["genre"],
+		Language:    r.FormValue("language"),
+		ChapterDraft: struct {
+			Title   string
+			Content string
+		}{
+			Title:   r.FormValue("chapter_title"),
+			Content: r.FormValue("chapter_content"),
+		},
 	}
 
 	days := r.Form["release_schedule_day"]
@@ -135,12 +144,15 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.Server.Store.UploadBook(r.Context(), &store.Book{
-		Name:             params.Name,
-		Description:      params.Description,
-		Image:            url,
-		Author_Id:        authorId,
-		Genres:           params.Genres,
-		Chapter_Draft:    params.ChapterDraft,
+		Name:        params.Name,
+		Description: params.Description,
+		Image:       url,
+		Author_Id:   authorId,
+		Genres:      params.Genres,
+		Chapter_Draft: store.Chapter{
+			Title:   params.ChapterDraft.Title,
+			Content: params.ChapterDraft.Content,
+		},
 		Language:         params.Language,
 		Release_schedule: schedules,
 	}); err != nil {
@@ -149,10 +161,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("start writing response")
 	respondWithSuccess(w, http.StatusCreated, map[string]string{"message": "new book created"})
-
-	fmt.Println("finish writing response")
 }
 
 func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {}
