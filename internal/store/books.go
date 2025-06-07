@@ -5,32 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/lib/pq"
+	"github.com/oseayemenre/pagesy/internal/models"
 )
 
-type Schedule struct {
-	Day      string `json:"day"`
-	Chapters int    `json:"chapters"`
-}
-
-type Chapter struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
-}
-
-type Book struct {
-	Name             string     `json:"name"`
-	Description      string     `json:"description"`
-	Image            string     `json:"image"`
-	Author_Id        uuid.UUID  `json:"author_id"`
-	Genres           []string   `json:"genres"`
-	Chapter_Draft    Chapter    `json:"chapter_draft"`
-	Language         string     `json:"language"`
-	Release_schedule []Schedule `json:"release_schedule"`
-}
-
-func (s *PostgresStore) UploadBook(ctx context.Context, book *Book) error {
+func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error {
 	tx, err := s.DB.Begin()
 
 	if err != nil {

@@ -6,10 +6,11 @@ import (
 	"fmt"
 
 	_ "github.com/lib/pq"
+	"github.com/oseayemenre/pagesy/internal/models"
 )
 
 type Store interface {
-	UploadBook(ctx context.Context, book *Book) error
+	UploadBook(ctx context.Context, book *models.Book) error
 }
 
 type PostgresStore struct {

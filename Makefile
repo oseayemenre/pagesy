@@ -26,6 +26,9 @@ migrate-force:
 docker-run-postgres:
 	docker exec -it pagesy-postgres-1 psql -U pagesy -d pagesy_db
 
+swagger:
+	swag init --generalInfo cmd/main.go
+
 curl-healthz:
 	curl -iX GET localhost:$(ADDR)/healthz
 

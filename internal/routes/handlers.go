@@ -10,10 +10,30 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/oseayemenre/pagesy/internal/models"
 	"github.com/oseayemenre/pagesy/internal/shared"
-	"github.com/oseayemenre/pagesy/internal/store"
 )
 
+// HandleUploadBooks godoc
+// @Summary Upload a new book
+// @Description Uploads a book with metadata, schedule, draft chapter, and book cover image
+// @Tags books
+// @Accept multipart/form-data
+// @Produce json
+// @Param name formData string true "Book name"
+// @Param description formData string true "Book description"
+// @Param genre formData []string true "Genres"
+// @Param language formData string true "Book language"
+// @Param chapter_title formData string true "Draft chapter title"
+// @Param chapter_content formData string true "Draft chapter content"
+// @Param release_schedule_day formData []string true "Release days (e.g. Monday, Tuesday)"
+// @Param release_schedule_chapter formData []int true "Chapters per day (e.g. 1, 2)"
+// @Param book_cover formData file true "Book cover image (max 3MB)"
+// @Success 201 {object} models.HandleUploadBooksRequest
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 413 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /books [post]
 func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 
@@ -25,28 +45,12 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 
 	defer r.MultipartForm.RemoveAll()
 
-	params := struct {
-		Name             string   `validate:"required"`
-		Description      string   `validate:"required"`
-		Genres           []string `validate:"required,min=1"`
-		Release_schedule []struct {
-			Day      string
-			Chapters int
-		} `validate:"required,min=1"`
-		Language     string `validate:"required"`
-		ChapterDraft struct {
-			Title   string
-			Content string
-		} `validate:"required"`
-	}{
+	params := models.HandleUploadBooksRequest{
 		Name:        r.FormValue("name"),
 		Description: r.FormValue("description"),
 		Genres:      r.Form["genre"],
 		Language:    r.FormValue("language"),
-		ChapterDraft: struct {
-			Title   string
-			Content string
-		}{
+		ChapterDraft: models.Chapter{
 			Title:   r.FormValue("chapter_title"),
 			Content: r.FormValue("chapter_content"),
 		},
@@ -70,10 +74,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		schedule := struct {
-			Day      string
-			Chapters int
-		}{
+		schedule := models.Schedule{
 			Day:      days[i],
 			Chapters: ch,
 		}
@@ -126,9 +127,9 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schedules := make([]store.Schedule, len(params.Release_schedule))
+	schedules := make([]models.Schedule, len(params.Release_schedule))
 	for i, rs := range params.Release_schedule {
-		schedules[i] = store.Schedule{
+		schedules[i] = models.Schedule{
 			Day:      rs.Day,
 			Chapters: rs.Chapters,
 		}
@@ -143,13 +144,13 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.Server.Store.UploadBook(r.Context(), &store.Book{
+	if err := s.Server.Store.UploadBook(r.Context(), &models.Book{
 		Name:        params.Name,
 		Description: params.Description,
 		Image:       url,
 		Author_Id:   authorId,
 		Genres:      params.Genres,
-		Chapter_Draft: store.Chapter{
+		Chapter_Draft: models.Chapter{
 			Title:   params.ChapterDraft.Title,
 			Content: params.ChapterDraft.Content,
 		},

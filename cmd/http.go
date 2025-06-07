@@ -14,13 +14,16 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/oseayemenre/pagesy/internal/config"
+	_ "github.com/oseayemenre/pagesy/docs"
 	"github.com/oseayemenre/pagesy/internal/logger"
 	"github.com/oseayemenre/pagesy/internal/routes"
 	"github.com/oseayemenre/pagesy/internal/shared"
 	"github.com/oseayemenre/pagesy/internal/store"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/swaggo/http-swagger"
 )
 
 type Server struct {
@@ -41,6 +44,8 @@ func (s *Server) Mount() *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
+
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
@@ -120,10 +125,9 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 			baseServer := NewServer(logger, objectStore, db)
 
 			httpServer := &http.Server{
-				Addr:    fmt.Sprintf(":%d", addr),
-				Handler: baseServer.Mount(),
-				// ReadTimeout:  15 * time.Second,
-				// WriteTimeout: 10 * time.Second,
+				Addr:        fmt.Sprintf(":%d", addr),
+				Handler:     baseServer.Mount(),
+				IdleTimeout: 15 * time.Minute,
 			}
 			errCh := make(chan error, 1)
 

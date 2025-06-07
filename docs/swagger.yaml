@@ -1,0 +1,139 @@
+basePath: /api/v1
+definitions:
+  models.Chapter:
+    properties:
+      content:
+        type: string
+      title:
+        type: string
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.HandleUploadBooksRequest:
+    properties:
+      chapterDraft:
+        $ref: '#/definitions/models.Chapter'
+      description:
+        type: string
+      genres:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      language:
+        type: string
+      name:
+        type: string
+      release_schedule:
+        items:
+          $ref: '#/definitions/models.Schedule'
+        minItems: 1
+        type: array
+    required:
+    - chapterDraft
+    - description
+    - genres
+    - language
+    - name
+    - release_schedule
+    type: object
+  models.Schedule:
+    properties:
+      chapters:
+        type: integer
+      day:
+        type: string
+    type: object
+host: localhost:8000
+info:
+  contact: {}
+  title: Pagesy API
+  version: "1.0"
+paths:
+  /books:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a book with metadata, schedule, draft chapter, and book
+        cover image
+      parameters:
+      - description: Book name
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Book description
+        in: formData
+        name: description
+        required: true
+        type: string
+      - collectionFormat: csv
+        description: Genres
+        in: formData
+        items:
+          type: string
+        name: genre
+        required: true
+        type: array
+      - description: Book language
+        in: formData
+        name: language
+        required: true
+        type: string
+      - description: Draft chapter title
+        in: formData
+        name: chapter_title
+        required: true
+        type: string
+      - description: Draft chapter content
+        in: formData
+        name: chapter_content
+        required: true
+        type: string
+      - collectionFormat: csv
+        description: Release days (e.g. Monday, Tuesday)
+        in: formData
+        items:
+          type: string
+        name: release_schedule_day
+        required: true
+        type: array
+      - collectionFormat: csv
+        description: Chapters per day (e.g. 1, 2)
+        in: formData
+        items:
+          type: integer
+        name: release_schedule_chapter
+        required: true
+        type: array
+      - description: Book cover image (max 3MB)
+        in: formData
+        name: book_cover
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.HandleUploadBooksRequest'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Upload a new book
+      tags:
+      - books
+swagger: "2.0"

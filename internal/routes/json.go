@@ -3,6 +3,8 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/oseayemenre/pagesy/internal/models"
 )
 
 func respondWithSuccess(w http.ResponseWriter, code int, data any) {
@@ -12,5 +14,5 @@ func respondWithSuccess(w http.ResponseWriter, code int, data any) {
 }
 
 func respondWithError(w http.ResponseWriter, code int, error error) {
-	respondWithSuccess(w, code, map[string]string{"error": error.Error()})
+	respondWithSuccess(w, code, models.ErrorResponse{Error: error.Error()})
 }
