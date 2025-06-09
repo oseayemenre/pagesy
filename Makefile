@@ -12,7 +12,7 @@ run-http: build
 	./bin/pagesy http --addr=$(ADDR) --env=$(ENV)
 
 migrate-create:
-	migrate create ext -sql -dir internal/store/migrations -seq $(MIGRATION_NAME) 
+	migrate create -ext sql -dir internal/store/migrations -seq $(MIGRATION_NAME) 
 
 migrate-up:
 	migrate -path internal/store/migrations -database $(DB) up
@@ -38,13 +38,13 @@ curl-upload-file:
 		-F "description=Book 1 description" \
 		-F "genre=Romance" \
 		-F "genre=Mystery" \
-		-F "language=Chinese" \
 		-F "language=English" \
 		-F "release_schedule_day=Sunday" \
 		-F "release_schedule_chapter=2" \
 		-F "release_schedule_day=Tuesday" \
 		-F "release_schedule_chapter=3" \
-		-F "chapter_draft=draft chapter 1" \
-		-F "book_cover=@$(FILEPATH)"
+		-F "chapter_title=draft chapter title 1" \
+		-F "chapter_content=draft chapter content 1" \
+		$$( [ -n "$$FILEPATH" ] && echo -F "book_cover=@$(FILEPATH)")
 
 .PHONY: build run run-http migrate-create migrate-up migrate-down curl-healthz curl-upload-file docker-run-postgres migrate-force

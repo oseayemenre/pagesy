@@ -6,13 +6,13 @@ import (
 )
 
 type Schedule struct {
-	Day      string `json:"day"`
-	Chapters int    `json:"chapters"`
+	Day      string `json:"day" validate:"required"`
+	Chapters int    `json:"chapters" validate:"required"`
 }
 
 type Chapter struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	Title   string `json:"title" validate:"required"`
+	Content string `json:"content" validate:"required"`
 }
 
 type Book struct {
@@ -29,12 +29,12 @@ type Book struct {
 }
 
 type HandleUploadBooksRequest struct {
-	Name             string     `validate:"required"`
-	Description      string     `validate:"required"`
-	Genres           []string   `validate:"required,min=1"`
-	Release_schedule []Schedule `validate:"required,min=1"`
-	Language         string     `validate:"required"`
-	ChapterDraft     Chapter    `validate:"required"`
+	Name             string   `validate:"required"`
+	Description      string   `validate:"required"`
+	Genres           []string `validate:"required,min=1"`
+	Release_schedule []Schedule
+	Language         string `validate:"required"`
+	ChapterDraft     *Chapter
 }
 
 type ErrorResponse struct {

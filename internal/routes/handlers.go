@@ -28,7 +28,7 @@ import (
 // @Param chapter_content formData string true "Draft chapter content"
 // @Param release_schedule_day formData []string true "Release days (e.g. Monday, Tuesday)"
 // @Param release_schedule_chapter formData []int true "Chapters per day (e.g. 1, 2)"
-// @Param book_cover formData file true "Book cover image (max 3MB)"
+// @Param book_cover formData file false "Book cover image (max 3MB)"
 // @Success 201 {object} models.HandleUploadBooksRequest
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 413 {object} models.ErrorResponse
@@ -50,7 +50,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		Description: r.FormValue("description"),
 		Genres:      r.Form["genre"],
 		Language:    r.FormValue("language"),
-		ChapterDraft: models.Chapter{
+		ChapterDraft: &models.Chapter{
 			Title:   r.FormValue("chapter_title"),
 			Content: r.FormValue("chapter_content"),
 		},
@@ -91,39 +91,42 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile("book_cover")
 
-	if err != nil {
+	var url string
+
+	if err == nil {
+		defer file.Close()
+
+		fileData, err := io.ReadAll(file)
+		if err != nil {
+			s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
+			return
+		}
+
+		if len(fileData) > 3<<20 {
+			s.Server.Logger.Error("book cover too large", "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusRequestEntityTooLarge, fmt.Errorf("book cover too large"))
+			return
+		}
+
+		if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
+			s.Server.Logger.Warn("invalid file type", "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
+			return
+		}
+
+		url, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%v", header.Filename, time.Now().Unix()))
+
+		if err != nil {
+			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	if err != nil && err != http.ErrMissingFile {
 		s.Server.Logger.Error(fmt.Sprintf("error uploading image: %v", err), "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error uploading image: %v", err))
-		return
-	}
-
-	defer file.Close()
-
-	if header.Size > 3<<20 {
-		s.Server.Logger.Error("book cover too large", "service", "HandleUploadBooks")
-		respondWithError(w, http.StatusRequestEntityTooLarge, fmt.Errorf("book cover too large"))
-		return
-	}
-
-	fileData, err := io.ReadAll(file)
-
-	if err != nil {
-		s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleUploadBooks")
-		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
-		return
-	}
-
-	if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
-		s.Server.Logger.Warn("invalid file type", "service", "HandleUploadBooks")
-		respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
-		return
-	}
-
-	url, err := s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%v", header.Filename, time.Now().Unix()))
-
-	if err != nil {
-		s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
-		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -136,7 +139,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Dummy id here. Would handle this properly later
-	authorId, err := uuid.Parse("4d272c0f-7516-440b-9cbc-7f88a74a1886")
+	authorId, err := uuid.Parse("dc5e215a-afd4-4f70-aa80-3e360fa1d9e4")
 
 	if err != nil {
 		s.Server.Logger.Error(fmt.Sprintf("error parsing uuid: %v", err), "service", "HandleUploadBooks")

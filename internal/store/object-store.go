@@ -30,7 +30,5 @@ func (s *CloudinaryStore) UploadFile(ctx context.Context, file io.Reader, id str
 		return "", fmt.Errorf("error uploading file: %+v", err)
 	}
 
-	fmt.Printf("cloudinary_response:%+v", resp)
-
 	return resp.SecureURL, nil
 }
