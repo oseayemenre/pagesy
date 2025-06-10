@@ -2,12 +2,18 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/oseayemenre/pagesy/internal/models"
 )
+
+var ErrGenresNotFound = errors.New("some genres were not found in the database")
+var ErrCreatorsBooksNotFound = errors.New("creator doesn't have any books")
 
 func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error {
 	tx, err := s.DB.Begin()
@@ -73,7 +79,7 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 	}
 
 	if len(genreIDs) != len(book.Genres) {
-		return fmt.Errorf("some genres were not found in the database")
+		return ErrGenresNotFound
 	}
 
 	valueStrings = []string{}
@@ -112,4 +118,117 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 	}
 
 	return nil
+}
+
+func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int, limit int) (*[]models.Book, error) {
+	var books []models.Book
+	booksMap := make(map[uuid.UUID]*models.Book)
+
+	rows1, err := s.DB.QueryContext(ctx, `
+			SELECT b.id, b.name, b.description, b.image, b.views, b.language, b.completed, b.approved, b.created_at, b.updated_at, 
+						 COUNT(c.id) AS chapter_count
+			FROM books b 
+			JOIN chapters c ON (c.book_id = b.id)
+			WHERE b.author_id = $1
+			GROUP BY b.id
+			OFFSET $2 LIMIT $3;
+		`, id, offset, limit)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrCreatorsBooksNotFound
+		}
+		return nil, fmt.Errorf("error retrieving books: %v", err)
+	}
+
+	defer rows1.Close()
+
+	var bookIds []uuid.UUID
+
+	for rows1.Next() {
+		var book models.Book
+
+		if err := rows1.Scan(
+			&book.Id,
+			&book.Name,
+			&book.Description,
+			&book.Image,
+			&book.Views,
+			&book.Language,
+			&book.Completed,
+			&book.Approved,
+			&book.Created_at,
+			&book.Updated_at,
+			&book.No_Of_Chapters,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning book rows: %v", err)
+		}
+
+		bookIds = append(bookIds, *book.Id)
+		booksMap[*book.Id] = &book
+	}
+
+	rows2, err := s.DB.QueryContext(ctx, `
+			SELECT book_id, day, no_of_chapters FROM release_schedule WHERE book_id = ANY($1);
+		`, pq.Array(bookIds))
+
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving release_schedule: %v", err)
+	}
+
+	defer rows2.Close()
+
+	for rows2.Next() {
+		var release_schedule models.Schedule
+
+		if err := rows2.Scan(
+			&release_schedule.BookId,
+			&release_schedule.Day,
+			&release_schedule.Chapters,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning release_schedule rows: %v", err)
+		}
+
+		if book, ok := booksMap[release_schedule.BookId]; ok {
+			book.Release_schedule = append(book.Release_schedule, release_schedule)
+		}
+	}
+
+	rows3, err := s.DB.QueryContext(ctx, `
+			SELECT b.id, g.genres 
+			FROM books_genres bg
+			JOIN books b ON (b.id = bg.book_id)
+			JOIN genres g ON (g.id = bg.genre_id)
+			WHERE b.id = ANY($1);
+		`, pq.Array(bookIds))
+
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving book_genres: %v", err)
+	}
+
+	defer rows3.Close()
+
+	for rows3.Next() {
+		genre := struct {
+			book_id uuid.UUID
+			genres  string
+		}{}
+
+		if err := rows3.Scan(
+			&genre.book_id,
+			&genre.genres,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning genre rows: %v", err)
+		}
+
+		if book, ok := booksMap[genre.book_id]; ok {
+			book.Genres = append(book.Genres, genre.genres)
+		}
+	}
+
+	for _, book := range booksMap {
+		books = append(books, *book)
+	}
+
+	return &books, nil
 }

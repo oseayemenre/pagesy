@@ -6,8 +6,9 @@ import (
 )
 
 type Schedule struct {
-	Day      string `json:"day" validate:"required"`
-	Chapters int    `json:"chapters" validate:"required"`
+	BookId   uuid.UUID `json:"-"`
+	Day      string    `json:"day" validate:"required"`
+	Chapters int       `json:"chapters" validate:"required"`
 }
 
 type Chapter struct {
@@ -16,16 +17,21 @@ type Chapter struct {
 }
 
 type Book struct {
-	Id               string     `json:"id"`
+	Id               *uuid.UUID `json:"id"`
 	Name             string     `json:"name"`
 	Description      string     `json:"description"`
 	Image            string     `json:"image"`
-	Author_Id        uuid.UUID  `json:"author_id"`
+	Views            string     `json:"views"`
+	Author_Id        *uuid.UUID `json:"author_id,omitempty"`
+	Completed        *bool      `json:"completed,omitempty"`
+	Approved         *bool      `json:"approved,omitempty"`
 	Genres           []string   `json:"genres"`
-	Chapter_Draft    Chapter    `json:"chapter_draft"`
+	No_Of_Chapters   int        `json:"no_of_chapters,omitempty"`
+	Chapter_Draft    *Chapter   `json:"chapter_draft,omitempty"`
 	Language         string     `json:"language"`
 	Release_schedule []Schedule `json:"release_schedule"`
 	Created_at       time.Time  `json:"created_at"`
+	Updated_at       time.Time  `json:"updated_at"`
 }
 
 type HandleUploadBooksRequest struct {
@@ -37,6 +43,9 @@ type HandleUploadBooksRequest struct {
 	ChapterDraft     *Chapter
 }
 
+type HandleGetBooksStatsResponse struct {
+	Books []Book `json:"books"`
+}
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

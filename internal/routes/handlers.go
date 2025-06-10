@@ -2,6 +2,7 @@ package routes
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/models"
 	"github.com/oseayemenre/pagesy/internal/shared"
+	"github.com/oseayemenre/pagesy/internal/store"
 )
 
 // HandleUploadBooks godoc
@@ -151,21 +153,68 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		Name:        params.Name,
 		Description: params.Description,
 		Image:       url,
-		Author_Id:   authorId,
+		Author_Id:   &authorId,
 		Genres:      params.Genres,
-		Chapter_Draft: models.Chapter{
+		Chapter_Draft: &models.Chapter{
 			Title:   params.ChapterDraft.Title,
 			Content: params.ChapterDraft.Content,
 		},
 		Language:         params.Language,
 		Release_schedule: schedules,
 	}); err != nil {
+		if err == store.ErrGenresNotFound {
+			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusNotFound, err)
+		}
 		s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
-		respondWithError(w, http.StatusBadRequest, err)
+		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	respondWithSuccess(w, http.StatusCreated, map[string]string{"message": "new book created"})
+}
+
+func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
+	user := struct {
+		id   string
+		role string
+	}{
+		id:   "dc5e215a-afd4-4f70-aa80-3e360fa1d9e4",
+		role: "creator",
+	} //TODO: implement get user later
+
+	var id string
+
+	creatorId := r.URL.Query().Get("creator_id")
+	offset_query := r.URL.Query().Get("offset")
+	limit_query := r.URL.Query().Get("limit")
+
+	offset, _ := strconv.Atoi(offset_query)
+	limit, _ := strconv.Atoi(limit_query)
+
+	if user.role == "admin" && creatorId != "" {
+		id = creatorId
+	} else {
+		id = user.id
+	}
+
+	book, err := s.Store.GetBooksStats(r.Context(), id, offset, limit)
+
+	jsonBook, _ := json.Marshal(&book)
+	fmt.Println(string(jsonBook))
+
+	if err != nil {
+		if err == store.ErrCreatorsBooksNotFound {
+			respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksStatsResponse{})
+			return
+		}
+
+		s.Server.Logger.Error(err.Error(), "service", "HandleGetBooksStats")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksStatsResponse{Books: *book})
 }
 
 func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {}

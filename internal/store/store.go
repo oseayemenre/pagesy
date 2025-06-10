@@ -11,6 +11,7 @@ import (
 
 type Store interface {
 	UploadBook(ctx context.Context, book *models.Book) error
+	GetBooksStats(ctx context.Context, id string, offset int, limit int) (*[]models.Book, error)
 }
 
 type PostgresStore struct {

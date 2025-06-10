@@ -3,7 +3,6 @@ package routes
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -141,8 +140,6 @@ func TestHandleUploadBooksService(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			s.HandleUploadBooks(rr, req)
-
-			fmt.Println(rr.Body.String())
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)

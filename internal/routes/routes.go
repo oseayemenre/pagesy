@@ -40,6 +40,7 @@ func (s *Server) RegisterRoutes() {
 		r.Use(s.LoggingMiddleware)
 		r.Route("/books", func(r chi.Router) {
 			r.With(s.CheckPermission(PermissionUploadBooks)).Post("/", s.HandleUploadBooks)
+			r.With(s.CheckPermission(PermissionGetCreatorBooks)).Get("/stats", s.HandleGetBooksStats)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks, PermissionGetAllBooks)).Get("/", s.HandleGetBooks)
 			r.Get("/{bookId}", nil)
 			r.Delete("/{bookId}", nil)
