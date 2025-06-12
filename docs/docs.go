@@ -49,7 +49,7 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "Genres",
+                        "description": "Genre",
                         "name": "genre",
                         "in": "formData",
                         "required": true
@@ -101,15 +101,14 @@ const docTemplate = `{
                         "type": "file",
                         "description": "Book cover image (max 3MB)",
                         "name": "book_cover",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     }
                 ],
                 "responses": {
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/models.HandleUploadBooksRequest"
+                            "$ref": "#/definitions/models.HandleUploadBooksResponse"
                         }
                     },
                     "400": {
@@ -132,20 +131,57 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/books/stats": {
+            "get": {
+                "description": "get all books by id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "books"
+                ],
+                "summary": "get all books",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "creator id",
+                        "name": "creator_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "offset",
+                        "name": "offset",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "limit",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.HandleGetBooksStatsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
-        "models.Chapter": {
-            "type": "object",
-            "properties": {
-                "content": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
         "models.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -154,29 +190,32 @@ const docTemplate = `{
                 }
             }
         },
-        "models.HandleUploadBooksRequest": {
+        "models.HandleGetBooksResponseBook": {
             "type": "object",
-            "required": [
-                "chapterDraft",
-                "description",
-                "genres",
-                "language",
-                "name",
-                "release_schedule"
-            ],
             "properties": {
-                "chapterDraft": {
-                    "$ref": "#/definitions/models.Chapter"
+                "approved": {
+                    "type": "boolean"
+                },
+                "completed": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
                 },
                 "description": {
                     "type": "string"
                 },
                 "genres": {
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "type": "string"
                     }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
                 },
                 "language": {
                     "type": "string"
@@ -184,17 +223,48 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "no_of_chapters": {
+                    "type": "integer"
+                },
                 "release_schedule": {
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "$ref": "#/definitions/models.Schedule"
                     }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "views": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.HandleGetBooksStatsResponse": {
+            "type": "object",
+            "properties": {
+                "books": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.HandleGetBooksResponseBook"
+                    }
+                }
+            }
+        },
+        "models.HandleUploadBooksResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
                 }
             }
         },
         "models.Schedule": {
             "type": "object",
+            "required": [
+                "chapters",
+                "day"
+            ],
             "properties": {
                 "chapters": {
                     "type": "integer"
@@ -210,10 +280,10 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8000",
+	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "Pagesy API",
+	Title:            "Pagesy",
 	Description:      "",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,

@@ -3,6 +3,7 @@ package routes
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -30,6 +31,10 @@ type testStore struct{}
 
 func (s *testStore) UploadBook(ctx context.Context, book *models.Book) error {
 	return nil
+}
+
+func (s *testStore) GetBooksStats(ctx context.Context, id string, offset int) (*[]models.Book, error) {
+	return &[]models.Book{}, nil
 }
 
 func TestHandleUploadBooksService(t *testing.T) {
@@ -140,6 +145,46 @@ func TestHandleUploadBooksService(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			s.HandleUploadBooks(rr, req)
+
+			if rr.Code != tt.expectedCode {
+				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
+			}
+		})
+	}
+}
+
+func TestHandleGetBooksStatsService(t *testing.T) {
+	s := &Server{
+		Server: &shared.Server{
+			Logger:      &testLogger{},
+			ObjectStore: &testObjectStore{},
+			Store:       &testStore{},
+		},
+	}
+
+	tests := []struct {
+		name         string
+		offset string
+		expectedCode int
+	}{
+		{
+			name:         "it should throw an error if offset isn't sent in query",
+			offset: "",
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "it should get book stats succesfully",
+			offset: "4",
+			expectedCode: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/books/stats?offset=%s", tt.offset), nil)
+			rr := httptest.NewRecorder()
+
+			s.HandleGetBooksStats(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)

@@ -120,7 +120,7 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 	return nil
 }
 
-func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int, limit int) (*[]models.Book, error) {
+func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int) (*[]models.Book, error) {
 	var books []models.Book
 	booksMap := make(map[uuid.UUID]*models.Book)
 
@@ -131,8 +131,8 @@ func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int
 			JOIN chapters c ON (c.book_id = b.id)
 			WHERE b.author_id = $1
 			GROUP BY b.id
-			OFFSET $2 LIMIT $3;
-		`, id, offset, limit)
+			OFFSET $2 LIMIT 10;
+		`, id, offset)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -164,8 +164,8 @@ func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int
 			return nil, fmt.Errorf("error scanning book rows: %v", err)
 		}
 
-		bookIds = append(bookIds, *book.Id)
-		booksMap[*book.Id] = &book
+		bookIds = append(bookIds, book.Id)
+		booksMap[book.Id] = &book
 	}
 
 	rows2, err := s.DB.QueryContext(ctx, `

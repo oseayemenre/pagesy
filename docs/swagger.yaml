@@ -1,44 +1,54 @@
 basePath: /api/v1
 definitions:
-  models.Chapter:
-    properties:
-      content:
-        type: string
-      title:
-        type: string
-    type: object
   models.ErrorResponse:
     properties:
       error:
         type: string
     type: object
-  models.HandleUploadBooksRequest:
+  models.HandleGetBooksResponseBook:
     properties:
-      chapterDraft:
-        $ref: '#/definitions/models.Chapter'
+      approved:
+        type: boolean
+      completed:
+        type: boolean
+      created_at:
+        type: string
       description:
         type: string
       genres:
         items:
           type: string
-        minItems: 1
         type: array
+      id:
+        type: string
+      image:
+        type: string
       language:
         type: string
       name:
         type: string
+      no_of_chapters:
+        type: integer
       release_schedule:
         items:
           $ref: '#/definitions/models.Schedule'
-        minItems: 1
         type: array
-    required:
-    - chapterDraft
-    - description
-    - genres
-    - language
-    - name
-    - release_schedule
+      updated_at:
+        type: string
+      views:
+        type: integer
+    type: object
+  models.HandleGetBooksStatsResponse:
+    properties:
+      books:
+        items:
+          $ref: '#/definitions/models.HandleGetBooksResponseBook'
+        type: array
+    type: object
+  models.HandleUploadBooksResponse:
+    properties:
+      message:
+        type: string
     type: object
   models.Schedule:
     properties:
@@ -46,11 +56,14 @@ definitions:
         type: integer
       day:
         type: string
+    required:
+    - chapters
+    - day
     type: object
-host: localhost:8000
+host: localhost:8080
 info:
   contact: {}
-  title: Pagesy API
+  title: Pagesy
   version: "1.0"
 paths:
   /books:
@@ -71,7 +84,7 @@ paths:
         required: true
         type: string
       - collectionFormat: csv
-        description: Genres
+        description: Genre
         in: formData
         items:
           type: string
@@ -112,7 +125,6 @@ paths:
       - description: Book cover image (max 3MB)
         in: formData
         name: book_cover
-        required: true
         type: file
       produces:
       - application/json
@@ -120,7 +132,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/models.HandleUploadBooksRequest'
+            $ref: '#/definitions/models.HandleUploadBooksResponse'
         "400":
           description: Bad Request
           schema:
@@ -134,6 +146,38 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Upload a new book
+      tags:
+      - books
+  /books/stats:
+    get:
+      description: get all books by id
+      parameters:
+      - description: creator id
+        in: query
+        name: creator_id
+        type: string
+      - description: offset
+        in: query
+        name: offset
+        required: true
+        type: string
+      - description: limit
+        in: query
+        name: limit
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HandleGetBooksStatsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: get all books
       tags:
       - books
 swagger: "2.0"

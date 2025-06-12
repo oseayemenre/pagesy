@@ -2,7 +2,6 @@ package routes
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,14 +23,14 @@ import (
 // @Produce json
 // @Param name formData string true "Book name"
 // @Param description formData string true "Book description"
-// @Param genre formData []string true "Genres"
+// @Param genre formData []string true "Genre"
 // @Param language formData string true "Book language"
 // @Param chapter_title formData string true "Draft chapter title"
 // @Param chapter_content formData string true "Draft chapter content"
 // @Param release_schedule_day formData []string true "Release days (e.g. Monday, Tuesday)"
 // @Param release_schedule_chapter formData []int true "Chapters per day (e.g. 1, 2)"
 // @Param book_cover formData file false "Book cover image (max 3MB)"
-// @Success 201 {object} models.HandleUploadBooksRequest
+// @Success 201 {object} models.HandleUploadBooksResponse
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 413 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
@@ -50,7 +49,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	params := models.HandleUploadBooksRequest{
 		Name:        r.FormValue("name"),
 		Description: r.FormValue("description"),
-		Genres:      r.Form["genre"],
+		Genres:      r.FormValue("genre"),
 		Language:    r.FormValue("language"),
 		ChapterDraft: &models.Chapter{
 			Title:   r.FormValue("chapter_title"),
@@ -58,8 +57,8 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	days := r.Form["release_schedule_day"]
-	chapters := r.Form["release_schedule_chapter"]
+	days := strings.Split(r.FormValue("release_schedule_day"), ",")
+	chapters := strings.Split(r.FormValue("release_schedule_chapter"), ",")
 
 	if len(days) != len(chapters) {
 		s.Server.Logger.Warn("chapter length and days length must be the same", "service", "HandleUploadBooks")
@@ -153,9 +152,9 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		Name:        params.Name,
 		Description: params.Description,
 		Image:       url,
-		Author_Id:   &authorId,
-		Genres:      params.Genres,
-		Chapter_Draft: &models.Chapter{
+		Author_Id:   authorId,
+		Genres:      strings.Split(params.Genres, ","),
+		Chapter_Draft: models.Chapter{
 			Title:   params.ChapterDraft.Title,
 			Content: params.ChapterDraft.Content,
 		},
@@ -171,9 +170,20 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithSuccess(w, http.StatusCreated, map[string]string{"message": "new book created"})
+	respondWithSuccess(w, http.StatusCreated, &models.HandleUploadBooksResponse{Message: "new book created"})
 }
 
+// HandleGetBooks GoDoc
+// @Summary get all books
+// @Description get all books by id
+// @Tags books
+// @Produce json
+// @Param creator_id query string false "creator id"
+// @Param offset query string true "offset"
+// @Param limit query string true "limit"
+// @Failure 500 {object} models.ErrorResponse
+// @Success 200 {object} models.HandleGetBooksStatsResponse
+// @Router /books/stats [get]
 func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	user := struct {
 		id   string
@@ -187,10 +197,14 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 
 	creatorId := r.URL.Query().Get("creator_id")
 	offset_query := r.URL.Query().Get("offset")
-	limit_query := r.URL.Query().Get("limit")
+
+	if offset_query == "" {
+		s.Server.Logger.Warn("please pass in an offset value", "service", "HandleGetBooksStats")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("please pass in an offset value"))
+		return
+	}
 
 	offset, _ := strconv.Atoi(offset_query)
-	limit, _ := strconv.Atoi(limit_query)
 
 	if user.role == "admin" && creatorId != "" {
 		id = creatorId
@@ -198,10 +212,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 		id = user.id
 	}
 
-	book, err := s.Store.GetBooksStats(r.Context(), id, offset, limit)
-
-	jsonBook, _ := json.Marshal(&book)
-	fmt.Println(string(jsonBook))
+	book, err := s.Store.GetBooksStats(r.Context(), id, offset)
 
 	if err != nil {
 		if err == store.ErrCreatorsBooksNotFound {
@@ -214,7 +225,40 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksStatsResponse{Books: *book})
+	var booksResponse []models.HandleGetBooksResponseBook
+
+	for _, b := range *book {
+		newBook := &models.HandleGetBooksResponseBook{
+			Id:             b.Id,
+			Name:           b.Name,
+			Description:    b.Description,
+			Image:          b.Image,
+			Views:          b.Views,
+			Completed:      b.Completed,
+			Approved:       b.Approved,
+			No_Of_Chapters: b.No_Of_Chapters,
+			Language:       b.Language,
+			Created_at:     b.Created_at,
+			Updated_at:     b.Updated_at,
+		}
+
+		for _, g := range b.Genres {
+			newBook.Genres = append(newBook.Genres, g)
+		}
+
+		for _, s := range b.Release_schedule {
+			release_schedule := &models.Schedule{
+				Day:      s.Day,
+				Chapters: s.Chapters,
+			}
+
+			newBook.Release_schedule = append(newBook.Release_schedule, *release_schedule)
+		}
+
+		booksResponse = append(booksResponse, *newBook)
+	}
+
+	respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksStatsResponse{Books: booksResponse})
 }
 
 func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {}
