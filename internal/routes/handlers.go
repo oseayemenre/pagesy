@@ -174,8 +174,8 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleGetBooks GoDoc
-// @Summary get all books
-// @Description get all books by id
+// @Summary Get All Books Stats
+// @Description Get all books by id
 // @Tags books
 // @Produce json
 // @Param creator_id query string false "creator id"
@@ -216,7 +216,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == store.ErrCreatorsBooksNotFound {
-			respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksStatsResponse{})
+			respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksStatsResponse{Books: []models.HandleGetBooksResponseBook{}})
 			return
 		}
 
@@ -261,7 +261,112 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksStatsResponse{Books: booksResponse})
 }
 
-func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {}
+func handleGetBooksHelper(w http.ResponseWriter, books *[]models.Book) {
+	var booksResponse []models.HandleGetBooksBooks
+
+	for _, b := range *books {
+		newBook := &models.HandleGetBooksBooks{
+			Name:           b.Name,
+			Description:    b.Description,
+			Image:          b.Image,
+			Views:          b.Views,
+			Rating:         b.Rating,
+			No_Of_Chapters: b.No_Of_Chapters,
+		}
+
+		for _, g := range b.Genres {
+			newBook.Genres = append(newBook.Genres, g)
+		}
+
+		for _, s := range b.Release_schedule {
+			release_schedule := &models.Schedule{
+				Day:      s.Day,
+				Chapters: s.Chapters,
+			}
+
+			newBook.Release_schedule = append(newBook.Release_schedule, *release_schedule)
+		}
+
+		booksResponse = append(booksResponse, *newBook)
+	}
+
+	respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: booksResponse})
+}
+
+// HandleGetBooks godoc
+// @Summary Get Books
+// @Description Get books by genre, language, both or get all books
+// @Produce json
+// @Tags books
+// @Param genre query string false "book genres"
+// @Param language query string false "book language"
+// @Success 200 {object} models.HandleGetBooksResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /books [get]
+func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
+	genre := r.URL.Query()["genre"]
+	language := r.URL.Query()["language"]
+
+	if len(genre) > 0 && len(language) < 1 {
+		books, err := s.Store.GetBooksByGenre(r.Context(), genre)
+
+		if err != nil {
+			if err == store.ErrNoBooksUnderThisGenre {
+				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
+				return
+			}
+			s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
+			respondWithError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		handleGetBooksHelper(w, books)
+		return
+	}
+
+	if len(genre) < 1 && len(language) > 0 {
+		books, err := s.Store.GetBooksByLanguage(r.Context(), language)
+
+		if err != nil {
+			if err == store.ErrNoBooksUnderThisLanguage {
+				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
+				return
+			}
+			s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
+			respondWithError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		handleGetBooksHelper(w, books)
+		return
+	}
+
+	if len(genre) > 0 && len(language) > 0 {
+		books, err := s.Store.GetBooksByGenreAndLanguage(r.Context(), genre, language)
+
+		if err != nil {
+			if err == store.ErrNoBooksUnderThisGenreOrLanguage {
+				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
+				return
+			}
+			s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
+			respondWithError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		handleGetBooksHelper(w, books)
+		return
+	}
+
+	books, err := s.Store.GetAllBooks(r.Context())
+	if err != nil {
+		s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	handleGetBooksHelper(w, books)
+}
 
 func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {}
 

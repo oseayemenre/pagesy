@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"context"
@@ -163,7 +163,7 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func run() error {
+func Run() error {
 	ctx := context.Background()
 
 	cmd := &cobra.Command{

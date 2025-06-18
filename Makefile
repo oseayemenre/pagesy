@@ -3,7 +3,7 @@ ENV ?= dev
 DB ?= postgres://pagesy:pagesy_password@localhost:5432/pagesy_db?sslmode=disable
 
 build:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/pagesy cmd/*.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/pagesy main.go
 
 run: build
 	./bin/pagesy
@@ -27,24 +27,9 @@ docker-run-postgres:
 	docker exec -it pagesy-postgres-1 psql -U pagesy -d pagesy_db
 
 swagger:
-	swag init --generalInfo cmd/main.go
+	swag init
 
 curl-healthz:
 	curl -iX GET localhost:$(ADDR)/healthz
 
-curl-upload-file:
-	curl -X POST localhost:8080/api/v1/books \
-		-F "name=Book 1" \
-		-F "description=Book 1 description" \
-		-F "genre=Romance" \
-		-F "genre=Mystery" \
-		-F "language=English" \
-		-F "release_schedule_day=Sunday" \
-		-F "release_schedule_chapter=2" \
-		-F "release_schedule_day=Tuesday" \
-		-F "release_schedule_chapter=3" \
-		-F "chapter_title=draft chapter title 1" \
-		-F "chapter_content=draft chapter content 1" \
-		$$( [ -n "$$FILEPATH" ] && echo -F "book_cover=@$(FILEPATH)")
-
-.PHONY: build run run-http migrate-create migrate-up migrate-down curl-healthz curl-upload-file docker-run-postgres migrate-force
+.PHONY: build run run-http migrate-create migrate-up migrate-down curl-healthz docker-run-postgres migrate-force

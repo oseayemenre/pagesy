@@ -16,6 +16,44 @@ const docTemplate = `{
     "basePath": "{{.BasePath}}",
     "paths": {
         "/books": {
+            "get": {
+                "description": "Get books by genre, language, both or get all books",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "books"
+                ],
+                "summary": "Get Books",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book genres",
+                        "name": "genre",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "book language",
+                        "name": "language",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.HandleGetBooksResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Uploads a book with metadata, schedule, draft chapter, and book cover image",
                 "consumes": [
@@ -134,14 +172,14 @@ const docTemplate = `{
         },
         "/books/stats": {
             "get": {
-                "description": "get all books by id",
+                "description": "Get all books by id",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "books"
                 ],
-                "summary": "get all books",
+                "summary": "Get All Books Stats",
                 "parameters": [
                     {
                         "type": "string",
@@ -187,6 +225,52 @@ const docTemplate = `{
             "properties": {
                 "error": {
                     "type": "string"
+                }
+            }
+        },
+        "models.HandleGetBooksBooks": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "genres": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "no_of_chapters": {
+                    "type": "integer"
+                },
+                "rating": {
+                    "type": "integer"
+                },
+                "release_schedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Schedule"
+                    }
+                },
+                "views": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.HandleGetBooksResponse": {
+            "type": "object",
+            "properties": {
+                "books": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.HandleGetBooksBooks"
+                    }
                 }
             }
         },

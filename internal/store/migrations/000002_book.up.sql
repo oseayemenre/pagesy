@@ -65,10 +65,7 @@ VALUES
 
 
 CREATE TABLE IF NOT EXISTS books_genres(
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  genre_id UUID REFERENCES genres(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(book_id, genre_id)
+  genre_id UUID REFERENCES genres(id) ON DELETE CASCADE,
+  PRIMARY KEY(book_id, genre_id)
 );

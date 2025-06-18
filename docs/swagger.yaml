@@ -5,6 +5,36 @@ definitions:
       error:
         type: string
     type: object
+  models.HandleGetBooksBooks:
+    properties:
+      description:
+        type: string
+      genres:
+        items:
+          type: string
+        type: array
+      image:
+        type: string
+      name:
+        type: string
+      no_of_chapters:
+        type: integer
+      rating:
+        type: integer
+      release_schedule:
+        items:
+          $ref: '#/definitions/models.Schedule'
+        type: array
+      views:
+        type: integer
+    type: object
+  models.HandleGetBooksResponse:
+    properties:
+      books:
+        items:
+          $ref: '#/definitions/models.HandleGetBooksBooks'
+        type: array
+    type: object
   models.HandleGetBooksResponseBook:
     properties:
       approved:
@@ -67,6 +97,31 @@ info:
   version: "1.0"
 paths:
   /books:
+    get:
+      description: Get books by genre, language, both or get all books
+      parameters:
+      - description: book genres
+        in: query
+        name: genre
+        type: string
+      - description: book language
+        in: query
+        name: language
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HandleGetBooksResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get Books
+      tags:
+      - books
     post:
       consumes:
       - multipart/form-data
@@ -150,7 +205,7 @@ paths:
       - books
   /books/stats:
     get:
-      description: get all books by id
+      description: Get all books by id
       parameters:
       - description: creator id
         in: query
@@ -177,7 +232,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/models.ErrorResponse'
-      summary: get all books
+      summary: Get All Books Stats
       tags:
       - books
 swagger: "2.0"

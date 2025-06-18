@@ -22,6 +22,7 @@ type Book struct {
 	Description      string
 	Image            string
 	Views            int
+	Rating           int
 	Author_Id        uuid.UUID
 	Completed        bool
 	Approved         bool
@@ -65,6 +66,21 @@ type HandleGetBooksResponseBook struct {
 
 type HandleGetBooksStatsResponse struct {
 	Books []HandleGetBooksResponseBook `json:"books"`
+}
+
+type HandleGetBooksBooks struct {
+	Name             string     `json:"name"`
+	Description      string     `json:"description"`
+	Image            string     `json:"image"`
+	Views            int        `json:"views"`
+	Rating           int        `json:"rating"`
+	Genres           []string   `json:"genres"`
+	No_Of_Chapters   int        `json:"no_of_chapters"`
+	Release_schedule []Schedule `json:"release_schedule"`
+}
+
+type HandleGetBooksResponse struct {
+	Books []HandleGetBooksBooks `json:"books"`
 }
 
 type ErrorResponse struct {
