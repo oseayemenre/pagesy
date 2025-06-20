@@ -107,15 +107,15 @@ func TestUploadBook(t *testing.T) {
 
 	db := setUpTestDb(t)
 
-	defer func() {
-		_, err := db.Exec(`TRUNCATE books CASCADE;`)
-		if err != nil {
-			t.Fatalf("error truncating tables: %v", err)
-		}
-	}()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				_, err := db.Exec(`TRUNCATE books CASCADE;`)
+				if err != nil {
+					t.Fatalf("error truncating tables: %v", err)
+				}
+			})
+
 			err := db.UploadBook(context.TODO(), tt.book)
 
 			if (err != nil) != tt.wantErr {
