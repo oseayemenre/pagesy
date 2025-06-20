@@ -110,7 +110,7 @@ func TestUploadBook(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Cleanup(func() {
-				_, err := db.Exec(`TRUNCATE books CASCADE;`)
+				_, err := db.DB.Exec(`TRUNCATE books CASCADE;`)
 				if err != nil {
 					t.Fatalf("error truncating tables: %v", err)
 				}
@@ -120,6 +120,71 @@ func TestUploadBook(t *testing.T) {
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, err != nil)
+			}
+		})
+	}
+}
+
+func TestGetBooksStats(t *testing.T) {
+	author_id := "dc5e215a-afd4-4f70-aa80-3e360fa1d9e4" //TODO: fix this later
+	tests := []struct {
+		name      string
+		author_id string
+		offset    int
+		wantErr   bool
+	}{
+		{
+			name:      "should return an error if author doesn't exist",
+			author_id: "",
+			wantErr:   true,
+		},
+		{
+			name:      "should return book stats",
+			author_id: author_id,
+			offset:    0,
+			wantErr:   false,
+		},
+	}
+
+	db := setUpTestDb(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := db.GetBooksStats(context.TODO(), tt.author_id, tt.offset)
+
+			if (err != nil && err != ErrCreatorsBooksNotFound) != tt.wantErr {
+				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrCreatorsBooksNotFound))
+			}
+		})
+	}
+}
+
+func TestGetBooksByLanguage(t *testing.T) {
+	tests := []struct {
+		name    string
+		genres  []string
+		wantErr bool
+	}{
+		{
+			name:    "should return an error if language does not exist",
+			genres:  []string{"non-existent language"},
+			wantErr: true,
+		},
+		{
+			name:    "should return books by language",
+			genres:  []string{"English"},
+			wantErr: false,
+		},
+	}
+
+	db := setUpTestDb(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := db.GetBooksByLanguage(context.TODO(), tt.genres)
+
+			if (err != nil && err != ErrNoBooksUnderThisLanguage) != tt.wantErr {
+				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisLanguage))
 			}
 		})
 	}
