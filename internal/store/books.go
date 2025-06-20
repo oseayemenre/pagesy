@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -122,7 +123,8 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 
 	var genreIDs []string
 
-	rows, err := tx.QueryContext(ctx, `
+	var rows *sql.Rows
+	rows, err = tx.QueryContext(ctx, `
 			SELECT id FROM genres WHERE genres = ANY($1);
 		`, pq.Array(book.Genres))
 
@@ -141,7 +143,8 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 	}
 
 	if len(genreIDs) != len(book.Genres) {
-		return ErrGenresNotFound
+		err = ErrGenresNotFound
+		return err
 	}
 
 	valueStrings = []string{}
