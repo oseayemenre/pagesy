@@ -10,12 +10,13 @@ import (
 )
 
 type Store interface {
-	UploadBook(ctx context.Context, book *models.Book) error
+	UploadBook(ctx context.Context, book *models.Book) (string, error)
 	GetBooksStats(ctx context.Context, id string, offset int) (*[]models.Book, error)
 	GetBooksByGenre(ctx context.Context, genre []string) (*[]models.Book, error)
 	GetBooksByLanguage(ctx context.Context, language []string) (*[]models.Book, error)
 	GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string) (*[]models.Book, error)
 	GetAllBooks(ctx context.Context) (*[]models.Book, error)
+	GetBook(ctx context.Context, id string) (*models.Book, error)
 }
 
 type PostgresStore struct {

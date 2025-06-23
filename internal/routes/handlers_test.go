@@ -21,8 +21,8 @@ func (s *testObjectStore) UploadFile(ctx context.Context, file io.Reader, id str
 
 type testStore struct{}
 
-func (s *testStore) UploadBook(ctx context.Context, book *models.Book) error {
-	return nil
+func (s *testStore) UploadBook(ctx context.Context, book *models.Book) (string, error) {
+	return "", nil
 }
 
 func (s *testStore) GetBooksStats(ctx context.Context, id string, offset int) (*[]models.Book, error) {
@@ -43,4 +43,8 @@ func (s *testStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []stri
 
 func (s *testStore) GetAllBooks(ctx context.Context) (*[]models.Book, error) {
 	return &[]models.Book{}, nil
+}
+
+func (s *testStore) GetBook(ctx context.Context, id string) (*models.Book, error) {
+	return &models.Book{}, nil
 }

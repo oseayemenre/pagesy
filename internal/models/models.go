@@ -12,8 +12,14 @@ type Schedule struct {
 }
 
 type Chapter struct {
-	Title   string `json:"title" validate:"required"`
-	Content string `json:"content" validate:"required"`
+	Title      string `json:"title" validate:"required"`
+	Content    string `json:"content" validate:"required"`
+	Created_at string `json:"created_at"`
+}
+
+type ChaptersBookPreview struct {
+	Title      string `json:"title"`
+	Created_at string `json:"created_at"`
 }
 
 type Book struct {
@@ -23,12 +29,14 @@ type Book struct {
 	Image            string
 	Views            int
 	Rating           int
+	Author_name      string
 	Author_Id        uuid.UUID
 	Completed        bool
 	Approved         bool
 	Genres           []string
 	No_Of_Chapters   int
 	Chapter_Draft    Chapter
+	Chapters         []Chapter
 	Language         string
 	Release_schedule []Schedule
 	Created_at       time.Time
@@ -45,7 +53,7 @@ type HandleUploadBooksRequest struct {
 }
 
 type HandleUploadBooksResponse struct {
-	Message string `json:"message"`
+	Id string `json:"id"`
 }
 
 type HandleGetBooksResponseBook struct {
@@ -81,6 +89,18 @@ type HandleGetBooksBooks struct {
 
 type HandleGetBooksResponse struct {
 	Books []HandleGetBooksBooks `json:"books"`
+}
+
+type HandleGetBookResponse struct {
+	Name             string                `json:"name"`
+	Description      string                `json:"description"`
+	Image            string                `json:"image"`
+	Views            int                   `json:"views"`
+	Rating           int                   `json:"rating"`
+	Genres           []string              `json:"genres"`
+	No_Of_Chapters   int                   `json:"no_of_chapters"`
+	Chapters         []ChaptersBookPreview `json:"chapters"`
+	Release_schedule []Schedule            `json:"release_schedule"`
 }
 
 type ErrorResponse struct {

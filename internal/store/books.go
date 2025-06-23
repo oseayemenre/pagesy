@@ -12,11 +12,12 @@ import (
 	"github.com/oseayemenre/pagesy/internal/models"
 )
 
-var ErrGenresNotFound = errors.New("some genres were not found in the database")
+var ErrGenresNotFound = errors.New("genres not found")
 var ErrCreatorsBooksNotFound = errors.New("creator doesn't have any books")
 var ErrNoBooksUnderThisGenre = errors.New("no books under this genre yet")
 var ErrNoBooksUnderThisLanguage = errors.New("no books under this language yet")
 var ErrNoBooksUnderThisGenreOrLanguage = errors.New("no books under this genre or language yet")
+var ErrBookNotFound = errors.New("book not found")
 
 func (s *PostgresStore) GetGenresAndReleaseSchedules(ctx context.Context, bookIDs *[]uuid.UUID, booksMap map[uuid.UUID]*models.Book) (*[]models.Book, error) {
 	var books []models.Book
@@ -78,11 +79,11 @@ func (s *PostgresStore) GetGenresAndReleaseSchedules(ctx context.Context, bookID
 	return &books, nil
 }
 
-func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error {
+func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) (string, error) {
 	tx, err := s.DB.Begin()
 
 	if err != nil {
-		return fmt.Errorf("error starting transaction: %v", err)
+		return "", fmt.Errorf("error starting transaction: %v", err)
 	}
 
 	defer func() {
@@ -99,7 +100,7 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 		`, book.Name, book.Description, book.Image, book.Author_Id, book.Language).Scan(&bookID)
 
 	if err != nil {
-		return fmt.Errorf("error inserting into book table: %v", err)
+		return "", fmt.Errorf("error inserting into book table: %v", err)
 	}
 
 	valueStrings := []string{}
@@ -118,7 +119,7 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 		`, strings.Join(valueStrings, ",")), valueArgs...)
 
 	if err != nil {
-		return fmt.Errorf("error inserting release_schedule: %v", err)
+		return "", fmt.Errorf("error inserting release_schedule: %v", err)
 	}
 
 	var genreIDs []string
@@ -129,7 +130,7 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 		`, pq.Array(book.Genres))
 
 	if err != nil {
-		return fmt.Errorf("error retrieving genre ids: %v", err)
+		return "", fmt.Errorf("error retrieving genre ids: %v", err)
 	}
 
 	defer rows.Close()
@@ -137,14 +138,14 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			return fmt.Errorf("error scanning genre ids: %v", err)
+			return "", fmt.Errorf("error scanning genre ids: %v", err)
 		}
 		genreIDs = append(genreIDs, id)
 	}
 
 	if len(genreIDs) != len(book.Genres) {
 		err = ErrGenresNotFound
-		return err
+		return "", err
 	}
 
 	valueStrings = []string{}
@@ -164,7 +165,7 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 		`, strings.Join(valueStrings, ",")), valueArgs...)
 
 	if err != nil {
-		return fmt.Errorf("error inserting into book_genres: %v", err)
+		return "", fmt.Errorf("error inserting into book_genres: %v", err)
 	}
 
 	_, err = tx.ExecContext(ctx, `
@@ -173,16 +174,16 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) error
 		`, book.Chapter_Draft.Title, book.Chapter_Draft.Content, bookID)
 
 	if err != nil {
-		return fmt.Errorf("error inserting draft chapter: %v", err)
+		return "", fmt.Errorf("error inserting draft chapter: %v", err)
 	}
 
 	err = tx.Commit()
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return bookID, nil
 }
 
 func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int) (*[]models.Book, error) {
@@ -251,7 +252,8 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string) (*[
 			JOIN books_genres bg ON (bg.book_id = b.id)
 			JOIN genres g ON (g.id = bg.genre_id)
 			WHERE g.genres = ANY($1)
-			GROUP BY b.id;
+			GROUP BY b.id
+			ORDER BY b.views DESC;
 		`, pq.Array(genre))
 
 	if err != nil {
@@ -268,7 +270,7 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string) (*[
 	booksMap := map[uuid.UUID]*models.Book{}
 
 	for rows1.Next() {
-		var book models.Book
+		book := models.Book{}
 		if err := rows1.Scan(
 			&book.Id,
 			&book.Name,
@@ -283,6 +285,10 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string) (*[
 
 		bookIDs = append(bookIDs, book.Id)
 		booksMap[book.Id] = &book
+	}
+
+	if len(booksMap) < 1 {
+		return nil, ErrNoBooksUnderThisGenre
 	}
 
 	books, err := s.GetGenresAndReleaseSchedules(ctx, &bookIDs, booksMap)
@@ -301,7 +307,8 @@ func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []strin
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
 			WHERE b.language = ANY($1::languages[])
-			GROUP BY b.id;
+			GROUP BY b.id
+			ORDER BY b.views DESC;
 		`, pq.Array(language))
 
 	if err != nil {
@@ -310,15 +317,11 @@ func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []strin
 
 	defer rows.Close()
 
-	if !rows.Next() {
-		return nil, ErrNoBooksUnderThisLanguage
-	}
-
 	var bookIDs []uuid.UUID
-	booksMap := make(map[uuid.UUID]*models.Book)
+	booksMap := map[uuid.UUID]*models.Book{}
 
 	for rows.Next() {
-		var book models.Book
+		book := models.Book{}
 		if err := rows.Scan(
 			&book.Id,
 			&book.Name,
@@ -333,6 +336,10 @@ func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []strin
 
 		bookIDs = append(bookIDs, book.Id)
 		booksMap[book.Id] = &book
+	}
+
+	if len(booksMap) < 1 {
+		return nil, ErrNoBooksUnderThisLanguage
 	}
 
 	books, err := s.GetGenresAndReleaseSchedules(ctx, &bookIDs, booksMap)
@@ -402,7 +409,8 @@ func (s *PostgresStore) GetAllBooks(ctx context.Context) (*[]models.Book, error)
 			COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
-			GROUP BY b.id;
+			GROUP BY b.id
+			ORDER BY b.views DESC;
 		`)
 
 	if err != nil {
@@ -439,4 +447,110 @@ func (s *PostgresStore) GetAllBooks(ctx context.Context) (*[]models.Book, error)
 	}
 
 	return books, nil
+}
+
+func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, error) {
+	book := &models.Book{}
+
+	err := s.DB.QueryRowContext(ctx, `
+			SELECT b.id, b.name, b.description, b.image, b.views, b.rating, b.language, b.completed, b.created_at,
+			u.name,
+			COUNT (c.id)
+			FROM books b
+			JOIN users u ON (u.id = b.author_id)
+			JOIN chapters c ON (c.book_id = b.id)	
+			WHERE b.id = $1::UUID
+			GROUP BY b.id, u.name;
+		`, id).Scan(
+		&book.Id,
+		&book.Name,
+		&book.Description,
+		&book.Image,
+		&book.Views,
+		&book.Rating,
+		&book.Language,
+		&book.Completed,
+		&book.Created_at,
+		&book.Author_name,
+		&book.No_Of_Chapters,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrBookNotFound
+		}
+
+		return nil, fmt.Errorf("error scanning book: %v", err)
+	}
+
+	rows1, err := s.DB.QueryContext(ctx, `
+			SELECT g.genres 
+			FROM genres g
+			JOIN books_genres bg ON (bg.genre_id = g.id)
+			WHERE bg.book_id = $1;
+		`, book.Id)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting genres: %v", err)
+	}
+
+	defer rows1.Close()
+
+	for rows1.Next() {
+		var genre string
+
+		if err := rows1.Scan(&genre); err != nil {
+			return nil, fmt.Errorf("error scanning genre: %v", err)
+		}
+
+		book.Genres = append(book.Genres, genre)
+	}
+
+	rows2, err := s.DB.QueryContext(ctx, `
+			SELECT day, no_of_chapters FROM release_schedule WHERE book_id = $1;
+		`, book.Id)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting release schedule: %v", err)
+	}
+
+	defer rows2.Close()
+
+	for rows2.Next() {
+		var schedule models.Schedule
+
+		if err := rows2.Scan(
+			&schedule.Day,
+			&schedule.Chapters,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning release schedule: %v", err)
+		}
+
+		book.Release_schedule = append(book.Release_schedule, schedule)
+	}
+
+	rows3, err := s.DB.QueryContext(ctx, `
+			SELECT title, created_at FROM chapters WHERE book_id = $1;
+		`, book.Id)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting chapters: %v", err)
+	}
+
+	defer rows3.Close()
+
+	for rows3.Next() {
+		var chapter models.Chapter
+
+		if err := rows3.Scan(
+			&chapter.Title,
+			&chapter.Created_at,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning chapters: %v", err)
+		}
+
+		book.Chapters = append(book.Chapters, chapter)
+	}
+
+	return book, nil
 }

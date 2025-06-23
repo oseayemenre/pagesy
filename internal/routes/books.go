@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/models"
 	"github.com/oseayemenre/pagesy/internal/shared"
@@ -33,6 +34,7 @@ import (
 // @Success 201 {object} models.HandleUploadBooksResponse
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 413 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
 // @Router /books [post]
 func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
@@ -148,7 +150,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.Server.Store.UploadBook(r.Context(), &models.Book{
+	bookId, err := s.Server.Store.UploadBook(r.Context(), &models.Book{
 		Name:        params.Name,
 		Description: params.Description,
 		Image:       url,
@@ -160,7 +162,9 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		},
 		Language:         params.Language,
 		Release_schedule: schedules,
-	}); err != nil {
+	})
+
+	if err != nil {
 		if err == store.ErrGenresNotFound {
 			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusNotFound, err)
@@ -170,7 +174,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithSuccess(w, http.StatusCreated, &models.HandleUploadBooksResponse{Message: "new book created"})
+	respondWithSuccess(w, http.StatusCreated, &models.HandleUploadBooksResponse{Id: bookId})
 }
 
 // HandleGetBooks GoDoc
@@ -368,9 +372,68 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	handleGetBooksHelper(w, books)
 }
 
-func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {}
+// HandleGetBook godoc
+// @Summary Get book
+// @Description Get book by id
+// @Tags books
+// @Produce json
+// @Param bookId path string true "book id"
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Success 200 {object} models.HandleGetBookResponse
+// @Router /books/{bookId} [get]
+func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "bookId")
 
-func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {}
+	book, err := s.Store.GetBook(r.Context(), id)
+
+	if err != nil {
+		if err == store.ErrBookNotFound {
+			s.Server.Logger.Warn(err.Error(), "service", "HandleGetBook")
+			respondWithError(w, http.StatusNotFound, err)
+			return
+
+		}
+		s.Server.Logger.Error(err.Error(), "service", "HandleGetBook")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	var chaptersForPreview []models.ChaptersBookPreview
+
+	for _, chapters := range book.Chapters {
+		chaptersForPreview = append(chaptersForPreview, models.ChaptersBookPreview{
+			Title:      chapters.Title,
+			Created_at: chapters.Created_at,
+		})
+	}
+
+	respondWithSuccess(w, http.StatusOK, &models.HandleGetBookResponse{
+		Name:             book.Name,
+		Description:      book.Description,
+		Image:            book.Image,
+		Views:            book.Views,
+		Rating:           book.Rating,
+		Genres:           book.Genres,
+		No_Of_Chapters:   book.No_Of_Chapters,
+		Chapters:         chaptersForPreview,
+		Release_schedule: book.Release_schedule,
+	})
+}
+
+// HandleDeleteBook Godoc
+// @Summary Delete book
+// @Description Delete book by id
+// @Tags books
+// @Produce json
+// @Param bookId path string true "book id"
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Success 204
+// @Router /books/{bookId} [delete]
+func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "bookId")
+}
 
 func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {}
 

@@ -1,9 +1,43 @@
 basePath: /api/v1
 definitions:
+  models.ChaptersBookPreview:
+    properties:
+      created_at:
+        type: string
+      title:
+        type: string
+    type: object
   models.ErrorResponse:
     properties:
       error:
         type: string
+    type: object
+  models.HandleGetBookResponse:
+    properties:
+      chapters:
+        items:
+          $ref: '#/definitions/models.ChaptersBookPreview'
+        type: array
+      description:
+        type: string
+      genres:
+        items:
+          type: string
+        type: array
+      image:
+        type: string
+      name:
+        type: string
+      no_of_chapters:
+        type: integer
+      rating:
+        type: integer
+      release_schedule:
+        items:
+          $ref: '#/definitions/models.Schedule'
+        type: array
+      views:
+        type: integer
     type: object
   models.HandleGetBooksBooks:
     properties:
@@ -77,7 +111,7 @@ definitions:
     type: object
   models.HandleUploadBooksResponse:
     properties:
-      message:
+      id:
         type: string
     type: object
   models.Schedule:
@@ -192,6 +226,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "413":
           description: Request Entity Too Large
           schema:
@@ -201,6 +239,57 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Upload a new book
+      tags:
+      - books
+  /books/{bookId}:
+    delete:
+      description: Delete book by id
+      parameters:
+      - description: book id
+        in: path
+        name: bookId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete book
+      tags:
+      - books
+    get:
+      description: Get book by id
+      parameters:
+      - description: book id
+        in: path
+        name: bookId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HandleGetBookResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get book
       tags:
       - books
   /books/stats:

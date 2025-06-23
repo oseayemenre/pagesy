@@ -116,7 +116,7 @@ func TestUploadBook(t *testing.T) {
 				}
 			})
 
-			err := db.UploadBook(context.TODO(), tt.book)
+			_, err := db.UploadBook(context.TODO(), tt.book)
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, err != nil)
@@ -185,6 +185,75 @@ func TestGetBooksByLanguage(t *testing.T) {
 
 			if (err != nil && err != ErrNoBooksUnderThisLanguage) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisLanguage))
+			}
+		})
+	}
+}
+
+func TestGetBook(t *testing.T) {
+	db := setUpTestDb(t)
+
+	author_id, _ := uuid.Parse("dc5e215a-afd4-4f70-aa80-3e360fa1d9e4") //TODO: fix this later
+
+	book_id, err := db.UploadBook(context.TODO(), &models.Book{
+		Name:        "test book",
+		Description: "test book description",
+		Image:       "test book image",
+		Author_Id:   author_id,
+		Language:    "English",
+		Release_schedule: []models.Schedule{
+			{
+				Day:      "Monday",
+				Chapters: 1,
+			},
+			{
+				Day:      "Tuesday",
+				Chapters: 2,
+			},
+		},
+		Genres: []string{"Action"},
+		Chapter_Draft: models.Chapter{
+			Title:   "test book chapter",
+			Content: "test book content",
+		},
+	},
+	)
+
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+
+	bookUUID, _ := uuid.Parse(book_id)
+
+	defer db.Exec(`DELETE FROM books WHERE id=$1`, bookUUID)
+
+	tests := []struct {
+		name    string
+		id      string
+		wantErr bool
+	}{
+		{
+			name:    "should return an error if book is not found",
+			id:      uuid.New().String(),
+			wantErr: true,
+		},
+		{
+			name:    "should return book",
+			id:      book_id,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			book, err := db.GetBook(context.TODO(), tt.id)
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)
+			}
+
+			if tt.wantErr == false && book.Id != bookUUID {
+				t.Fatalf("expected %v, got %v", bookUUID, book.Id)
 			}
 		})
 	}
