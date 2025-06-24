@@ -1,0 +1,4 @@
+DROP TYPE genre_type;
+
+ALTER TABLE genres
+ALTER COLUMN genres TYPE TEXT;

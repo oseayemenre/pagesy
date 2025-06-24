@@ -48,3 +48,7 @@ func (s *testStore) GetAllBooks(ctx context.Context) (*[]models.Book, error) {
 func (s *testStore) GetBook(ctx context.Context, id string) (*models.Book, error) {
 	return &models.Book{}, nil
 }
+
+func (s *testStore) DeleteBook(ctx context.Context, id string) error {
+	return nil
+}

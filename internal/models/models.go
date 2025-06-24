@@ -106,3 +106,8 @@ type HandleGetBookResponse struct {
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
+
+type HandleEditBookParam struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}

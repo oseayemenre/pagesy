@@ -159,20 +159,20 @@ func TestGetBooksStats(t *testing.T) {
 	}
 }
 
-func TestGetBooksByLanguage(t *testing.T) {
+func TestGetBooksByGenre(t *testing.T) {
 	tests := []struct {
 		name    string
 		genres  []string
 		wantErr bool
 	}{
 		{
-			name:    "should return an error if language does not exist",
-			genres:  []string{"non-existent language"},
+			name:    "should return an error if genre does not exist",
+			genres:  []string{"non-existent genre"},
 			wantErr: true,
 		},
 		{
-			name:    "should return books by language",
-			genres:  []string{"English"},
+			name:    "should return books by genre",
+			genres:  []string{"Fantasy"},
 			wantErr: false,
 		},
 	}
@@ -181,10 +181,81 @@ func TestGetBooksByLanguage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := db.GetBooksByLanguage(context.TODO(), tt.genres)
+			_, err := db.GetBooksByGenre(context.TODO(), tt.genres)
+
+			if (err != nil && err != ErrNoBooksUnderThisGenre) != tt.wantErr {
+				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisGenre))
+			}
+		})
+	}
+}
+
+func TestGetBooksByLanguage(t *testing.T) {
+	tests := []struct {
+		name      string
+		languages []string
+		wantErr   bool
+	}{
+		{
+			name:      "should return an error if language does not exist",
+			languages: []string{"non-existent language"},
+			wantErr:   true,
+		},
+		{
+			name:      "should return books by language",
+			languages: []string{"English"},
+			wantErr:   false,
+		},
+	}
+
+	db := setUpTestDb(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := db.GetBooksByLanguage(context.TODO(), tt.languages)
 
 			if (err != nil && err != ErrNoBooksUnderThisLanguage) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisLanguage))
+			}
+		})
+	}
+}
+
+func TestGetBooksByGenreAndLanguage(t *testing.T) {
+	tests := []struct {
+		name      string
+		genres    []string
+		languages []string
+		wantErr   bool
+	}{
+		{
+			name:      "should return an error if genre does not exist",
+			genres:    []string{"non-existent genre"},
+			languages: []string{"Spanish"},
+			wantErr:   true,
+		},
+		{
+			name:      "should return an error if language does not exist",
+			genres:    []string{"Fantasy"},
+			languages: []string{"non-existent language"},
+			wantErr:   true,
+		},
+		{
+			name:      "should return books by genre and language",
+			genres:    []string{"Fantasy"},
+			languages: []string{"English"},
+			wantErr:   false,
+		},
+	}
+
+	db := setUpTestDb(t)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := db.GetBooksByGenreAndLanguage(context.TODO(), tt.genres, tt.languages)
+
+			if (err != nil && err != ErrNoBooksUnderThisGenreOrLanguage) != tt.wantErr {
+				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisGenreOrLanguage))
 			}
 		})
 	}

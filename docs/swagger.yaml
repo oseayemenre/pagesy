@@ -292,6 +292,48 @@ paths:
       summary: Get book
       tags:
       - books
+    patch:
+      consumes:
+      - multipart/formData
+      description: Edit book name, image, genres or description
+      parameters:
+      - description: Book name
+        in: formData
+        name: name
+        type: string
+      - description: Book Description
+        in: formData
+        name: description
+        type: string
+      - description: Book Image
+        in: formData
+        name: image
+        type: string
+      - collectionFormat: csv
+        description: Book Description
+        in: formData
+        items:
+          type: string
+        name: genres
+        type: array
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Edit book details
+      tags:
+      - books
   /books/stats:
     get:
       description: Get all books by id

@@ -445,7 +445,26 @@ func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 	respondWithSuccess(w, http.StatusNoContent, nil)
 }
 
-func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {}
+// HandleEditBook Godoc
+// @Summary Edit book details
+// @Description Edit book name, image, genres or description
+// @Accept multipart/formData
+// @Tags books
+// @Param name formData string false "Book name"
+// @Param description formData string false "Book Description"
+// @Param image formData string false "Book Image"
+// @Param genres formData []string false "Book Description"
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 413 {object} models.ErrorResponse
+// @Faiure 500 {object} models.ErrorResponse
+// @Success 204
+// @Router /books/{bookId} [patch]
+func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
+	// id := chi.URLParam(r, "bookId")
+	//
+	// params := models.HandleEditBookParam{}
+}
 
 func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {}
 
