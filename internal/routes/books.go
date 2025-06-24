@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -92,6 +91,46 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	schedules := make([]models.Schedule, len(params.Release_schedule))
+	for i, rs := range params.Release_schedule {
+		schedules[i] = models.Schedule{
+			Day:      rs.Day,
+			Chapters: rs.Chapters,
+		}
+	}
+
+	//Dummy id here. Would handle this properly later
+	authorId, err := uuid.Parse("dc5e215a-afd4-4f70-aa80-3e360fa1d9e4")
+
+	if err != nil {
+		s.Server.Logger.Error(fmt.Sprintf("error parsing uuid: %v", err), "service", "HandleUploadBooks")
+		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error parsing uuid: %v", err))
+		return
+	}
+
+	bookId, err := s.Server.Store.UploadBook(r.Context(), &models.Book{
+		Name:        params.Name,
+		Description: params.Description,
+		Author_Id:   authorId,
+		Genres:      strings.Split(params.Genres, ","),
+		Chapter_Draft: models.Chapter{
+			Title:   params.ChapterDraft.Title,
+			Content: params.ChapterDraft.Content,
+		},
+		Language:         params.Language,
+		Release_schedule: schedules,
+	})
+
+	if err != nil {
+		if err == store.ErrGenresNotFound {
+			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusNotFound, err)
+		}
+		s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	file, header, err := r.FormFile("book_cover")
 
 	var url string
@@ -118,11 +157,17 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		url, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%v", header.Filename, time.Now().Unix()))
+		url, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%s", bookId, header.Filename))
 
 		if err != nil {
 			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusBadRequest, err)
+			return
+		}
+
+		if err := s.Store.UpdateBookImage(r.Context(), url, bookId); err != nil {
+			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
 	}
@@ -130,47 +175,6 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	if err != nil && err != http.ErrMissingFile {
 		s.Server.Logger.Error(fmt.Sprintf("error uploading image: %v", err), "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error uploading image: %v", err))
-		return
-	}
-
-	schedules := make([]models.Schedule, len(params.Release_schedule))
-	for i, rs := range params.Release_schedule {
-		schedules[i] = models.Schedule{
-			Day:      rs.Day,
-			Chapters: rs.Chapters,
-		}
-	}
-
-	//Dummy id here. Would handle this properly later
-	authorId, err := uuid.Parse("dc5e215a-afd4-4f70-aa80-3e360fa1d9e4")
-
-	if err != nil {
-		s.Server.Logger.Error(fmt.Sprintf("error parsing uuid: %v", err), "service", "HandleUploadBooks")
-		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error parsing uuid: %v", err))
-		return
-	}
-
-	bookId, err := s.Server.Store.UploadBook(r.Context(), &models.Book{
-		Name:        params.Name,
-		Description: params.Description,
-		Image:       url,
-		Author_Id:   authorId,
-		Genres:      strings.Split(params.Genres, ","),
-		Chapter_Draft: models.Chapter{
-			Title:   params.ChapterDraft.Title,
-			Content: params.ChapterDraft.Content,
-		},
-		Language:         params.Language,
-		Release_schedule: schedules,
-	})
-
-	if err != nil {
-		if err == store.ErrGenresNotFound {
-			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
-			respondWithError(w, http.StatusNotFound, err)
-		}
-		s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
-		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -447,7 +451,7 @@ func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 
 // HandleEditBook Godoc
 // @Summary Edit book details
-// @Description Edit book name, image, genres or description
+// @Description Edit book name, image, description, genre or release schedule
 // @Accept multipart/formData
 // @Tags books
 // @Param name formData string false "Book name"
@@ -461,9 +465,96 @@ func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 // @Success 204
 // @Router /books/{bookId} [patch]
 func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
-	// id := chi.URLParam(r, "bookId")
-	//
-	// params := models.HandleEditBookParam{}
+	bookId := chi.URLParam(r, "bookId")
+	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
+
+	if err := r.ParseMultipartForm(8 << 20); err != nil {
+		s.Server.Logger.Warn(fmt.Sprintf("error parsing form: %v", err), "service", "HandleEditBook")
+		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error parsing form: %v", err))
+		return
+	}
+
+	defer r.MultipartForm.RemoveAll()
+
+	file, header, err := r.FormFile("book_cover")
+
+	var url string
+
+	if err == nil {
+		defer file.Close()
+
+		fileData, err := io.ReadAll(file)
+		if err != nil {
+			s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleEditBook")
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
+			return
+		}
+
+		if len(fileData) > 3<<20 {
+			s.Server.Logger.Error("book cover too large", "service", "HandleEditBook")
+			respondWithError(w, http.StatusRequestEntityTooLarge, fmt.Errorf("book cover too large"))
+			return
+		}
+
+		if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
+			s.Server.Logger.Warn("invalid file type", "service", "HandleEditBook")
+			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
+			return
+		}
+
+		url, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%s", bookId, header.Filename))
+
+		if err != nil {
+			s.Server.Logger.Error(err.Error(), "service", "HandleEditBook")
+			respondWithError(w, http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	if err != nil && err != http.ErrMissingFile {
+		s.Server.Logger.Error(fmt.Sprintf("error uploading image: %v", err), "service", "HandleEditBook")
+		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error uploading image: %v", err))
+		return
+	}
+
+	days := strings.Split(r.FormValue("release_schedule_day"), ",")
+	chapters := strings.Split(r.FormValue("release_schedule_chapter"), ",")
+
+	if len(days) != len(chapters) {
+		s.Server.Logger.Warn("chapter length and days length must be the same", "service", "HandleEditBook")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("chapter length and days length must be the same"))
+		return
+	}
+
+	params := &models.HandleEditBookParam{
+		Id:          bookId,
+		Name:        r.FormValue("name"),
+		Description: r.FormValue("description"),
+		Genres:      strings.Split(r.FormValue("genres"), ","),
+		Image:       url,
+	}
+
+	if len(days) > 0 && len(chapters) > 0 {
+		for i := range days {
+			ch, err := strconv.Atoi(chapters[i])
+
+			if err != nil {
+				s.Server.Logger.Warn("error converting type string to int", "service", "HandleEditBook")
+				respondWithError(w, http.StatusBadRequest, fmt.Errorf("error converting type string to int"))
+				return
+			}
+
+			schedule := models.Schedule{
+				Day:      days[i],
+				Chapters: ch,
+			}
+
+			params.Release_schedule = append(params.Release_schedule,
+				schedule)
+		}
+	}
+
+	s.Store.EditBook(r.Context(), params)
 }
 
 func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {}

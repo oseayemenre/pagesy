@@ -11,6 +11,7 @@ import (
 
 type Store interface {
 	UploadBook(ctx context.Context, book *models.Book) (string, error)
+	UpdateBookImage(ctx context.Context, url string, id string) error
 	GetBooksStats(ctx context.Context, id string, offset int) (*[]models.Book, error)
 	GetBooksByGenre(ctx context.Context, genre []string) (*[]models.Book, error)
 	GetBooksByLanguage(ctx context.Context, language []string) (*[]models.Book, error)
@@ -18,6 +19,7 @@ type Store interface {
 	GetAllBooks(ctx context.Context) (*[]models.Book, error)
 	GetBook(ctx context.Context, id string) (*models.Book, error)
 	DeleteBook(ctx context.Context, id string) error
+	EditBook(ctx context.Context, book *models.HandleEditBookParam) error
 }
 
 type PostgresStore struct {

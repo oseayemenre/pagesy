@@ -108,6 +108,10 @@ type ErrorResponse struct {
 }
 
 type HandleEditBookParam struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Id               string
+	Name             string
+	Description      string
+	Genres           []string
+	Image            string
+	Release_schedule []Schedule
 }
