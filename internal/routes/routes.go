@@ -25,6 +25,7 @@ const (
 	PermissionBuyCoins               = "coins"
 	PermissionCommentOnBooks         = "book:comment"
 	PermissionGetAllCommentsOnBook   = "book:comments"
+	PermissionDeleteBook             = "book:delete"
 )
 
 type Server struct {
@@ -43,7 +44,7 @@ func (s *Server) RegisterRoutes() {
 			r.With(s.CheckPermission(PermissionGetCreatorBooks)).Get("/stats", s.HandleGetBooksStats)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks, PermissionGetAllBooks)).Get("/", s.HandleGetBooks)
 			r.With(s.CheckPermission(PermissionGetSpecificBook)).Get("/{bookId}", s.HandleGetBook)
-			r.Delete("/{bookId}", nil)
+			r.With(s.CheckPermission(PermissionDeleteBook)).Delete("/{bookId}", s.HandleDeleteBook)
 			r.Put("/{bookId}", nil)
 			r.Patch("/{bookId}/approval", nil)
 			r.Patch("/{bookId}/complete", nil)

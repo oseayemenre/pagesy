@@ -433,6 +433,16 @@ func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {
 // @Router /books/{bookId} [delete]
 func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "bookId")
+
+	err := s.Store.DeleteBook(r.Context(), id)
+
+	if err != nil {
+		s.Server.Logger.Warn(err.Error(), "service", "HandleDeleteBook")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	respondWithSuccess(w, http.StatusNoContent, nil)
 }
 
 func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {}
@@ -444,5 +454,3 @@ func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request
 func (s *Server) HandleGetRecents(w http.ResponseWriter, r *http.Request) {}
 
 func (s *Server) HandleGetNewlyUpdated(w http.ResponseWriter, r *http.Request) {}
-
-func (s *Server) HandleGetRecommended(w http.ResponseWriter, r *http.Request) {}

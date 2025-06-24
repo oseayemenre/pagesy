@@ -17,6 +17,7 @@ type Store interface {
 	GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string) (*[]models.Book, error)
 	GetAllBooks(ctx context.Context) (*[]models.Book, error)
 	GetBook(ctx context.Context, id string) (*models.Book, error)
+	DeleteBook(ctx context.Context, id string) error
 }
 
 type PostgresStore struct {

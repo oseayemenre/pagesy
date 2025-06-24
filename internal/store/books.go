@@ -205,10 +205,6 @@ func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int
 
 	defer rows1.Close()
 
-	if !rows1.Next() {
-		return nil, ErrCreatorsBooksNotFound
-	}
-
 	var bookIds []uuid.UUID
 
 	for rows1.Next() {
@@ -232,6 +228,10 @@ func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int
 
 		bookIds = append(bookIds, book.Id)
 		booksMap[book.Id] = &book
+	}
+
+	if len(booksMap) < 1 {
+		return nil, ErrCreatorsBooksNotFound
 	}
 
 	books, err := s.GetGenresAndReleaseSchedules(ctx, &bookIds, booksMap)
@@ -261,10 +261,6 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string) (*[
 	}
 
 	defer rows1.Close()
-
-	if !rows1.Next() {
-		return nil, ErrNoBooksUnderThisGenre
-	}
 
 	var bookIDs []uuid.UUID
 	booksMap := map[uuid.UUID]*models.Book{}
@@ -369,10 +365,6 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 
 	defer rows.Close()
 
-	if !rows.Next() {
-		return nil, ErrNoBooksUnderThisGenreOrLanguage
-	}
-
 	var bookIDs []uuid.UUID
 	booksMap := make(map[uuid.UUID]*models.Book)
 
@@ -392,6 +384,10 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 
 		bookIDs = append(bookIDs, book.Id)
 		booksMap[book.Id] = &book
+	}
+
+	if len(booksMap) < 1 {
+		return nil, ErrNoBooksUnderThisGenreOrLanguage
 	}
 
 	books, err := s.GetGenresAndReleaseSchedules(ctx, &bookIDs, booksMap)
@@ -459,7 +455,7 @@ func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, e
 			FROM books b
 			JOIN users u ON (u.id = b.author_id)
 			JOIN chapters c ON (c.book_id = b.id)	
-			WHERE b.id = $1::UUID
+			WHERE b.id = $1
 			GROUP BY b.id, u.name;
 		`, id).Scan(
 		&book.Id,
@@ -553,4 +549,12 @@ func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, e
 	}
 
 	return book, nil
+}
+
+func (s *PostgresStore) DeleteBook(ctx context.Context, id string) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM books WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("error deleting book: %v", err)
+	}
+	return nil
 }

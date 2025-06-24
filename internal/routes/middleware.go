@@ -56,7 +56,7 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 					PermissionGetNewlyUpdated, PermissionGetRecommendations, PermissionGetAllBooks,
 					PermissionGetSpecificBook, PermissionAddToLibrary, PermissionGetAllBooksFromLibrary,
 					PermissionRemoveBookFromLibrary, PermissionBuyCoins,
-					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook,
+					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionDeleteBook,
 				},
 				"creator": {
 					PermissionUploadBooks, PermissionGetCreatorBooks, PermissionGetBookStat,
@@ -64,7 +64,7 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 					PermissionGetRecentReads, PermissionGetNewlyUpdated, PermissionGetRecommendations,
 					PermissionGetSpecificBook, PermissionAddToLibrary, PermissionGetAllBooksFromLibrary,
 					PermissionRemoveBookFromLibrary, PermissionBuyCoins,
-					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionGetAllBooks,
+					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionGetAllBooks, PermissionDeleteBook,
 				},
 				"reader": {
 					PermissionGetRecentReads, PermissionGetNewlyUpdated, PermissionGetRecommendations,
