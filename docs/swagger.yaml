@@ -294,9 +294,14 @@ paths:
       - books
     patch:
       consumes:
-      - multipart/formData
-      description: Edit book name, image, genres or description
+      - multipart/form-data
+      description: Edit book name, image, description, genre or release schedule
       parameters:
+      - description: Book Id
+        in: path
+        name: bookId
+        required: true
+        type: string
       - description: Book name
         in: formData
         name: name
@@ -310,11 +315,25 @@ paths:
         name: image
         type: string
       - collectionFormat: csv
-        description: Book Description
+        description: Book Genres
         in: formData
         items:
           type: string
         name: genres
+        type: array
+      - collectionFormat: csv
+        description: Release schedule days
+        in: formData
+        items:
+          type: string
+        name: release_schedule_day
+        type: array
+      - collectionFormat: csv
+        description: Release schedule chapters
+        in: formData
+        items:
+          type: string
+        name: release_schedule_chapter
         type: array
       responses:
         "204":

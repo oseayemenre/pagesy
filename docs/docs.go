@@ -301,15 +301,22 @@ const docTemplate = `{
                 }
             },
             "patch": {
-                "description": "Edit book name, image, genres or description",
+                "description": "Edit book name, image, description, genre or release schedule",
                 "consumes": [
-                    "multipart/formData"
+                    "multipart/form-data"
                 ],
                 "tags": [
                     "books"
                 ],
                 "summary": "Edit book details",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Book Id",
+                        "name": "bookId",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "type": "string",
                         "description": "Book name",
@@ -334,8 +341,28 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "Book Description",
+                        "description": "Book Genres",
                         "name": "genres",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Release schedule days",
+                        "name": "release_schedule_day",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Release schedule chapters",
+                        "name": "release_schedule_chapter",
                         "in": "formData"
                     }
                 ],

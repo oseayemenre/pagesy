@@ -1,8 +1,10 @@
 package models
 
 import (
-	"github.com/google/uuid"
+	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Schedule struct {
@@ -26,7 +28,7 @@ type Book struct {
 	Id               uuid.UUID
 	Name             string
 	Description      string
-	Image            string
+	Image            sql.NullString
 	Views            int
 	Rating           int
 	Author_name      string

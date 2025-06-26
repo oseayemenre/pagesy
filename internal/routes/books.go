@@ -240,11 +240,11 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 			Id:             b.Id,
 			Name:           b.Name,
 			Description:    b.Description,
-			Image:          b.Image,
 			Views:          b.Views,
 			Completed:      b.Completed,
 			Approved:       b.Approved,
 			No_Of_Chapters: b.No_Of_Chapters,
+			Image:          b.Image.String,
 			Language:       b.Language,
 			Created_at:     b.Created_at,
 			Updated_at:     b.Updated_at,
@@ -276,9 +276,9 @@ func handleGetBooksHelper(w http.ResponseWriter, books *[]models.Book) {
 		newBook := &models.HandleGetBooksBooks{
 			Name:           b.Name,
 			Description:    b.Description,
-			Image:          b.Image,
 			Views:          b.Views,
 			Rating:         b.Rating,
+			Image:          b.Image.String,
 			No_Of_Chapters: b.No_Of_Chapters,
 		}
 
@@ -412,17 +412,19 @@ func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	respondWithSuccess(w, http.StatusOK, &models.HandleGetBookResponse{
+	response := &models.HandleGetBookResponse{
 		Name:             book.Name,
 		Description:      book.Description,
-		Image:            book.Image,
 		Views:            book.Views,
 		Rating:           book.Rating,
+		Image:            book.Image.String,
 		Genres:           book.Genres,
 		No_Of_Chapters:   book.No_Of_Chapters,
 		Chapters:         chaptersForPreview,
 		Release_schedule: book.Release_schedule,
-	})
+	}
+
+	respondWithSuccess(w, http.StatusOK, response)
 }
 
 // HandleDeleteBook Godoc
@@ -452,12 +454,15 @@ func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 // HandleEditBook Godoc
 // @Summary Edit book details
 // @Description Edit book name, image, description, genre or release schedule
-// @Accept multipart/formData
 // @Tags books
+// @Accept multipart/form-data
+// @Param bookId path string true "Book Id"
 // @Param name formData string false "Book name"
 // @Param description formData string false "Book Description"
 // @Param image formData string false "Book Image"
-// @Param genres formData []string false "Book Description"
+// @Param genres formData []string false "Book Genres"
+// @Param release_schedule_day formData []string false "Release schedule days"
+// @Param release_schedule_chapter formData []string false "Release schedule chapters"
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 404 {object} models.ErrorResponse
 // @Failure 413 {object} models.ErrorResponse
@@ -520,17 +525,31 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 	days := strings.Split(r.FormValue("release_schedule_day"), ",")
 	chapters := strings.Split(r.FormValue("release_schedule_chapter"), ",")
 
+	if len(days) == 1 && days[0] == "" {
+		days = []string{}
+	}
+
+	if len(chapters) == 1 && chapters[0] == "" {
+		chapters = []string{}
+	}
+
 	if len(days) != len(chapters) {
 		s.Server.Logger.Warn("chapter length and days length must be the same", "service", "HandleEditBook")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("chapter length and days length must be the same"))
 		return
 	}
 
+	genres := strings.Split(r.FormValue("genres"), ",")
+
+	if len(genres) == 1 && genres[0] == "" {
+		genres = []string{}
+	}
+
 	params := &models.HandleEditBookParam{
 		Id:          bookId,
 		Name:        r.FormValue("name"),
 		Description: r.FormValue("description"),
-		Genres:      strings.Split(r.FormValue("genres"), ","),
+		Genres:      genres,
 		Image:       url,
 	}
 
@@ -554,7 +573,11 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s.Store.EditBook(r.Context(), params)
+	if err := s.Store.EditBook(r.Context(), params); err != nil {
+		s.Server.Logger.Warn(err.Error(), "service", "HandleEditBook")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
 }
 
 func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {}

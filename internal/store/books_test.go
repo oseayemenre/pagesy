@@ -109,18 +109,18 @@ func TestUploadBook(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Cleanup(func() {
-				_, err := db.DB.Exec(`TRUNCATE books CASCADE;`)
-				if err != nil {
-					t.Fatalf("error truncating tables: %v", err)
-				}
-			})
-
-			_, err := db.UploadBook(context.TODO(), tt.book)
+			id, err := db.UploadBook(context.TODO(), tt.book)
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, err != nil)
 			}
+
+			t.Cleanup(func() {
+				_, err := db.DB.Exec("DELETE FROM books WHERE id = $1", id)
+				if err != nil {
+					t.Fatalf("error truncating tables: %v", err)
+				}
+			})
 		})
 	}
 }

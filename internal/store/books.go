@@ -97,7 +97,7 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) (stri
 	err = tx.QueryRowContext(ctx, `
 			INSERT INTO books (name, description, author_id, language)
 			VALUES ($1, $2, $3, $4) RETURNING id;
-		`, book.Name, book.Description, book.Image, book.Author_Id, book.Language).Scan(&bookID)
+		`, book.Name, book.Description, book.Author_Id, book.Language).Scan(&bookID)
 
 	if err != nil {
 		return "", fmt.Errorf("error inserting into book table: %v", err)
@@ -613,81 +613,86 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 	_, err = tx.ExecContext(ctx, fmt.Sprintf(`
 			UPDATE books
 			SET %v
-			WHERE id = $%d
+			WHERE id = $%d;
 		`, strings.Join(clauses, ","), index+1), arguments...)
 
 	if err != nil {
 		return fmt.Errorf("error updating book: %v", err)
 	}
 
-	_, err = tx.ExecContext(ctx, "DELETE FROM release_schedule WHERE book_id = $1", book.Id)
+	if len(book.Release_schedule) > 0 {
+		_, err = tx.ExecContext(ctx, "DELETE FROM release_schedule WHERE book_id = $1", book.Id)
 
-	clauses = []string{}
-	arguments = []interface{}{}
-	index = 1
+		clauses = []string{}
+		arguments = []interface{}{}
+		index = 1
 
-	for _, sched := range book.Release_schedule {
-		clauses = append(clauses, fmt.Sprintf("($%d, $%d, $%d)", index, index+1, index+2))
-		arguments = append(arguments, book.Id, sched.Day, sched.Chapters)
-		index += 3
-	}
+		for _, sched := range book.Release_schedule {
+			clauses = append(clauses, fmt.Sprintf("($%d, $%d, $%d)", index, index+1, index+2))
+			arguments = append(arguments, book.Id, sched.Day, sched.Chapters)
+			index += 3
+		}
 
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(`
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(`
 			INSERT INTO release_schedule(book_id, day, no_of_chapters)
 			VALUES %s; 
-		`, strings.Join(clauses, ",")), arguments...)
+			`, strings.Join(clauses, ",")), arguments...)
 
-	if err != nil {
-		return fmt.Errorf("error inserting release_schedule: %v", err)
-	}
-
-	_, err = tx.ExecContext(ctx, "DELETE FROM books_genres WHERE book_id = $1", book.Id)
-
-	var genreIDs []string
-
-	var rows *sql.Rows
-	rows, err = tx.QueryContext(ctx, `
-			SELECT id FROM genres WHERE genres = ANY($1);
-		`, pq.Array(book.Genres))
-
-	if err != nil {
-		return fmt.Errorf("error retrieving genre ids: %v", err)
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return fmt.Errorf("error scanning genre ids: %v", err)
+		if err != nil {
+			return fmt.Errorf("error inserting release_schedule: %v", err)
 		}
-		genreIDs = append(genreIDs, id)
 	}
 
-	if len(genreIDs) != len(book.Genres) {
-		err = ErrGenresNotFound
-		return err
-	}
+	if len(book.Genres) > 0 {
 
-	clauses = []string{}
-	arguments = []interface{}{}
-	index = 1
+		_, err = tx.ExecContext(ctx, "DELETE FROM books_genres WHERE book_id = $1", book.Id)
 
-	for _, genreId := range genreIDs {
-		clauses = append(clauses, fmt.Sprintf("($%d, $%d)", index, index+1))
-		arguments = append(arguments, book.Id, genreId)
-		index += 2
-	}
+		var genreIDs []string
 
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(`
+		var rows *sql.Rows
+		rows, err = tx.QueryContext(ctx, `
+			SELECT id FROM genres WHERE genres = ANY($1);
+			`, pq.Array(book.Genres))
+
+		if err != nil {
+			return fmt.Errorf("error retrieving genre ids: %v", err)
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("error scanning genre ids: %v", err)
+			}
+			genreIDs = append(genreIDs, id)
+		}
+
+		if len(genreIDs) != len(book.Genres) {
+			err = ErrGenresNotFound
+			return err
+		}
+
+		clauses = []string{}
+		arguments = []interface{}{}
+		index = 1
+
+		for _, genreId := range genreIDs {
+			clauses = append(clauses, fmt.Sprintf("($%d, $%d)", index, index+1))
+			arguments = append(arguments, book.Id, genreId)
+			index += 2
+		}
+
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(`
 			INSERT INTO books_genres(book_id, genre_id)
 			VALUES %s
 			ON CONFLICT DO NOTHING;
-		`, strings.Join(clauses, ",")), arguments...)
+			`, strings.Join(clauses, ",")), arguments...)
 
-	if err != nil {
-		return fmt.Errorf("error inserting into book_genres: %v", err)
+		if err != nil {
+			return fmt.Errorf("error inserting into book_genres: %v", err)
+		}
 	}
 
-	return nil
+	return tx.Commit()
 }

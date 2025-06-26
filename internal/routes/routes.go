@@ -45,7 +45,7 @@ func (s *Server) RegisterRoutes() {
 			r.With(s.CheckPermission(PermissionGetCreatorBooks, PermissionGetAllBooks)).Get("/", s.HandleGetBooks)
 			r.With(s.CheckPermission(PermissionGetSpecificBook)).Get("/{bookId}", s.HandleGetBook)
 			r.With(s.CheckPermission(PermissionDeleteBook)).Delete("/{bookId}", s.HandleDeleteBook)
-			r.Patch("/{bookId}", nil)
+			r.Patch("/{bookId}", s.HandleEditBook)
 			r.Patch("/{bookId}/approval", nil)
 			r.Patch("/{bookId}/complete", nil)
 			r.Post("/{bookId}/chapters", nil)
