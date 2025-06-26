@@ -596,6 +596,10 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 		arguments = append(arguments, book.Image)
 	}
 
+	if len(clauses) < 0 {
+		return nil
+	}
+
 	arguments = append(arguments, book.Id)
 
 	tx, err := s.DB.Begin()
