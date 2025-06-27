@@ -634,7 +634,7 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
 // @Success 204
-// @Router /books/{bookId}complete [patch]
+// @Router /books/{bookId}/complete [patch]
 func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request) {
 	bookId := chi.URLParam(r, "bookId")
 	param := models.MarkAsCompleteParam{}

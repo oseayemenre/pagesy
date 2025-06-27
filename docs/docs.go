@@ -438,7 +438,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/books/{bookId}complete": {
+        "/books/{bookId}/complete": {
             "patch": {
                 "description": "Mark book as complete using id",
                 "produces": [
