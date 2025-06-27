@@ -427,6 +427,8 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Mark Book As Complete
+      tags:
+      - books
   /books/stats:
     get:
       description: Get all books by id

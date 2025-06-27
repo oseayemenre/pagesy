@@ -444,6 +444,9 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "books"
+                ],
                 "summary": "Mark Book As Complete",
                 "parameters": [
                     {
