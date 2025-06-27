@@ -390,9 +390,111 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/books/{bookId}/approval": {
+            "patch": {
+                "description": "Approve book by id",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "books"
+                ],
+                "summary": "Approve book",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Book ID",
+                        "name": "bookId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Approve book body",
+                        "name": "param",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ApproveBookParam"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/books/{bookId}complete": {
+            "patch": {
+                "description": "Mark book as complete using id",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Mark Book As Complete",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Book ID",
+                        "name": "bookId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Mark book as complete body",
+                        "name": "param",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.MarkAsCompleteParam"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "models.ApproveBookParam": {
+            "type": "object",
+            "required": [
+                "approve"
+            ],
+            "properties": {
+                "approve": {
+                    "type": "boolean"
+                }
+            }
+        },
         "models.ChaptersBookPreview": {
             "type": "object",
             "properties": {
@@ -565,6 +667,17 @@ const docTemplate = `{
             "properties": {
                 "id": {
                     "type": "string"
+                }
+            }
+        },
+        "models.MarkAsCompleteParam": {
+            "type": "object",
+            "required": [
+                "completed"
+            ],
+            "properties": {
+                "completed": {
+                    "type": "boolean"
                 }
             }
         },

@@ -2,6 +2,7 @@ package routes
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -575,7 +576,7 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.Store.EditBook(r.Context(), params); err != nil {
 		if err == store.ErrShouldAtLeasePassOneFieldToUpdate {
-			s.Server.Logger.Error(err.Error(), "service", "HandleEditBook")
+			s.Server.Logger.Warn(err.Error(), "service", "HandleEditBook")
 			respondWithError(w, http.StatusBadRequest, err)
 			return
 		}
@@ -587,9 +588,76 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 	respondWithSuccess(w, http.StatusNoContent, nil)
 }
 
-func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {}
+// HandleApproveBook godoc
+// @Summary Approve book
+// @Description Approve book by id
+// @Tags books
+// @Produce json
+// @Param bookId path string true "Book ID"
+// @Param param body models.ApproveBookParam true "Approve book body"
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Success 204
+// @Router /books/{bookId}/approval [patch]
+func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
+	bookId := chi.URLParam(r, "bookId")
+	param := models.ApproveBookParam{}
 
-func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request) {}
+	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+		s.Server.Logger.Error(fmt.Sprintf("error decoding json: %v", err), "service", "HandleApproveBook")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error decoding json: %v", err))
+		return
+	}
+
+	if err := shared.Validate.Struct(&param); err != nil {
+		s.Server.Logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleApproveBook")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error validating fields: %v", err))
+		return
+	}
+
+	if err := s.Store.ApproveBook(r.Context(), bookId, param.Approve); err != nil {
+		s.Server.Logger.Error(err.Error(), "service", "HandleApproveBook")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	respondWithSuccess(w, http.StatusNoContent, nil)
+}
+
+// HandleMarkBookAsComplete godoc
+// @Summary Mark Book As Complete
+// @Description Mark book as complete using id
+// @Produce json
+// @Param bookId path string true "Book ID"
+// @Param param body models.MarkAsCompleteParam true "Mark book as complete body"
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Success 204
+// @Router /books/{bookId}complete [patch]
+func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request) {
+	bookId := chi.URLParam(r, "bookId")
+	param := models.MarkAsCompleteParam{}
+
+	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+		s.Server.Logger.Error(fmt.Sprintf("error decoding json: %v", err), "service", "HandleMarkBookAsComplete")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error decoding json: %v", err))
+		return
+	}
+
+	if err := shared.Validate.Struct(&param); err != nil {
+		s.Server.Logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleMarkBookAsComplete")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error validating fields: %v", err))
+		return
+	}
+
+	if err := s.Store.MarkBookAsComplete(r.Context(), bookId, param.Completed); err != nil {
+		s.Server.Logger.Error(err.Error(), "service", "HandleMarkBookAsComplete")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	respondWithSuccess(w, http.StatusNoContent, nil)
+}
 
 func (s *Server) HandleGetRecents(w http.ResponseWriter, r *http.Request) {}
 

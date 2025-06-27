@@ -60,3 +60,11 @@ func (s *testStore) DeleteBook(ctx context.Context, id string) error {
 func (s *testStore) EditBook(ctx context.Context, book *models.HandleEditBookParam) error {
 	return nil
 }
+
+func (s *testStore) ApproveBook(ctx context.Context, id string, approve bool) error {
+	return nil
+}
+
+func (s *testStore) MarkBookAsComplete(ctx context.Context, id string, complete bool) error {
+	return nil
+}

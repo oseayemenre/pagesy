@@ -164,7 +164,7 @@ func TestHandleGetBooksStatsService(t *testing.T) {
 	}
 }
 
-func TestHandleEditBook(t *testing.T) {
+func TestHandleEditBookService(t *testing.T) {
 	s := &Server{
 		Server: &shared.Server{
 			Logger:      &testLogger{},
@@ -236,5 +236,42 @@ func TestHandleEditBook(t *testing.T) {
 			}
 		})
 	}
+}
 
+func HandleApproveBookService(t *testing.T) {
+	s := &Server{
+		Server: &shared.Server{
+			Logger:      &testLogger{},
+			ObjectStore: &testObjectStore{},
+			Store:       &testStore{},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1/approval", bytes.NewBuffer([]byte("")))
+	rr := httptest.NewRecorder()
+
+	s.HandleApproveBook(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected %d, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
+
+func HandleMarkBookAsCompleteService(t *testing.T) {
+	s := &Server{
+		Server: &shared.Server{
+			Logger:      &testLogger{},
+			ObjectStore: &testObjectStore{},
+			Store:       &testStore{},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1/complete", bytes.NewBuffer([]byte("")))
+	rr := httptest.NewRecorder()
+
+	s.HandleApproveBook(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected %d, got %d", http.StatusBadRequest, rr.Code)
+	}
 }

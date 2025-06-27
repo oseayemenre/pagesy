@@ -20,6 +20,8 @@ type Store interface {
 	GetBook(ctx context.Context, id string) (*models.Book, error)
 	DeleteBook(ctx context.Context, id string) error
 	EditBook(ctx context.Context, book *models.HandleEditBookParam) error
+	ApproveBook(ctx context.Context, id string, approve bool) error
+	MarkBookAsComplete(ctx context.Context, id string, complete bool) error
 }
 
 type PostgresStore struct {

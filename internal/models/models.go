@@ -117,3 +117,11 @@ type HandleEditBookParam struct {
 	Image            string
 	Release_schedule []Schedule
 }
+
+type ApproveBookParam struct {
+	Approve bool `json:"approve" validate:"required"`
+}
+
+type MarkAsCompleteParam struct {
+	Completed bool `json:"completed" validate:"required"`
+}

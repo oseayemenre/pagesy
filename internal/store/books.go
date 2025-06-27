@@ -703,3 +703,26 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 
 	return tx.Commit()
 }
+
+func (s *PostgresStore) ApproveBook(ctx context.Context, id string, approve bool) error {
+	if _, err := s.DB.ExecContext(ctx, `
+			UPDATE books
+			SET approved = $1
+			WHERE id = $2;
+		`, approve, id); err != nil {
+		return fmt.Errorf("error approving book: %v", err)
+	}
+	return nil
+}
+
+func (s *PostgresStore) MarkBookAsComplete(ctx context.Context, id string, complete bool) error {
+	if _, err := s.DB.ExecContext(ctx, `
+			UPDATE books
+			SET completed = $1
+			WHERE id = $2;
+		`, complete, id); err != nil {
+		return fmt.Errorf("error marking book as complete: %v", err)
+	}
+
+	return nil
+}
