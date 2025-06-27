@@ -627,6 +627,7 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 // HandleMarkBookAsComplete godoc
 // @Summary Mark Book As Complete
 // @Description Mark book as complete using id
+// @Tags books
 // @Produce json
 // @Param bookId path string true "Book ID"
 // @Param param body models.MarkAsCompleteParam true "Mark book as complete body"
