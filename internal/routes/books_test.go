@@ -97,11 +97,7 @@ func TestHandleUploadBooksService(t *testing.T) {
 			writer := multipart.NewWriter(body)
 
 			for key, val := range tt.formFields {
-				if strings.HasPrefix(key, "release_schedule") || key == "genre" {
-					writer.WriteField(key, val)
-				} else {
-					writer.WriteField(key, val)
-				}
+				writer.WriteField(key, val)
 			}
 
 			file, _ := writer.CreateFormFile("book_cover", tt.coverType)
@@ -166,4 +162,79 @@ func TestHandleGetBooksStatsService(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleEditBook(t *testing.T) {
+	s := &Server{
+		Server: &shared.Server{
+			Logger:      &testLogger{},
+			ObjectStore: &testObjectStore{},
+			Store:       &testStore{},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		formFields     map[string]string
+		coverSizeBytes int
+		coverType      string
+		errCode        int
+	}{
+		{
+			name:           "should throw an error if book cover is too large",
+			formFields:     map[string]string{},
+			coverSizeBytes: 4 * 1024 * 1024,
+			coverType:      "image.pdf",
+			errCode:        http.StatusRequestEntityTooLarge,
+		},
+		{
+			name:           "should throw an error if book cover is not an image",
+			formFields:     map[string]string{},
+			coverSizeBytes: 2 * 1024 * 1024,
+			coverType:      "image.pdf",
+			errCode:        http.StatusBadRequest,
+		},
+		{
+			name: "should throw an error if release schedule days and release schedule chapters are not the same",
+			formFields: map[string]string{
+				"release_schedule_day":     "Sunday",
+				"release_schedule_chapter": "2,4",
+			},
+			coverSizeBytes: 2 * 1024 * 1024,
+			coverType:      "cover.jpg",
+			errCode:        http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := bytes.Buffer{}
+			writer := multipart.NewWriter(&buf)
+			file, _ := writer.CreateFormFile("book_cover", tt.coverType)
+
+			for key, val := range tt.formFields {
+				writer.WriteField(key, val)
+			}
+
+			if strings.HasSuffix(tt.coverType, "jpg") {
+				file.Write([]byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46})
+			} else {
+				file.Write(make([]byte, tt.coverSizeBytes))
+			}
+
+			writer.Close()
+
+			req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1", &buf)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+
+			rr := httptest.NewRecorder()
+
+			s.HandleEditBook(rr, req)
+
+			if rr.Code != tt.errCode {
+				t.Fatalf("expected %d, got %d", tt.errCode, rr.Code)
+			}
+		})
+	}
+
 }

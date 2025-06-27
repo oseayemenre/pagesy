@@ -25,6 +25,10 @@ func (s *testStore) UploadBook(ctx context.Context, book *models.Book) (string, 
 	return "", nil
 }
 
+func (s *testStore) UpdateBookImage(ctx context.Context, url string, id string) error {
+	return nil
+}
+
 func (s *testStore) GetBooksStats(ctx context.Context, id string, offset int) (*[]models.Book, error) {
 	return &[]models.Book{}, nil
 }
@@ -50,5 +54,9 @@ func (s *testStore) GetBook(ctx context.Context, id string) (*models.Book, error
 }
 
 func (s *testStore) DeleteBook(ctx context.Context, id string) error {
+	return nil
+}
+
+func (s *testStore) EditBook(ctx context.Context, book *models.HandleEditBookParam) error {
 	return nil
 }

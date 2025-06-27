@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/google/uuid"
@@ -30,9 +31,12 @@ func TestUploadBook(t *testing.T) {
 			book: &models.Book{
 				Name:        "test book",
 				Description: "test book description",
-				Image:       "test book image",
-				Author_Id:   author_id,
-				Language:    "English",
+				Image: sql.NullString{
+					String: "test book image",
+					Valid:  true,
+				},
+				Author_Id: author_id,
+				Language:  "English",
 				Release_schedule: []models.Schedule{
 					{
 						Day:      "Monday",
@@ -56,9 +60,12 @@ func TestUploadBook(t *testing.T) {
 			book: &models.Book{
 				Name:        "test book",
 				Description: "test book description",
-				Image:       "test book image",
-				Author_Id:   uuid.New(),
-				Language:    "English",
+				Image: sql.NullString{
+					String: "test book image",
+					Valid:  true,
+				},
+				Author_Id: uuid.New(),
+				Language:  "English",
 				Release_schedule: []models.Schedule{
 					{
 						Day:      "Monday",
@@ -82,9 +89,12 @@ func TestUploadBook(t *testing.T) {
 			book: &models.Book{
 				Name:        "test book",
 				Description: "test book description",
-				Image:       "test book image",
-				Author_Id:   author_id,
-				Language:    "English",
+				Image: sql.NullString{
+					String: "test book image",
+					Valid:  true,
+				},
+				Author_Id: author_id,
+				Language:  "English",
 				Release_schedule: []models.Schedule{
 					{
 						Day:      "Monday",
@@ -115,12 +125,12 @@ func TestUploadBook(t *testing.T) {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, err != nil)
 			}
 
-			t.Cleanup(func() {
-				_, err := db.DB.Exec("DELETE FROM books WHERE id = $1", id)
+			if id != "" {
+				_, err = db.DB.Exec("DELETE FROM books WHERE id = $1", id)
 				if err != nil {
-					t.Fatalf("error truncating tables: %v", err)
+					t.Fatalf("error deleting book: %v", err)
 				}
-			})
+			}
 		})
 	}
 }
@@ -269,9 +279,12 @@ func TestGetBook(t *testing.T) {
 	book_id, err := db.UploadBook(context.TODO(), &models.Book{
 		Name:        "test book",
 		Description: "test book description",
-		Image:       "test book image",
-		Author_Id:   author_id,
-		Language:    "English",
+		Image: sql.NullString{
+			String: "test book image",
+			Valid:  true,
+		},
+		Author_Id: author_id,
+		Language:  "English",
 		Release_schedule: []models.Schedule{
 			{
 				Day:      "Monday",
@@ -325,6 +338,30 @@ func TestGetBook(t *testing.T) {
 
 			if tt.wantErr == false && book.Id != bookUUID {
 				t.Fatalf("expected %v, got %v", bookUUID, book.Id)
+			}
+		})
+	}
+}
+
+func TestEditBook(t *testing.T) {
+	db := setUpTestDb(t)
+
+	tests := []struct {
+		name    string
+		wantErr bool
+	}{
+		{
+			name:    "should return an error if at least one field isn't passed",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := db.EditBook(context.TODO(), &models.HandleEditBookParam{})
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)
 			}
 		})
 	}

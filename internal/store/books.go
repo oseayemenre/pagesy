@@ -18,6 +18,7 @@ var ErrNoBooksUnderThisGenre = errors.New("no books under this genre yet")
 var ErrNoBooksUnderThisLanguage = errors.New("no books under this language yet")
 var ErrNoBooksUnderThisGenreOrLanguage = errors.New("no books under this genre or language yet")
 var ErrBookNotFound = errors.New("book not found")
+var ErrShouldAtLeasePassOneFieldToUpdate = errors.New("one field at least is required to update")
 
 func (s *PostgresStore) GetGenresAndReleaseSchedules(ctx context.Context, bookIDs *[]uuid.UUID, booksMap map[uuid.UUID]*models.Book) (*[]models.Book, error) {
 	var books []models.Book
@@ -596,11 +597,11 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 		arguments = append(arguments, book.Image)
 	}
 
-	if len(clauses) < 0 {
-		return nil
-	}
-
 	arguments = append(arguments, book.Id)
+
+	if len(clauses) < 1 || len(book.Release_schedule) < 1 || len(book.Genres) < 1 {
+		return ErrShouldAtLeasePassOneFieldToUpdate
+	}
 
 	tx, err := s.DB.Begin()
 
@@ -614,14 +615,16 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 		}
 	}()
 
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(`
+	if len(clauses) > 0 {
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(`
 			UPDATE books
 			SET %v
 			WHERE id = $%d;
-		`, strings.Join(clauses, ","), index+1), arguments...)
+			`, strings.Join(clauses, ","), index+1), arguments...)
 
-	if err != nil {
-		return fmt.Errorf("error updating book: %v", err)
+		if err != nil {
+			return fmt.Errorf("error updating book: %v", err)
+		}
 	}
 
 	if len(book.Release_schedule) > 0 {

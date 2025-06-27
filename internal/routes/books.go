@@ -481,6 +481,29 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 
 	defer r.MultipartForm.RemoveAll()
 
+	days := strings.Split(r.FormValue("release_schedule_day"), ",")
+	chapters := strings.Split(r.FormValue("release_schedule_chapter"), ",")
+
+	if len(days) == 1 && days[0] == "" {
+		days = []string{}
+	}
+
+	if len(chapters) == 1 && chapters[0] == "" {
+		chapters = []string{}
+	}
+
+	if len(days) != len(chapters) {
+		s.Server.Logger.Warn("chapter length and days length must be the same", "service", "HandleEditBook")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("chapter length and days length must be the same"))
+		return
+	}
+
+	genres := strings.Split(r.FormValue("genres"), ",")
+
+	if len(genres) == 1 && genres[0] == "" {
+		genres = []string{}
+	}
+
 	file, header, err := r.FormFile("book_cover")
 
 	var url string
@@ -522,29 +545,6 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	days := strings.Split(r.FormValue("release_schedule_day"), ",")
-	chapters := strings.Split(r.FormValue("release_schedule_chapter"), ",")
-
-	if len(days) == 1 && days[0] == "" {
-		days = []string{}
-	}
-
-	if len(chapters) == 1 && chapters[0] == "" {
-		chapters = []string{}
-	}
-
-	if len(days) != len(chapters) {
-		s.Server.Logger.Warn("chapter length and days length must be the same", "service", "HandleEditBook")
-		respondWithError(w, http.StatusBadRequest, fmt.Errorf("chapter length and days length must be the same"))
-		return
-	}
-
-	genres := strings.Split(r.FormValue("genres"), ",")
-
-	if len(genres) == 1 && genres[0] == "" {
-		genres = []string{}
-	}
-
 	params := &models.HandleEditBookParam{
 		Id:          bookId,
 		Name:        r.FormValue("name"),
@@ -574,10 +574,17 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.Store.EditBook(r.Context(), params); err != nil {
-		s.Server.Logger.Warn(err.Error(), "service", "HandleEditBook")
+		if err == store.ErrShouldAtLeasePassOneFieldToUpdate {
+			s.Server.Logger.Error(err.Error(), "service", "HandleEditBook")
+			respondWithError(w, http.StatusBadRequest, err)
+			return
+		}
+		s.Server.Logger.Error(err.Error(), "service", "HandleEditBook")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	respondWithSuccess(w, http.StatusNoContent, nil)
 }
 
 func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {}

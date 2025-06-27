@@ -56,7 +56,7 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 					PermissionGetNewlyUpdated, PermissionGetRecommendations, PermissionGetAllBooks,
 					PermissionGetSpecificBook, PermissionAddToLibrary, PermissionGetAllBooksFromLibrary,
 					PermissionRemoveBookFromLibrary, PermissionBuyCoins,
-					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionDeleteBook,
+					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionDeleteBook, PermissionEditBook,
 				},
 				"creator": {
 					PermissionUploadBooks, PermissionGetCreatorBooks, PermissionGetBookStat,
@@ -65,12 +65,14 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 					PermissionGetSpecificBook, PermissionAddToLibrary, PermissionGetAllBooksFromLibrary,
 					PermissionRemoveBookFromLibrary, PermissionBuyCoins,
 					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionGetAllBooks, PermissionDeleteBook,
+					PermissionEditBook,
 				},
 				"reader": {
 					PermissionGetRecentReads, PermissionGetNewlyUpdated, PermissionGetRecommendations,
 					PermissionGetSpecificBook, PermissionAddToLibrary, PermissionGetAllBooksFromLibrary,
 					PermissionRemoveBookFromLibrary, PermissionBuyCoins,
 					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionGetAllBooks,
+					PermissionEditBook,
 				},
 			}
 			// header := r.Header.Get("Authorization")
