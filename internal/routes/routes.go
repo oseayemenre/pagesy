@@ -44,23 +44,32 @@ func (s *Server) RegisterRoutes() {
 			r.With(s.CheckPermission(PermissionUploadBooks)).Post("/", s.HandleUploadBooks)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks)).Get("/stats", s.HandleGetBooksStats)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks, PermissionGetAllBooks)).Get("/", s.HandleGetBooks)
-			r.With(s.CheckPermission(PermissionGetSpecificBook)).Get("/{bookId}", s.HandleGetBook)
-			r.With(s.CheckPermission(PermissionDeleteBook)).Delete("/{bookId}", s.HandleDeleteBook)
-			r.With(s.CheckPermission(PermissionEditBook)).Patch("/{bookId}", s.HandleEditBook)
-			r.With(s.CheckPermission(PermissionApproveOrDenyBooks)).Patch("/{bookId}/approval", s.HandleApproveBook)
-			r.With(s.CheckPermission(PermissionMarkComplete)).Patch("/{bookId}/complete", nil)
-			r.Post("/{bookId}/chapters", nil)
-			r.Get("/{bookId}/chapters/{chapterId}", nil)
-			r.Delete("/{bookId}/chapters/{chapterId}", nil)
-			r.Get("/{bookId}/chapters/{chapterId}/pages/{pageNumber}", nil)
 			r.Get("/recents", nil)
 			r.Get("/new", nil)
 			r.Get("/recommended", nil)
-			r.Post("/{bookId}/comments", nil)
-			r.Get("/{bookId}/comments", nil)
-			r.Post("/{bookId}/comments/{commentId}", nil)
-			r.Delete("/{bookId}/comments/{commentId}", nil)
-			r.Patch("/{bookId}/comments/{commentId}", nil)
+
+			r.Route("/{bookId}", func(r chi.Router) {
+				r.With(s.CheckPermission(PermissionGetSpecificBook)).Get("/", s.HandleGetBook)
+				r.With(s.CheckPermission(PermissionDeleteBook)).Delete("/", s.HandleDeleteBook)
+				r.With(s.CheckPermission(PermissionEditBook)).Patch("/", s.HandleEditBook)
+				r.With(s.CheckPermission(PermissionApproveOrDenyBooks)).Patch("/approval", s.HandleApproveBook)
+				r.With(s.CheckPermission(PermissionMarkComplete)).Patch("/complete", s.HandleMarkBookAsComplete)
+
+				r.Route("/chapters", func(r chi.Router) {
+					r.Post("/", nil)
+					r.Get("/{chapterId}", nil)
+					r.Delete("/{chapterId}", nil)
+					r.Get("/{chapterId}/pages/{pageNumber}", nil)
+				})
+
+				r.Route("/comments", func(r chi.Router) {
+					r.Post("/", nil)
+					r.Get("/", nil)
+					r.Post("/{commentId}", nil)
+					r.Delete("/{commentId}", nil)
+					r.Patch("/{commentId}", nil)
+				})
+			})
 		})
 
 		r.Route("/library", func(r chi.Router) {

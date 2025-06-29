@@ -370,7 +370,7 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 			JOIN chapters c ON (b.id = c.book_id)
 			JOIN books_genres bg ON (bg.book_id = b.id)
 			JOIN genres g ON (g.id = bg.genre_id)
-			WHERE b.language = ANY($1::languages[]) OR g.genres = ANY($2)
+			WHERE b.language = ANY($1::languages[]) AND g.genres = ANY($2)
 			GROUP BY b.id;
 		`, pq.Array(language), pq.Array(genre))
 
