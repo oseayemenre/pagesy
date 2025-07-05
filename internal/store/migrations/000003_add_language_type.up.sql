@@ -11,7 +11,7 @@ CREATE TYPE languages AS ENUM(
   'Indonesian'
 );
 
-ALTER TABLE books
+ALTER TABLE books 
 ALTER COLUMN language DROP DEFAULT,
-ALTER COLUMN language TYPE languages USING language::languages, 
-ALTER COLUMN language SET DEFAULT 'English'; 
+ALTER COLUMN language TYPE languages USING language::languages,
+ALTER COLUMN language SET DEFAULT 'English';

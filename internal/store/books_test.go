@@ -10,11 +10,13 @@ import (
 )
 
 func TestUploadBook(t *testing.T) {
-	author_id, err := uuid.Parse("dc5e215a-afd4-4f70-aa80-3e360fa1d9e4") //TODO: fix this later
+	db := setUpTestDb(t)
 
-	if err != nil {
-		t.Fatalf("error parsing uuid: %v", err)
-	}
+	author_id, _ := db.CreateUser(context.TODO()) //TODO: fix this later
+
+	defer func() {
+		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
+	}()
 
 	tests := []struct {
 		name    string
@@ -35,7 +37,7 @@ func TestUploadBook(t *testing.T) {
 					String: "test book image",
 					Valid:  true,
 				},
-				Author_Id: author_id,
+				Author_Id: *author_id,
 				Language:  "English",
 				Release_schedule: []models.Schedule{
 					{
@@ -93,7 +95,7 @@ func TestUploadBook(t *testing.T) {
 					String: "test book image",
 					Valid:  true,
 				},
-				Author_Id: author_id,
+				Author_Id: *author_id,
 				Language:  "English",
 				Release_schedule: []models.Schedule{
 					{
@@ -115,8 +117,6 @@ func TestUploadBook(t *testing.T) {
 		},
 	}
 
-	db := setUpTestDb(t)
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			id, err := db.UploadBook(context.TODO(), tt.book)
@@ -136,11 +136,17 @@ func TestUploadBook(t *testing.T) {
 }
 
 func TestGetBooksStats(t *testing.T) {
-	author_id := "dc5e215a-afd4-4f70-aa80-3e360fa1d9e4" //TODO: fix this later
+	db := setUpTestDb(t)
+
+	author_id, _ := db.CreateUser(context.TODO()) //TODO: fix this later
+
+	defer func() {
+		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
+	}()
+
 	tests := []struct {
 		name      string
 		author_id string
-		offset    int
 		wantErr   bool
 	}{
 		{
@@ -150,17 +156,14 @@ func TestGetBooksStats(t *testing.T) {
 		},
 		{
 			name:      "should return book stats",
-			author_id: author_id,
-			offset:    0,
+			author_id: author_id.String(),
 			wantErr:   false,
 		},
 	}
 
-	db := setUpTestDb(t)
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := db.GetBooksStats(context.TODO(), tt.author_id, tt.offset)
+			_, err := db.GetBooksStats(context.TODO(), tt.author_id, 0, 5)
 
 			if (err != nil && err != ErrCreatorsBooksNotFound) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrCreatorsBooksNotFound))
@@ -191,7 +194,7 @@ func TestGetBooksByGenre(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := db.GetBooksByGenre(context.TODO(), tt.genres)
+			_, err := db.GetBooksByGenre(context.TODO(), tt.genres, 0, 5)
 
 			if (err != nil && err != ErrNoBooksUnderThisGenre) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisGenre))
@@ -222,7 +225,7 @@ func TestGetBooksByLanguage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := db.GetBooksByLanguage(context.TODO(), tt.languages)
+			_, err := db.GetBooksByLanguage(context.TODO(), tt.languages, 0, 5)
 
 			if (err != nil && err != ErrNoBooksUnderThisLanguage) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisLanguage))
@@ -262,7 +265,7 @@ func TestGetBooksByGenreAndLanguage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := db.GetBooksByGenreAndLanguage(context.TODO(), tt.genres, tt.languages)
+			_, err := db.GetBooksByGenreAndLanguage(context.TODO(), tt.genres, tt.languages, 0, 5)
 
 			if (err != nil && err != ErrNoBooksUnderThisGenreOrLanguage) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisGenreOrLanguage))
@@ -274,7 +277,11 @@ func TestGetBooksByGenreAndLanguage(t *testing.T) {
 func TestGetBook(t *testing.T) {
 	db := setUpTestDb(t)
 
-	author_id, _ := uuid.Parse("dc5e215a-afd4-4f70-aa80-3e360fa1d9e4") //TODO: fix this later
+	author_id, _ := db.CreateUser(context.TODO()) //TODO: fix this later
+
+	defer func() {
+		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
+	}()
 
 	book_id, err := db.UploadBook(context.TODO(), &models.Book{
 		Name:        "test book",
@@ -283,7 +290,7 @@ func TestGetBook(t *testing.T) {
 			String: "test book image",
 			Valid:  true,
 		},
-		Author_Id: author_id,
+		Author_Id: *author_id,
 		Language:  "English",
 		Release_schedule: []models.Schedule{
 			{

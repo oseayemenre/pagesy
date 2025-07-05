@@ -44,7 +44,7 @@ func (s *Server) RegisterRoutes() {
 			r.With(s.CheckPermission(PermissionUploadBooks)).Post("/", s.HandleUploadBooks)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks)).Get("/stats", s.HandleGetBooksStats)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks, PermissionGetAllBooks)).Get("/", s.HandleGetBooks)
-			r.Get("/recents", nil)
+			r.With(s.CheckPermission(PermissionGetRecentReads)).Get("/recents", s.HandleGetRecentReads)
 			r.Get("/new", nil)
 			r.Get("/recommended", nil)
 

@@ -125,3 +125,14 @@ type ApproveBookParam struct {
 type MarkAsCompleteParam struct {
 	Completed bool `json:"completed" validate:"required"`
 }
+
+type RecentReadsResponseBooks struct {
+	Name            string `json:"name"`
+	Image           string `json:"image"`
+	LastReadChapter int    `json:"last_read_chapter"`
+	LastRead        int    `json:"last_read"`
+}
+
+type HandleGetRecentReadsResponse struct {
+	Books []RecentReadsResponseBooks `json:"books"`
+}

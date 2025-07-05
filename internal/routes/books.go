@@ -206,6 +206,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 
 	creatorId := r.URL.Query().Get("creator_id")
 	offset_query := r.URL.Query().Get("offset")
+	limit_query := r.URL.Query().Get("limit")
 
 	if offset_query == "" {
 		s.Server.Logger.Warn("please pass in an offset value", "service", "HandleGetBooksStats")
@@ -214,6 +215,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	offset, _ := strconv.Atoi(offset_query)
+	limit, _ := strconv.Atoi(limit_query)
 
 	if user.role == "admin" && creatorId != "" {
 		id = creatorId
@@ -221,7 +223,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 		id = user.id
 	}
 
-	book, err := s.Store.GetBooksStats(r.Context(), id, offset)
+	book, err := s.Store.GetBooksStats(r.Context(), id, offset, limit)
 
 	if err != nil {
 		if err == store.ErrCreatorsBooksNotFound {
@@ -309,15 +311,32 @@ func handleGetBooksHelper(w http.ResponseWriter, books *[]models.Book) {
 // @Tags books
 // @Param genre query string false "book genres"
 // @Param language query string false "book language"
+// @Param offset query string false "offset number"
+// @Param limit query string false "limit number"
 // @Success 200 {object} models.HandleGetBooksResponse
 // @Failure 500 {object} models.ErrorResponse
 // @Router /books [get]
 func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	genre := r.URL.Query()["genre"]
 	language := r.URL.Query()["language"]
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+
+	if err != nil {
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	if err != nil {
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
 
 	if len(genre) > 0 && len(language) < 1 {
-		books, err := s.Store.GetBooksByGenre(r.Context(), genre)
+		books, err := s.Store.GetBooksByGenre(r.Context(), genre, offset, limit)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisGenre {
@@ -334,7 +353,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(genre) < 1 && len(language) > 0 {
-		books, err := s.Store.GetBooksByLanguage(r.Context(), language)
+		books, err := s.Store.GetBooksByLanguage(r.Context(), language, offset, limit)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisLanguage {
@@ -351,7 +370,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(genre) > 0 && len(language) > 0 {
-		books, err := s.Store.GetBooksByGenreAndLanguage(r.Context(), genre, language)
+		books, err := s.Store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisGenreOrLanguage {
@@ -367,7 +386,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	books, err := s.Store.GetAllBooks(r.Context())
+	books, err := s.Store.GetAllBooks(r.Context(), offset, limit)
 	if err != nil {
 		s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
 		respondWithError(w, http.StatusInternalServerError, err)
@@ -660,6 +679,48 @@ func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request
 	respondWithSuccess(w, http.StatusNoContent, nil)
 }
 
-func (s *Server) HandleGetRecents(w http.ResponseWriter, r *http.Request) {}
+func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
+	user := struct {
+		id string
+	}{
+		id: "dc5e215a-afd4-4f70-aa80-3e360fa1d9e4",
+	} //TODO: implement get user later
 
-func (s *Server) HandleGetNewlyUpdated(w http.ResponseWriter, r *http.Request) {}
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+
+	if err != nil {
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	if err != nil {
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	books, err := s.Store.GetRecentReads(r.Context(), user.id, offset, limit)
+
+	if err != nil {
+		s.Server.Logger.Error(err.Error(), "service", "HandleGetRecentReads")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	var recentBooks []models.RecentReadsResponseBooks
+
+	for _, b := range *books {
+		recentBooks = append(recentBooks, models.RecentReadsResponseBooks{
+			Name:  b.Name,
+			Image: b.Image.String,
+		})
+	}
+
+	respondWithSuccess(w, http.StatusOK, &models.HandleGetRecentReadsResponse{})
+}
+
+func (s *Server) HandleGetNewlyUpdated(w http.ResponseWriter, r *http.Request) {
+}

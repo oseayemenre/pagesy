@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS release_schedule(
 
 CREATE TABLE IF NOT EXISTS chapters(
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  chapter_no INT NOT NULL,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   book_id UUID REFERENCES books(id) ON DELETE CASCADE,
