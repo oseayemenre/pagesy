@@ -124,15 +124,7 @@ func TestHandleUploadBooksService(t *testing.T) {
 	}
 }
 
-func TestHandleGetBooksService(t *testing.T) {
-	s := &Server{
-		Server: &shared.Server{
-			Logger:      &testLogger{},
-			ObjectStore: &testObjectStore{},
-			Store:       &testStore{},
-		},
-	}
-
+func helperTestGetBooks(t *testing.T, path string, handler http.HandlerFunc) {
 	tests := []struct {
 		name         string
 		offset       string
@@ -160,16 +152,29 @@ func TestHandleGetBooksService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/books/?offset=%s&limit=%s", tt.offset, tt.limit), nil)
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(path, tt.offset, tt.limit), nil)
 			rr := httptest.NewRecorder()
 
-			s.HandleGetBooks(rr, req)
+			handler(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
 			}
 		})
 	}
+
+}
+
+func TestHandleGetBooksService(t *testing.T) {
+	s := &Server{
+		Server: &shared.Server{
+			Logger:      &testLogger{},
+			ObjectStore: &testObjectStore{},
+			Store:       &testStore{},
+		},
+	}
+
+	helperTestGetBooks(t, "/api/v1/books/?offset=%s&limit=%s", s.HandleGetBooks)
 }
 
 func TestHandleGetBooksStatsService(t *testing.T) {
@@ -181,43 +186,7 @@ func TestHandleGetBooksStatsService(t *testing.T) {
 		},
 	}
 
-	tests := []struct {
-		name         string
-		offset       string
-		limit        string
-		expectedCode int
-	}{
-		{
-			name:         "it should throw an error if offset isn't sent in query",
-			offset:       "",
-			expectedCode: http.StatusBadRequest,
-		},
-		{
-			name:         "it should throw an error if limit isn't sent in query",
-			offset:       "0",
-			limit:        "",
-			expectedCode: http.StatusBadRequest,
-		},
-		{
-			name:         "it should get book stats succesfully",
-			offset:       "0",
-			limit:        "4",
-			expectedCode: http.StatusOK,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/books/stats?offset=%s&limit=%s", tt.offset, tt.limit), nil)
-			rr := httptest.NewRecorder()
-
-			s.HandleGetBooksStats(rr, req)
-
-			if rr.Code != tt.expectedCode {
-				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
-			}
-		})
-	}
+	helperTestGetBooks(t, "/api/v1/books/stats?offset=%s&limit=%s", s.HandleGetBooksStats)
 }
 
 func TestHandleEditBookService(t *testing.T) {
@@ -294,19 +263,11 @@ func TestHandleEditBookService(t *testing.T) {
 	}
 }
 
-func HandleApproveBookService(t *testing.T) {
-	s := &Server{
-		Server: &shared.Server{
-			Logger:      &testLogger{},
-			ObjectStore: &testObjectStore{},
-			Store:       &testStore{},
-		},
-	}
-
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1/approval", bytes.NewBuffer([]byte("")))
+func helperPatchBookRequests(t *testing.T, path string, handler http.HandlerFunc) {
+	req := httptest.NewRequest(http.MethodPatch, path, bytes.NewBuffer([]byte("")))
 	rr := httptest.NewRecorder()
 
-	s.HandleApproveBook(rr, req)
+	handler(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("expected %d, got %d", http.StatusBadRequest, rr.Code)
@@ -322,14 +283,19 @@ func HandleMarkBookAsCompleteService(t *testing.T) {
 		},
 	}
 
-	req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1/complete", bytes.NewBuffer([]byte("")))
-	rr := httptest.NewRecorder()
+	helperPatchBookRequests(t, "/api/v1/books/1/complete", s.HandleApproveBook)
+}
 
-	s.HandleApproveBook(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected %d, got %d", http.StatusBadRequest, rr.Code)
+func HandleApproveBookService(t *testing.T) {
+	s := &Server{
+		Server: &shared.Server{
+			Logger:      &testLogger{},
+			ObjectStore: &testObjectStore{},
+			Store:       &testStore{},
+		},
 	}
+
+	helperPatchBookRequests(t, "/api/v1/books/1/approval", s.HandleApproveBook)
 }
 
 func TestHandleGetRecentReads(t *testing.T) {
@@ -341,41 +307,17 @@ func TestHandleGetRecentReads(t *testing.T) {
 		},
 	}
 
-	tests := []struct {
-		name         string
-		offset       string
-		limit        string
-		expectedCode int
-	}{
-		{
-			name:         "should throw an error if offset is not set",
-			offset:       "",
-			expectedCode: http.StatusBadRequest,
-		},
-		{
-			name:         "should throw an error if limit is not set",
-			offset:       "0",
-			limit:        "",
-			expectedCode: http.StatusBadRequest,
-		},
-		{
-			name:         "should get books",
-			offset:       "0",
-			limit:        "10",
-			expectedCode: http.StatusOK,
+	helperTestGetBooks(t, "/api/v1/books/recents?offset=%s&limit=%s", s.HandleGetRecentReads)
+}
+
+func TestHandleGetNewlyUpdated(t *testing.T) {
+	s := &Server{
+		Server: &shared.Server{
+			Logger:      &testLogger{},
+			ObjectStore: &testObjectStore{},
+			Store:       &testStore{},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/books/recents?offset=%s&limit=%s", tt.offset, tt.limit), nil)
-			rr := httptest.NewRecorder()
-
-			s.HandleGetRecentReads(rr, req)
-
-			if rr.Code != tt.expectedCode {
-				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
-			}
-		})
-	}
+	helperTestGetBooks(t, "/api/v1/books/new?offset=%s&limit=%s", s.HandleGetNewlyUpdated)
 }

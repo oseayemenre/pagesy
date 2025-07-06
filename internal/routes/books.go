@@ -209,7 +209,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetBooksStats")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -217,7 +217,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetBooksStats")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -327,7 +327,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetBooks")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -335,7 +335,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetBooks")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -765,5 +765,41 @@ func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
 	respondWithSuccess(w, http.StatusOK, &models.HandleGetRecentReadsResponse{Books: recentBooks})
 }
 
+// HandleGetNewlyUpdated godoc
+// @Summary Get newly updated books
+// @Description Get newly updated books
+// @Tags books
+// @Produce json
+// @Param offset query string true "offset number"
+// @Param limit query string true "limit number"
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Success 200 {object} models.HandleGetBooksResponse
+// @Router /books/new [get]
 func (s *Server) HandleGetNewlyUpdated(w http.ResponseWriter, r *http.Request) {
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+
+	if err != nil {
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetNewlyUpdated")
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	if err != nil {
+		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetNewlyUpdated")
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	books, err := s.Store.GetNewlyUpdated(r.Context(), offset, limit)
+
+	if err != nil {
+		s.Server.Logger.Error(err.Error(), "service", "HandleGetNewlyUpdated")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	handleGetBooksHelper(w, books)
 }

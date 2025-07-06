@@ -377,6 +377,5 @@ func TestGetRecentReads(t *testing.T) {
 		if (err != nil) != true {
 			t.Fatalf("expected %v, got %v", true, err != nil)
 		}
-
 	})
 }

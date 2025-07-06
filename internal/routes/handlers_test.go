@@ -77,3 +77,7 @@ func (s *testStore) GetRecentReads(ctx context.Context, id string, offset int, l
 func (s *testStore) CreateUser(ctx context.Context) (*uuid.UUID, error) {
 	return nil, nil
 }
+
+func (s *testStore) GetNewlyUpdated(ctx context.Context, offset int, limit int) (*[]models.Book, error) {
+	return &[]models.Book{}, nil
+}

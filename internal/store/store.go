@@ -24,6 +24,7 @@ type Store interface {
 	ApproveBook(ctx context.Context, id string, approve bool) error
 	MarkBookAsComplete(ctx context.Context, id string, complete bool) error
 	GetRecentReads(ctx context.Context, id string, offset int, limit int) (*[]models.Book, error)
+	GetNewlyUpdated(ctx context.Context, offset int, limit int) (*[]models.Book, error)
 	CreateUser(ctx context.Context) (*uuid.UUID, error) //TODO: fix this later
 }
 

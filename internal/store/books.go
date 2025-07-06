@@ -766,3 +766,50 @@ func (s *PostgresStore) GetRecentReads(ctx context.Context, id string, offset in
 
 	return &books, nil
 }
+
+func (s *PostgresStore) GetNewlyUpdated(ctx context.Context, offset int, limit int) (*[]models.Book, error) {
+	rows, err := s.DB.QueryContext(ctx, `
+			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
+			COUNT(c.id)
+			FROM books b
+			JOIN chapters c ON (b.id = c.book_id)
+			GROUP BY b.id
+			ORDER BY b.updated_at DESC
+			OFFSET $1 LIMIT $2;
+		`, offset, limit)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting newly updated books: %v", err)
+	}
+
+	defer rows.Close()
+
+	var bookIDs []uuid.UUID
+	booksMap := make(map[uuid.UUID]*models.Book)
+
+	for rows.Next() {
+		var book models.Book
+		if err := rows.Scan(
+			&book.Id,
+			&book.Name,
+			&book.Description,
+			&book.Image,
+			&book.Views,
+			&book.Rating,
+			&book.No_Of_Chapters,
+		); err != nil {
+			return nil, fmt.Errorf("error scanning books: %v", err)
+		}
+
+		bookIDs = append(bookIDs, book.Id)
+		booksMap[book.Id] = &book
+	}
+
+	books, err := s.GetGenresAndReleaseSchedules(ctx, &bookIDs, booksMap)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return books, nil
+}
