@@ -184,7 +184,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleGetBooks GoDoc
-// @Summary Get All Books Stats
+// @Summary Get books stats
 // @Description Get all books by id
 // @Tags books
 // @Produce json
@@ -310,7 +310,7 @@ func handleGetBooksHelper(w http.ResponseWriter, books *[]models.Book) {
 }
 
 // HandleGetBooks godoc
-// @Summary Get Books
+// @Summary Get books
 // @Description Get books by genre, language, both or get all books
 // @Produce json
 // @Tags books
@@ -649,7 +649,7 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleMarkBookAsComplete godoc
-// @Summary Mark Book As Complete
+// @Summary Mark book as complete
 // @Description Mark book as complete using id
 // @Tags books
 // @Produce json

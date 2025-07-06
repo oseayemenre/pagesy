@@ -24,7 +24,7 @@ const docTemplate = `{
                 "tags": [
                     "books"
                 ],
-                "summary": "Get Books",
+                "summary": "Get books",
                 "parameters": [
                     {
                         "type": "string",
@@ -293,7 +293,7 @@ const docTemplate = `{
                 "tags": [
                     "books"
                 ],
-                "summary": "Get All Books Stats",
+                "summary": "Get books stats",
                 "parameters": [
                     {
                         "type": "string",
@@ -555,7 +555,7 @@ const docTemplate = `{
                 "tags": [
                     "books"
                 ],
-                "summary": "Mark Book As Complete",
+                "summary": "Mark book as complete",
                 "parameters": [
                     {
                         "type": "string",
