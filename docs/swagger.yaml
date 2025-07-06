@@ -116,6 +116,13 @@ definitions:
           $ref: '#/definitions/models.HandleGetBooksResponseBook'
         type: array
     type: object
+  models.HandleGetRecentReadsResponse:
+    properties:
+      books:
+        items:
+          $ref: '#/definitions/models.RecentReadsResponseBooks'
+        type: array
+    type: object
   models.HandleUploadBooksResponse:
     properties:
       id:
@@ -127,6 +134,17 @@ definitions:
         type: boolean
     required:
     - completed
+    type: object
+  models.RecentReadsResponseBooks:
+    properties:
+      image:
+        type: string
+      last_read:
+        type: string
+      last_read_chapter:
+        type: integer
+      name:
+        type: string
     type: object
   models.Schedule:
     properties:
@@ -155,6 +173,14 @@ paths:
       - description: book language
         in: query
         name: language
+        type: string
+      - description: offset number
+        in: query
+        name: offset
+        type: string
+      - description: limit number
+        in: query
+        name: limit
         type: string
       produces:
       - application/json
@@ -427,6 +453,38 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Mark Book As Complete
+      tags:
+      - books
+  /books/recents:
+    get:
+      description: Get user's recent reads
+      parameters:
+      - description: offset
+        in: query
+        name: offset
+        required: true
+        type: string
+      - description: limit
+        in: query
+        name: limit
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HandleGetRecentReadsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get recent reads
       tags:
       - books
   /books/stats:

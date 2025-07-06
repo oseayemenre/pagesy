@@ -124,6 +124,8 @@ func TestHandleUploadBooksService(t *testing.T) {
 	}
 }
 
+func TestHandleGetBooksService(t *testing.T) {}
+
 func TestHandleGetBooksStatsService(t *testing.T) {
 	s := &Server{
 		Server: &shared.Server{
@@ -136,6 +138,7 @@ func TestHandleGetBooksStatsService(t *testing.T) {
 	tests := []struct {
 		name         string
 		offset       string
+		limit        string
 		expectedCode int
 	}{
 		{
@@ -144,15 +147,22 @@ func TestHandleGetBooksStatsService(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 		},
 		{
+			name:         "it should throw an error if limit isn't sent in query",
+			offset:       "0",
+			limit:        "",
+			expectedCode: http.StatusBadRequest,
+		},
+		{
 			name:         "it should get book stats succesfully",
-			offset:       "4",
+			offset:       "0",
+			limit:        "4",
 			expectedCode: http.StatusOK,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/books/stats?offset=%s", tt.offset), nil)
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/books/stats?offset=%s&limit=%s", tt.offset, tt.limit), nil)
 			rr := httptest.NewRecorder()
 
 			s.HandleGetBooksStats(rr, req)

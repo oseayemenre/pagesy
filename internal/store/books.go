@@ -12,13 +12,16 @@ import (
 	"github.com/oseayemenre/pagesy/internal/models"
 )
 
-var ErrGenresNotFound = errors.New("genres not found")
-var ErrCreatorsBooksNotFound = errors.New("creator doesn't have any books")
-var ErrNoBooksUnderThisGenre = errors.New("no books under this genre yet")
-var ErrNoBooksUnderThisLanguage = errors.New("no books under this language yet")
-var ErrNoBooksUnderThisGenreOrLanguage = errors.New("no books under this genre or language yet")
-var ErrBookNotFound = errors.New("book not found")
-var ErrShouldAtLeasePassOneFieldToUpdate = errors.New("one field at least is required to update")
+var (
+	ErrGenresNotFound                    = errors.New("genres not found")
+	ErrCreatorsBooksNotFound             = errors.New("creator doesn't have any books")
+	ErrNoBooksUnderThisGenre             = errors.New("no books under this genre yet")
+	ErrNoBooksUnderThisLanguage          = errors.New("no books under this language yet")
+	ErrNoBooksUnderThisGenreOrLanguage   = errors.New("no books under this genre or language yet")
+	ErrBookNotFound                      = errors.New("book not found")
+	ErrShouldAtLeasePassOneFieldToUpdate = errors.New("one field at least is required to update")
+	ErrNoBooksInRecents                  = errors.New("no books in recents yet")
+)
 
 func (s *PostgresStore) GetGenresAndReleaseSchedules(ctx context.Context, bookIDs *[]uuid.UUID, booksMap map[uuid.UUID]*models.Book) (*[]models.Book, error) {
 	var books []models.Book
@@ -736,24 +739,30 @@ func (s *PostgresStore) GetRecentReads(ctx context.Context, id string, offset in
 
 	rows, err := s.DB.QueryContext(ctx, `
 			SELECT b.name, b.image,
-			r.chapter_no,
-			NOW() - r.updated_at AS time_difference 
-			JOIN books ON (r.book_id = b.id)
+			r.chapter_no, r.updated_at
 			FROM recents r
-			WHERE user_id = $1
+			JOIN books b ON (r.book_id = b.id)
+			WHERE r.user_id = $1
 			OFFSET $2 LIMIT $3;
 		`, id, offset, limit)
 
 	if err != nil {
-		return nil, fmt.Errorf("error getting recent reads")
+		return nil, fmt.Errorf("error getting recent reads: %v", err)
 	}
 
 	for rows.Next() {
 		var book models.Book
 
-		if err := rows.Scan(&book.Name, &book.Image); err != nil {
+		if err := rows.Scan(&book.Name, &book.Image, &book.ChapterLastRead, &book.TimeLastOpened); err != nil {
+			return nil, fmt.Errorf("error scanning books")
 		}
+
+		books = append(books, book)
 	}
 
-	return nil, nil
+	if len(books) < 1 {
+		return nil, ErrNoBooksInRecents
+	}
+
+	return &books, nil
 }

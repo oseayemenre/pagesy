@@ -37,6 +37,18 @@ const docTemplate = `{
                         "description": "book language",
                         "name": "language",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "offset number",
+                        "name": "offset",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "limit number",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -163,6 +175,54 @@ const docTemplate = `{
                     },
                     "413": {
                         "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/books/recents": {
+            "get": {
+                "description": "Get user's recent reads",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "books"
+                ],
+                "summary": "Get recent reads",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "offset",
+                        "name": "offset",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "limit",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.HandleGetRecentReadsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
@@ -665,6 +725,17 @@ const docTemplate = `{
                 }
             }
         },
+        "models.HandleGetRecentReadsResponse": {
+            "type": "object",
+            "properties": {
+                "books": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RecentReadsResponseBooks"
+                    }
+                }
+            }
+        },
         "models.HandleUploadBooksResponse": {
             "type": "object",
             "properties": {
@@ -681,6 +752,23 @@ const docTemplate = `{
             "properties": {
                 "completed": {
                     "type": "boolean"
+                }
+            }
+        },
+        "models.RecentReadsResponseBooks": {
+            "type": "object",
+            "properties": {
+                "image": {
+                    "type": "string"
+                },
+                "last_read": {
+                    "type": "string"
+                },
+                "last_read_chapter": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

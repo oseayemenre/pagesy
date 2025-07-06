@@ -31,6 +31,8 @@ type Book struct {
 	Image            sql.NullString
 	Views            int
 	Rating           int
+	ChapterLastRead  int
+	TimeLastOpened   time.Time
 	Author_name      string
 	Author_Id        uuid.UUID
 	Completed        bool
@@ -130,7 +132,7 @@ type RecentReadsResponseBooks struct {
 	Name            string `json:"name"`
 	Image           string `json:"image"`
 	LastReadChapter int    `json:"last_read_chapter"`
-	LastRead        int    `json:"last_read"`
+	LastRead        string `json:"last_read"`
 }
 
 type HandleGetRecentReadsResponse struct {
