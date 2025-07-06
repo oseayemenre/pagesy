@@ -722,7 +722,7 @@ func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == store.ErrNoBooksInRecents {
-			s.Server.Logger.Error(err.Error(), "service", "HandleGetRecentReads")
+			s.Server.Logger.Warn(err.Error(), "service", "HandleGetRecentReads")
 			respondWithSuccess(w, http.StatusOK, &models.HandleGetRecentReadsResponse{Books: []models.RecentReadsResponseBooks{}})
 			return
 		}

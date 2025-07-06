@@ -353,23 +353,30 @@ func TestGetBook(t *testing.T) {
 func TestEditBook(t *testing.T) {
 	db := setUpTestDb(t)
 
-	tests := []struct {
-		name    string
-		wantErr bool
-	}{
-		{
-			name:    "should return an error if at least one field isn't passed",
-			wantErr: true,
-		},
-	}
+	t.Run("should return an error if at least one field isn't passed", func(t *testing.T) {
+		err := db.EditBook(context.TODO(), &models.HandleEditBookParam{})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := db.EditBook(context.TODO(), &models.HandleEditBookParam{})
+		if (err != nil) != true {
+			t.Fatalf("expected %v, got %v", true, err != nil)
+		}
+	})
+}
 
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)
-			}
-		})
-	}
+func TestGetRecentReads(t *testing.T) {
+	db := setUpTestDb(t)
+
+	id, _ := db.CreateUser(context.TODO())
+
+	defer func() {
+		db.DB.Exec("DELETE FROM users WHERE id = $1", id)
+	}()
+
+	t.Run("should return an error if recent books is empty", func(t *testing.T) { //this isn't a bad error btw
+		_, err := db.GetRecentReads(context.TODO(), id.String(), 0, 5)
+
+		if (err != nil) != true {
+			t.Fatalf("expected %v, got %v", true, err != nil)
+		}
+
+	})
 }

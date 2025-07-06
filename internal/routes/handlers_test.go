@@ -71,7 +71,7 @@ func (s *testStore) MarkBookAsComplete(ctx context.Context, id string, complete 
 }
 
 func (s *testStore) GetRecentReads(ctx context.Context, id string, offset int, limit int) (*[]models.Book, error) {
-	return nil, nil
+	return &[]models.Book{}, nil
 }
 
 func (s *testStore) CreateUser(ctx context.Context) (*uuid.UUID, error) {
