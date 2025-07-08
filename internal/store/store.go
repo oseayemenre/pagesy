@@ -11,21 +11,23 @@ import (
 )
 
 type Store interface {
-	UploadBook(ctx context.Context, book *models.Book) (string, error)
+	UploadBook(ctx context.Context, book *models.Book) (*uuid.UUID, error)
 	UpdateBookImage(ctx context.Context, url string, id string) error
-	GetBooksStats(ctx context.Context, id string, offset int, limit int) (*[]models.Book, error)
-	GetBooksByGenre(ctx context.Context, genre []string, offset int, limit int) (*[]models.Book, error)
-	GetBooksByLanguage(ctx context.Context, language []string, offset int, limit int) (*[]models.Book, error)
-	GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int) (*[]models.Book, error)
-	GetAllBooks(ctx context.Context, offset int, limit int) (*[]models.Book, error)
+	GetBooksStats(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
+	GetBooksByGenre(ctx context.Context, genre []string, offset int, limit int) ([]models.Book, error)
+	GetBooksByLanguage(ctx context.Context, language []string, offset int, limit int) ([]models.Book, error)
+	GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int) ([]models.Book, error)
+	GetAllBooks(ctx context.Context, offset int, limit int) ([]models.Book, error)
 	GetBook(ctx context.Context, id string) (*models.Book, error)
 	DeleteBook(ctx context.Context, id string) error
 	EditBook(ctx context.Context, book *models.HandleEditBookParam) error
 	ApproveBook(ctx context.Context, id string, approve bool) error
 	MarkBookAsComplete(ctx context.Context, id string, complete bool) error
-	GetRecentReads(ctx context.Context, id string, offset int, limit int) (*[]models.Book, error)
-	GetNewlyUpdated(ctx context.Context, offset int, limit int) (*[]models.Book, error)
-	CreateUser(ctx context.Context) (*uuid.UUID, error) //TODO: fix this later
+	GetRecentReads(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
+	GetNewlyUpdated(ctx context.Context, offset int, limit int) ([]models.Book, error)
+	CheckIfUserExists(ctx context.Context, email string) (*uuid.UUID, error)
+	CreateUserOauth(ctx context.Context, user *models.User) (*uuid.UUID, error) //TODO: fix this later
+	CreateUser(ctx context.Context) (*uuid.UUID, error)                         //TODO: fix this later
 }
 
 type PostgresStore struct {

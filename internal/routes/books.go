@@ -159,7 +159,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		url, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%s", bookId, header.Filename))
+		url, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%s", bookId.String(), header.Filename))
 
 		if err != nil {
 			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
@@ -167,7 +167,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := s.Store.UpdateBookImage(r.Context(), url, bookId); err != nil {
+		if err := s.Store.UpdateBookImage(r.Context(), url, bookId.String()); err != nil {
 			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusInternalServerError, err)
 			return
@@ -180,7 +180,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithSuccess(w, http.StatusCreated, &models.HandleUploadBooksResponse{Id: bookId})
+	respondWithSuccess(w, http.StatusCreated, &models.HandleUploadBooksResponse{Id: bookId.String()})
 }
 
 // HandleGetBooks GoDoc
@@ -243,7 +243,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 
 	var booksResponse []models.HandleGetBooksResponseBook
 
-	for _, b := range *book {
+	for _, b := range book {
 		newBook := &models.HandleGetBooksResponseBook{
 			Id:             b.Id,
 			Name:           b.Name,
@@ -277,10 +277,10 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksStatsResponse{Books: booksResponse})
 }
 
-func handleGetBooksHelper(w http.ResponseWriter, books *[]models.Book) {
+func handleGetBooksHelper(w http.ResponseWriter, books []models.Book) {
 	var booksResponse []models.HandleGetBooksBooks
 
-	for _, b := range *books {
+	for _, b := range books {
 		newBook := &models.HandleGetBooksBooks{
 			Name:           b.Name,
 			Description:    b.Description,
@@ -734,7 +734,7 @@ func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
 
 	var recentBooks []models.RecentReadsResponseBooks
 
-	for _, b := range *books {
+	for _, b := range books {
 		book := models.RecentReadsResponseBooks{
 			Name:            b.Name,
 			Image:           b.Image.String,

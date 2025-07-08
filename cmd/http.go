@@ -15,8 +15,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/oseayemenre/pagesy/internal/config"
+	"github.com/gorilla/sessions"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
+	"github.com/markbates/goth/providers/google"
 	_ "github.com/oseayemenre/pagesy/docs"
+	"github.com/oseayemenre/pagesy/internal/config"
 	"github.com/oseayemenre/pagesy/internal/logger"
 	"github.com/oseayemenre/pagesy/internal/routes"
 	"github.com/oseayemenre/pagesy/internal/shared"
@@ -40,7 +44,25 @@ func NewServer(logger logger.Logger, objectStore store.ObjectStore, store store.
 	}
 }
 
-func (s *Server) Mount() *chi.Mux {
+func (s *Server) Mount(env string, cfg *config.Config) *chi.Mux {
+	store := sessions.NewCookieStore([]byte(cfg.Session_secret))
+	store.MaxAge(8400 * 30)
+	store.Options.Path = "/"
+	store.Options.HttpOnly = true
+
+	if env == "prod" {
+		store.Options.Secure = true
+	} else {
+		store.Options.Secure = false
+		store.Options.SameSite = http.SameSiteLaxMode
+	}
+
+	gothic.Store = store
+
+	goth.UseProviders(
+		google.New(cfg.Google_client_id, cfg.Google_client_secret, fmt.Sprintf("%s/api/v1/auth/google/callback", cfg.Host)),
+	)
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
@@ -126,7 +148,7 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 
 			httpServer := &http.Server{
 				Addr:        fmt.Sprintf(":%d", addr),
-				Handler:     baseServer.Mount(),
+				Handler:     baseServer.Mount(env, &cfg),
 				IdleTimeout: 15 * time.Minute,
 			}
 			errCh := make(chan error, 1)

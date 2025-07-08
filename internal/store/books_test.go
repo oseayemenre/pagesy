@@ -125,7 +125,7 @@ func TestUploadBook(t *testing.T) {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, err != nil)
 			}
 
-			if id != "" {
+			if id != nil {
 				_, err = db.DB.Exec("DELETE FROM books WHERE id = $1", id)
 				if err != nil {
 					t.Fatalf("error deleting book: %v", err)
@@ -314,18 +314,16 @@ func TestGetBook(t *testing.T) {
 		t.Fatalf("error: %v", err)
 	}
 
-	bookUUID, _ := uuid.Parse(book_id)
-
-	defer db.Exec(`DELETE FROM books WHERE id=$1`, bookUUID)
+	defer db.Exec(`DELETE FROM books WHERE id=$1`, book_id)
 
 	tests := []struct {
 		name    string
-		id      string
+		id      *uuid.UUID
 		wantErr bool
 	}{
 		{
 			name:    "should return an error if book is not found",
-			id:      uuid.New().String(),
+			id:      nil,
 			wantErr: true,
 		},
 		{
@@ -337,14 +335,21 @@ func TestGetBook(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			book, err := db.GetBook(context.TODO(), tt.id)
+			var book *models.Book
+			var err error
+
+			if tt.id == nil {
+				book, err = db.GetBook(context.TODO(), "")
+			} else {
+				book, err = db.GetBook(context.TODO(), tt.id.String())
+			}
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)
 			}
 
-			if tt.wantErr == false && book.Id != bookUUID {
-				t.Fatalf("expected %v, got %v", bookUUID, book.Id)
+			if book != nil && tt.wantErr == false && book.Id != *book_id {
+				t.Fatalf("expected %v, got %v", *book_id, book.Id)
 			}
 		})
 	}

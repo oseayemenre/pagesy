@@ -40,6 +40,13 @@ func NewServer(server *shared.Server) *Server {
 func (s *Server) RegisterRoutes() {
 	s.Server.Router.Route("/api/v1", func(r chi.Router) {
 		r.Use(s.LoggingMiddleware)
+		r.Route("/auth", func(r chi.Router) {
+			r.Route("/google", func(r chi.Router) {
+				r.Get("/", s.HandleGoogleSignIn)
+				r.Get("/callback", s.HandleGoogleSignInCallback)
+			})
+		})
+
 		r.Route("/books", func(r chi.Router) {
 			r.With(s.CheckPermission(PermissionUploadBooks)).Post("/", s.HandleUploadBooks)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks)).Get("/stats", s.HandleGetBooksStats)

@@ -138,3 +138,15 @@ type RecentReadsResponseBooks struct {
 type HandleGetRecentReadsResponse struct {
 	Books []RecentReadsResponseBooks `json:"books"`
 }
+
+type User struct {
+	Id              uuid.UUID
+	Username        string
+	Email           string
+	Password        string
+	Name            string
+	Image           string
+	About           string
+	Follower_count  int
+	Following_count int
+}

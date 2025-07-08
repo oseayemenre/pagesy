@@ -15,6 +15,49 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/google": {
+            "get": {
+                "description": "Sign in with google",
+                "tags": [
+                    "users"
+                ],
+                "summary": "Sign in with google",
+                "responses": {
+                    "302": {
+                        "description": "Found"
+                    },
+                    "307": {
+                        "description": "Temporary Redirect"
+                    }
+                }
+            }
+        },
+        "/auth/google/callback": {
+            "get": {
+                "description": "Google auth callback url",
+                "tags": [
+                    "users"
+                ],
+                "summary": "Google auth callback url",
+                "responses": {
+                    "302": {
+                        "description": "Found"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/books": {
             "get": {
                 "description": "Get books by genre, language, both or get all books",

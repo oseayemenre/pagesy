@@ -162,7 +162,6 @@ func helperTestGetBooks(t *testing.T, path string, handler http.HandlerFunc) {
 			}
 		})
 	}
-
 }
 
 func TestHandleGetBooksService(t *testing.T) {
