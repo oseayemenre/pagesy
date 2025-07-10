@@ -57,7 +57,7 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 
 	if id != nil {
 		s.Logger.Warn("user already exists", "service", "HandleGoogleSignInCallback")
-		respondWithError(w, http.StatusInternalServerError, err)
+		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("user already exists"))
 		return
 	}
 

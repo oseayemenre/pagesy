@@ -5,22 +5,29 @@ CREATE TABLE IF NOT EXISTS roles (
   name TEXT UNIQUE NOT NULL
 );
 
-CREATE OR REPLACE FUNCTION get_role_id_by_name()
-RETURNS UUID
+CREATE OR REPLACE FUNCTION match_user_to_roles_on_create_account_func()
+RETURNS TRIGGER
 AS $$
-  DECLARE role_id UUID;
+DECLARE
+  role_id UUID;
 BEGIN
-  SELECT r.id INTO role_id FROM roles WHERE name = 'others';
-  RETURN role_id;
-END;
-$$ language 'plpgsql';
+  SELECT id INTO role_id FROM roles WHERE roles.name = 'others';
+
+  INSERT INTO users_roles(user_id, role_id)
+  VALUES(NEW.id, role_id);
+
+  RETURN NEW;
+END; $$ language 'plpgsql';
+
+CREATE TRIGGER match_user_to_roles_on_create_account
+AFTER INSERT ON users
+FOR EACH ROW
+  EXECUTE FUNCTION match_user_to_roles_on_create_account_func();
 
 CREATE TABLE IF NOT EXISTS users_roles (
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  role_id UUID DEFAULT get_role_id_by_name(),
-  PRIMARY KEY (user_id, role_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+  role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, role_id)
 );
 
 CREATE TABLE IF NOT EXISTS "privileges"(
