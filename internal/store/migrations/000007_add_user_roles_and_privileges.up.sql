@@ -82,7 +82,7 @@ JOIN "privileges" p ON p.name IN(
   'upload:chapters',
   'delete:chapters',
   'recent:reads',
-  'newly:updated'
+  'newly:updated',
   'get:recommendations',
   'get:books',
   'add:library:books',

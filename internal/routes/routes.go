@@ -5,30 +5,6 @@ import (
 	"github.com/oseayemenre/pagesy/internal/shared"
 )
 
-const (
-	PermissionUploadBooks            = "upload:books"
-	PermissionGetCreatorBooks        = "get:creator:books"
-	PermissionGetBookStat            = "get:stats:book"
-	PermissionMarkComplete           = "mark:complete"
-	PermissionUploadChapters         = "upload:chapters"
-	PermissionDeleteChapters         = "delete:chapters"
-	PermissionApproveOrDenyBooks     = "approve:books"
-	PermissionBanUsers               = "ban:users"
-	PermissionGetRecentReads         = "get:recent:reads"
-	PermissionGetNewlyUpdated        = "get:newly:updated"
-	PermissionGetRecommendations     = "get:recommendations"
-	PermissionGetAllBooks            = "get:books"
-	PermissionGetSpecificBook        = "get:book"
-	PermissionAddToLibrary           = "add:library"
-	PermissionGetAllBooksFromLibrary = "get:library:books"
-	PermissionRemoveBookFromLibrary  = "remove:library:book"
-	PermissionBuyCoins               = "coins"
-	PermissionCommentOnBooks         = "book:comment"
-	PermissionGetAllCommentsOnBook   = "book:comments"
-	PermissionDeleteBook             = "book:delete"
-	PermissionEditBook               = "book:edit"
-)
-
 type Server struct {
 	*shared.Server
 }
@@ -50,13 +26,13 @@ func (s *Server) RegisterRoutes() {
 		r.Route("/books", func(r chi.Router) {
 			r.With(s.CheckPermission(PermissionUploadBooks)).Post("/", s.HandleUploadBooks)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks)).Get("/stats", s.HandleGetBooksStats)
-			r.With(s.CheckPermission(PermissionGetCreatorBooks, PermissionGetAllBooks)).Get("/", s.HandleGetBooks)
+			r.With(s.CheckPermission(PermissionGetCreatorBooks, PermissionGetBooks)).Get("/", s.HandleGetBooks)
 			r.With(s.CheckPermission(PermissionGetRecentReads)).Get("/recents", s.HandleGetRecentReads)
 			r.With(s.CheckPermission(PermissionGetNewlyUpdated)).Get("/new", s.HandleGetNewlyUpdated)
 			r.Get("/recommended", nil)
 
 			r.Route("/{bookId}", func(r chi.Router) {
-				r.With(s.CheckPermission(PermissionGetSpecificBook)).Get("/", s.HandleGetBook)
+				r.With(s.CheckPermission(PermissionGetBooks)).Get("/", s.HandleGetBook)
 				r.With(s.CheckPermission(PermissionDeleteBook)).Delete("/", s.HandleDeleteBook)
 				r.With(s.CheckPermission(PermissionEditBook)).Patch("/", s.HandleEditBook)
 				r.With(s.CheckPermission(PermissionApproveOrDenyBooks)).Patch("/approval", s.HandleApproveBook)

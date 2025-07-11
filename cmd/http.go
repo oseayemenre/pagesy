@@ -45,8 +45,12 @@ func NewServer(logger logger.Logger, objectStore store.ObjectStore, store store.
 }
 
 func (s *Server) Mount(env string, cfg *config.Config) *chi.Mux {
+	goth.UseProviders(
+		google.New(cfg.Google_client_id, cfg.Google_client_secret, fmt.Sprintf("%s/api/v1/auth/google/callback", cfg.Host)),
+	)
+
 	store := sessions.NewCookieStore([]byte(cfg.Session_secret))
-	store.MaxAge(8400 * 30)
+	store.MaxAge(86400 * 30)
 	store.Options.Path = "/"
 	store.Options.HttpOnly = true
 
@@ -58,10 +62,6 @@ func (s *Server) Mount(env string, cfg *config.Config) *chi.Mux {
 	}
 
 	gothic.Store = store
-
-	goth.UseProviders(
-		google.New(cfg.Google_client_id, cfg.Google_client_secret, fmt.Sprintf("%s/api/v1/auth/google/callback", cfg.Host)),
-	)
 
 	r := chi.NewRouter()
 

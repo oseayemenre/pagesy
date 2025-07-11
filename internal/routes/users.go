@@ -20,12 +20,7 @@ import (
 // @Router /auth/google [get]
 func (s *Server) HandleGoogleSignIn(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(context.WithValue(r.Context(), "provider", "google"))
-
-	if _, err := gothic.CompleteUserAuth(w, r); err == nil {
-		http.Redirect(w, r, "/", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
-	} else {
-		gothic.BeginAuthHandler(w, r)
-	}
+	gothic.BeginAuthHandler(w, r)
 }
 
 // HandleGoogleSignInCallback godoc
@@ -56,8 +51,10 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 	}
 
 	if id != nil {
-		s.Logger.Warn("user already exists", "service", "HandleGoogleSignInCallback")
-		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("user already exists"))
+		session, _ := gothic.Store.Get(r, "app_session")
+		session.Values["user_id"] = id.String()
+		session.Save(r, w)
+		http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
 		return
 	}
 
@@ -72,7 +69,11 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
+	session, _ := gothic.Store.Get(r, "app_session")
+	session.Values["user_id"] = id.String()
+	session.Save(r, w)
+
+	http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
 }
 
 func (s *Server) HandleCreateUser(w http.ResponseWriter, r *http.Request) {}

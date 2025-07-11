@@ -26,8 +26,9 @@ type Store interface {
 	GetRecentReads(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
 	GetNewlyUpdated(ctx context.Context, offset int, limit int) ([]models.Book, error)
 	CheckIfUserExists(ctx context.Context, email string) (*uuid.UUID, error)
-	CreateUserOauth(ctx context.Context, user *models.User) (*uuid.UUID, error) //TODO: fix this later
-	CreateUser(ctx context.Context) (*uuid.UUID, error)                         //TODO: fix this later
+	CreateUserOauth(ctx context.Context, user *models.User) (*uuid.UUID, error)
+	GetUserById(ctx context.Context, id string) (*models.User, error)
+	CreateUser(ctx context.Context) (*uuid.UUID, error) //TODO: fix this later
 }
 
 type PostgresStore struct {

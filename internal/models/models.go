@@ -146,6 +146,8 @@ type User struct {
 	Password        string
 	Name            string
 	Image           string
+	Role            string
+	Privileges      []string
 	About           string
 	Follower_count  int
 	Following_count int

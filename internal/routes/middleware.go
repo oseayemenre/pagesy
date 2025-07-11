@@ -2,11 +2,13 @@ package routes
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
-	// "strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/markbates/goth/gothic"
 )
 
 type responseWriterWrapper struct {
@@ -45,74 +47,59 @@ func (s *Server) LoggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+const (
+	PermissionUploadBooks            = "books:upload"
+	PermissionGetCreatorBooks        = "creator:books"
+	PermissionGetBookStat            = "books:stats"
+	PermissionMarkComplete           = "mark:complete"
+	PermissionUploadChapters         = "upload:chapters"
+	PermissionDeleteChapters         = "delete:chapters"
+	PermissionApproveOrDenyBooks     = "books:approve"
+	PermissionBanUsers               = "ban:users"
+	PermissionGetRecentReads         = "recent:reads"
+	PermissionGetNewlyUpdated        = "newly:updated"
+	PermissionGetRecommendations     = "get:recommendations"
+	PermissionGetBooks               = "get:books"
+	PermissionAddToLibrary           = "add:library:books"
+	PermissionGetAllBooksFromLibrary = "get:library:books"
+	PermissionRemoveBookFromLibrary  = "remove:library:book"
+	PermissionBuyCoins               = "coins"
+	PermissionCommentOnBooks         = "books:comment"
+	PermissionGetAllCommentsOnBook   = "get:book:comment"
+	PermissionDeleteBook             = "books:delete"
+	PermissionEditBook               = "books:edit"
+)
+
 func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			roles := map[string][]string{
-				"admin": {
-					PermissionUploadBooks, PermissionGetCreatorBooks, PermissionGetBookStat,
-					PermissionMarkComplete, PermissionUploadChapters, PermissionDeleteChapters,
-					PermissionApproveOrDenyBooks, PermissionBanUsers, PermissionGetRecentReads,
-					PermissionGetNewlyUpdated, PermissionGetRecommendations, PermissionGetAllBooks,
-					PermissionGetSpecificBook, PermissionAddToLibrary, PermissionGetAllBooksFromLibrary,
-					PermissionRemoveBookFromLibrary, PermissionBuyCoins,
-					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionDeleteBook, PermissionEditBook,
-				},
-				"creator": {
-					PermissionUploadBooks, PermissionGetCreatorBooks, PermissionGetBookStat,
-					PermissionMarkComplete, PermissionUploadChapters, PermissionDeleteChapters,
-					PermissionGetRecentReads, PermissionGetNewlyUpdated, PermissionGetRecommendations,
-					PermissionGetSpecificBook, PermissionAddToLibrary, PermissionGetAllBooksFromLibrary,
-					PermissionRemoveBookFromLibrary, PermissionBuyCoins,
-					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionGetAllBooks, PermissionDeleteBook,
-					PermissionEditBook,
-				},
-				"reader": {
-					PermissionGetRecentReads, PermissionGetNewlyUpdated, PermissionGetRecommendations,
-					PermissionGetSpecificBook, PermissionAddToLibrary, PermissionGetAllBooksFromLibrary,
-					PermissionRemoveBookFromLibrary, PermissionBuyCoins,
-					PermissionCommentOnBooks, PermissionGetAllCommentsOnBook, PermissionGetAllBooks,
-					PermissionEditBook,
-				},
-			}
-			// header := r.Header.Get("Authorization")
-			//
-			// if header == "" {
-			// 	s.Server.Logger.Warn("check permission", "status", "authorization header cannot be empty")
-			//
-			// 	w.Header().Set("Content-Type", "application/json")
-			// 	w.WriteHeader(http.StatusNotFound)
-			// 	json.NewEncoder(w).Encode(map[string]string{"error": "authorization header cannot be empty"})
-			// 	return
-			// }
-			//
-			// headerSplit := strings.Split(header, " ")
-			//
-			// if len(headerSplit) < 2 || headerSplit[0] != "Bearer" {
-			// 	s.Server.Logger.Warn("check permission", "status", "malformed header")
-			//
-			// 	w.Header().Set("Content-Type", "application/json")
-			// 	w.WriteHeader(http.StatusBadRequest)
-			// 	json.NewEncoder(w).Encode(map[string]string{"error": "malformed header"})
-			// 	return
-			// }
-			//
-			// //TODO: add jwt check here, using dummy user for now
+			r = r.WithContext(context.WithValue(r.Context(), "provider", "google"))
 
-			user := struct {
-				name string
-				role string
-			}{
-				name: "ose",
-				role: "creator",
+			session, _ := gothic.Store.Get(r, "app_session")
+
+			id, ok := session.Values["user_id"].(string)
+
+			if !ok || id == "" {
+				s.Logger.Warn("no user in session", "status", "permission denied")
+				respondWithError(w, http.StatusNotFound, fmt.Errorf("no user in session"))
+				return
 			}
 
-			rolePermissions := roles[user.role]
+			db_user, err := s.Store.GetUserById(r.Context(), id)
+
+			if err != nil {
+				s.Logger.Warn(err.Error(), "service", "middleware")
+				respondWithError(w, http.StatusNotFound, err)
+				return
+			}
+
 			hasPermission := false
 
-			for _, allowedPerms := range permissions {
-				for _, rolePerms := range rolePermissions {
-					if rolePerms == allowedPerms {
+			fmt.Println(db_user.Privileges)
+
+			for _, perm := range permissions {
+				for _, roles_perm := range db_user.Privileges {
+					if roles_perm == perm {
 						hasPermission = true
 						break
 					}
@@ -120,12 +107,17 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 			}
 
 			if !hasPermission {
-				s.Server.Logger.Warn("check permission", "status", "permission denied")
-
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusForbidden)
-				json.NewEncoder(w).Encode(map[string]string{"error": "permission denied"})
+				s.Server.Logger.Warn("role does not have permission to access this route", "status", "permission denied")
+				respondWithError(w, http.StatusForbidden, fmt.Errorf("role does not have permission to access this route"))
 				return
+			}
+
+			user := struct {
+				id   uuid.UUID
+				role string
+			}{
+				id:   db_user.Id,
+				role: db_user.Role,
 			}
 
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "user", user)))
