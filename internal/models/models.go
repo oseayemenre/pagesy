@@ -152,3 +152,13 @@ type User struct {
 	Follower_count  int
 	Following_count int
 }
+
+type HandleRegisterParams struct {
+	Username string `json:"username" validate:"required"`
+	Email    string `json:"email" validate:"email,required"`
+	Password string `json:"password" validate:"required,min=8"`
+}
+
+type HandleRegisterResponse struct {
+	Id string `json:"id"`
+}

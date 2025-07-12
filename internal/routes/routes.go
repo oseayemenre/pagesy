@@ -21,6 +21,9 @@ func (s *Server) RegisterRoutes() {
 				r.Get("/", s.HandleGoogleSignIn)
 				r.Get("/callback", s.HandleGoogleSignInCallback)
 			})
+
+			r.Post("/register", s.HandleRegister)
+			r.Post("/login", s.HandleLogin)
 		})
 
 		r.Route("/books", func(r chi.Router) {

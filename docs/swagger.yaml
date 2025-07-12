@@ -123,6 +123,24 @@ definitions:
           $ref: '#/definitions/models.RecentReadsResponseBooks'
         type: array
     type: object
+  models.HandleRegisterParams:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - password
+    - username
+    type: object
+  models.HandleRegisterResponse:
+    properties:
+      id:
+        type: string
+    type: object
   models.HandleUploadBooksResponse:
     properties:
       id:
@@ -188,6 +206,40 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Google auth callback url
+      tags:
+      - users
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register user using emal, username and password
+      parameters:
+      - description: user
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.HandleRegisterParams'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.HandleRegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Register user
       tags:
       - users
   /books:

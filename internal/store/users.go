@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -76,13 +75,14 @@ func (s *PostgresStore) GetUserById(ctx context.Context, id string) (*models.Use
 	return &user, nil
 }
 
-func (s *PostgresStore) CreateUser(ctx context.Context) (*uuid.UUID, error) {
+func (s *PostgresStore) CreateUser(ctx context.Context, user *models.User) (*uuid.UUID, error) {
 	var id uuid.UUID
 
 	if err := s.DB.QueryRowContext(ctx, `
-			INSERT INTO users(name, email) VALUES ('test user', $1) RETURNING id; 
-		`, rand.Text()).Scan(&id); err != nil {
-	} //TODO: just doing this so the test passes for now
-
+		INSERT INTO users(username, email, password) 
+		VALUES ($1, $2, $3) RETURNING id;`,
+		user.Username, user.Email, user.Password).Scan(&id); err != nil {
+		return nil, fmt.Errorf("error inserting in users table: %v", err)
+	}
 	return &id, nil
 }

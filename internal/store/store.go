@@ -28,7 +28,7 @@ type Store interface {
 	CheckIfUserExists(ctx context.Context, email string) (*uuid.UUID, error)
 	CreateUserOauth(ctx context.Context, user *models.User) (*uuid.UUID, error)
 	GetUserById(ctx context.Context, id string) (*models.User, error)
-	CreateUser(ctx context.Context) (*uuid.UUID, error) //TODO: fix this later
+	CreateUser(ctx context.Context, user *models.User) (*uuid.UUID, error)
 }
 
 type PostgresStore struct {
