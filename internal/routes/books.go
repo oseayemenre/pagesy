@@ -2,7 +2,6 @@ package routes
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -627,9 +626,7 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 	bookId := chi.URLParam(r, "bookId")
 	param := models.ApproveBookParam{}
 
-	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
-		s.Server.Logger.Error(fmt.Sprintf("error decoding json: %v", err), "service", "HandleApproveBook")
-		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error decoding json: %v", err))
+	if err := s.decodeJson(w, r, param, "HandleApproveBook"); err != nil {
 		return
 	}
 
@@ -663,9 +660,7 @@ func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request
 	bookId := chi.URLParam(r, "bookId")
 	param := models.MarkAsCompleteParam{}
 
-	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
-		s.Server.Logger.Error(fmt.Sprintf("error decoding json: %v", err), "service", "HandleMarkBookAsComplete")
-		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error decoding json: %v", err))
+	if err := s.decodeJson(w, r, param, "HandleMarkBookAsComplete"); err != nil {
 		return
 	}
 

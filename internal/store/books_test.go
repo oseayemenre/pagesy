@@ -6,13 +6,18 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"fmt"
 	"github.com/oseayemenre/pagesy/internal/models"
 )
 
 func TestUploadBook(t *testing.T) {
 	db := setUpTestDb(t)
 
-	author_id, _ := db.CreateUser(context.TODO()) //TODO: fix this later
+	author_id, _ := db.CreateUser(context.TODO(), &models.User{
+		Username: "fake_username",
+		Email:    "fake_email@email.com",
+		Password: "fake_password",
+	})
 
 	defer func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
@@ -138,7 +143,11 @@ func TestUploadBook(t *testing.T) {
 func TestGetBooksStats(t *testing.T) {
 	db := setUpTestDb(t)
 
-	author_id, _ := db.CreateUser(context.TODO()) //TODO: fix this later
+	author_id, _ := db.CreateUser(context.TODO(), &models.User{
+		Username: "fake_username",
+		Email:    "fake_email@email.com",
+		Password: "fake_password",
+	})
 
 	defer func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
@@ -277,7 +286,11 @@ func TestGetBooksByGenreAndLanguage(t *testing.T) {
 func TestGetBook(t *testing.T) {
 	db := setUpTestDb(t)
 
-	author_id, _ := db.CreateUser(context.TODO()) //TODO: fix this later
+	author_id, _ := db.CreateUser(context.TODO(), &models.User{
+		Username: "fake_username",
+		Email:    "fake_email@email.com",
+		Password: "fake_password",
+	})
 
 	defer func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
@@ -344,6 +357,8 @@ func TestGetBook(t *testing.T) {
 				book, err = db.GetBook(context.TODO(), tt.id.String())
 			}
 
+			fmt.Println(err)
+
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)
 			}
@@ -370,7 +385,11 @@ func TestEditBook(t *testing.T) {
 func TestGetRecentReads(t *testing.T) {
 	db := setUpTestDb(t)
 
-	id, _ := db.CreateUser(context.TODO())
+	id, _ := db.CreateUser(context.TODO(), &models.User{
+		Username: "fake_username",
+		Email:    "fake_email@email.com",
+		Password: "fake_password",
+	})
 
 	defer func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", id)

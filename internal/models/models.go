@@ -162,3 +162,9 @@ type HandleRegisterParams struct {
 type HandleRegisterResponse struct {
 	Id string `json:"id"`
 }
+
+type HandleLoginParams struct {
+	Email    string `json:"email" validate:"email"`
+	Username string `json:"username"`
+	Password string `json:"password" validate:"required"`
+}

@@ -3,7 +3,6 @@ package routes
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -93,9 +92,7 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var params models.HandleRegisterParams
 
-	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		s.Logger.Warn(fmt.Sprintf("error decoding json: %v", err), "service", "HandleRegister")
-		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error decoding json: %v", err))
+	if err := s.decodeJson(w, r, params, "HandleRegister"); err != nil {
 		return
 	}
 
@@ -142,6 +139,10 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	respondWithSuccess(w, http.StatusCreated, &models.HandleRegisterResponse{Id: id.String()})
 }
 
-func (s *Server) HandleLogin(w http.ResponseWriter, r http.Request) {}
+func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	var params models.HandleLoginParams
 
-func (s *Server) HandleBanUser(w http.ResponseWriter, r *http.Request) {}
+	if err := s.decodeJson(w, r, params, "HandleLogin"); err != nil {
+		return
+	}
+}

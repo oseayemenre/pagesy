@@ -95,8 +95,6 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 
 			hasPermission := false
 
-			fmt.Println(db_user.Privileges)
-
 			for _, perm := range permissions {
 				for _, roles_perm := range db_user.Privileges {
 					if roles_perm == perm {

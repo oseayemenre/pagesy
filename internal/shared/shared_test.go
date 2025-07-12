@@ -13,6 +13,6 @@ func TestHashPassword(t *testing.T) {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 
 	if err != nil {
-		t.Errorf("Password comparison failed: %v", err)
+		t.Fatalf("Password comparison failed: %v", err)
 	}
 }
