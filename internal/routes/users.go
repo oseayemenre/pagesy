@@ -1,11 +1,14 @@
 package routes
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/markbates/goth/gothic"
 	"github.com/oseayemenre/pagesy/internal/models"
@@ -46,35 +49,138 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 	id, err := s.Store.CheckIfUserExists(r.Context(), user.Email)
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.Logger.Error(err.Error(), "service", "HandleGoogleSignInCallback")
-		respondWithError(w, http.StatusInternalServerError, err)
+		s.Logger.Warn(err.Error(), "service", "HandleGoogleSignInCallback")
+		respondWithError(w, http.StatusNotFound, err)
 		return
 	}
 
 	if id != nil {
-		session, _ := gothic.Store.Get(r, "app_session")
-		session.Values["user_id"] = id.String()
-		session.Save(r, w)
-		http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
+		if err := CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret, "HandleGoogleSignInCallback"); err != nil {
+			s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
+			respondWithError(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+
+	session, _ := gothic.Store.Get(r, "app_session")
+	session.Values["user_email"] = user.Email
+	session.Save(r, w)
+	http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
+}
+
+// HandleOnboarding godoc
+// @Summary Onboard users
+// @Description Onboard users with display_name, name, about and image
+// @Tags users
+// @Accept multipart/form-data
+// @Produce json
+// @Param username formData string true "username"
+// @Param display_name formData string true "display name"
+// @Param about formData string false "about"
+// @Param image formData file false "profile_picture"
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 413 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Success 201 {object} models.HandleRegisterResponse
+// @Router /auth/onboarding [post]
+func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
+	session, _ := gothic.Store.Get(r, "app_session")
+
+	email, ok := session.Values["user_email"].(string)
+
+	if !ok || email == "" {
+		s.Logger.Warn("no user in session", "status", "permission denied")
+		respondWithError(w, http.StatusNotFound, fmt.Errorf("no user in session"))
 		return
 	}
 
-	id, err = s.Store.CreateUserOauth(r.Context(), &models.User{
-		Email: user.Email,
-		Image: user.AvatarURL,
+	password, _ := session.Values["user_password"].(string)
+
+	r.Body = http.MaxBytesReader(w, r.Body, 500<<10)
+
+	if err := r.ParseMultipartForm(500 << 10); err != nil {
+		s.Logger.Warn(fmt.Sprintf("error parsing data: %v", err), "service", "HandleOnboarding")
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	params := models.HandleOnboardingParams{
+		Username:     r.FormValue("username"),
+		Display_name: r.FormValue("display_name"),
+		About:        r.FormValue("about"),
+	}
+
+	if err := shared.Validate.Struct(&params); err != nil {
+		s.Server.Logger.Warn(fmt.Sprintf("validation error: %v", err), "service", "HandleOnboarding")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("validation error: %v", err))
+		return
+	}
+
+	file, header, err := r.FormFile("image")
+
+	if err != nil && err != http.ErrMissingFile {
+		s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleOnboarding")
+		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
+		return
+	}
+
+	if err == nil {
+		defer file.Close()
+		image, err := io.ReadAll(file)
+
+		if err != nil {
+			s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleOnboarding")
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
+			return
+		}
+
+		if len(image) > 400<<10 {
+			s.Server.Logger.Error("image too large", "service", "HandleOnboarding")
+			respondWithError(w, http.StatusRequestEntityTooLarge, fmt.Errorf("image too large"))
+			return
+		}
+
+		if contentType := http.DetectContentType(image); !strings.HasPrefix(contentType, "image/") {
+			s.Server.Logger.Warn("invalid file type", "service", "HandleOnboarding")
+			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
+			return
+		}
+
+		params.Image, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(image), fmt.Sprintf("%s_%s", email, header.Filename))
+
+		if err != nil {
+			s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
+			respondWithError(w, http.StatusBadRequest, err)
+			return
+		}
+	}
+
+	id, err := s.Store.CreateUser(r.Context(), &models.User{
+		Username:     params.Username,
+		Display_name: params.Display_name,
+		Email:        email,
+		Password:     password,
+		About:        params.About,
+		Image:        params.Image,
 	})
 
 	if err != nil {
-		s.Logger.Warn(err.Error(), "service", "HandleGoogleSignInCallback")
+		s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
+		respondWithError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	delete(session.Values, "user_email")
+	delete(session.Values, "user_password")
+
+	if err := CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret, "HandleOnboarding"); err != nil {
+		s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	session, _ := gothic.Store.Get(r, "app_session")
-	session.Values["user_id"] = id.String()
-	session.Save(r, w)
-
-	http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
+	respondWithSuccess(w, http.StatusCreated, &models.HandleRegisterResponse{Id: id.String()})
 }
 
 // HandleRegister godoc
@@ -116,7 +222,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPaswword, err := shared.HashPassword(params.Password)
+	hashedPaswword, err := HashPassword(params.Password)
 
 	if err != nil {
 		s.Logger.Error(err.Error(), "service", "HandleRegister")
@@ -124,19 +230,11 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err = s.Store.CreateUser(r.Context(), &models.User{
-		Username: params.Username,
-		Email:    params.Email,
-		Password: hashedPaswword,
-	})
-
-	if err != nil {
-		s.Logger.Error(err.Error(), "service", "HandleRegister")
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	respondWithSuccess(w, http.StatusCreated, &models.HandleRegisterResponse{Id: id.String()})
+	session, _ := gothic.Store.Get(r, "app_session")
+	session.Values["user_email"] = params.Email
+	session.Values["user_password"] = hashedPaswword
+	session.Save(r, w)
+	http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
 }
 
 func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {

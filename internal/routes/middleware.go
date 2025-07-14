@@ -73,19 +73,27 @@ const (
 func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, err := r.Cookie("access_token") //TODO: handle this
+
+			if err != nil {
+				s.Logger.Warn(fmt.Sprintf("error retrieving cookie: %v", err), "status", "permission denied")
+				respondWithError(w, http.StatusNotFound, fmt.Errorf("error retrieving cookie: %v", err))
+				return
+			}
+
 			r = r.WithContext(context.WithValue(r.Context(), "provider", "google"))
 
 			session, _ := gothic.Store.Get(r, "app_session")
 
-			id, ok := session.Values["user_id"].(string)
+			email, ok := session.Values["user_email"].(string)
 
-			if !ok || id == "" {
+			if !ok || email == "" {
 				s.Logger.Warn("no user in session", "status", "permission denied")
 				respondWithError(w, http.StatusNotFound, fmt.Errorf("no user in session"))
 				return
 			}
 
-			db_user, err := s.Store.GetUserById(r.Context(), id)
+			db_user, err := s.Store.GetUserByEmail(r.Context(), email)
 
 			if err != nil {
 				s.Logger.Warn(err.Error(), "service", "middleware")

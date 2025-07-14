@@ -34,12 +34,13 @@ type Server struct {
 	*shared.Server
 }
 
-func NewServer(logger logger.Logger, objectStore store.ObjectStore, store store.Store) *Server {
+func NewServer(logger logger.Logger, objectStore store.ObjectStore, store store.Store, cfg *config.Config) *Server {
 	return &Server{
 		Server: &shared.Server{
 			Logger:      logger,
 			ObjectStore: objectStore,
 			Store:       store,
+			Config:      cfg,
 		},
 	}
 }
@@ -50,7 +51,7 @@ func (s *Server) Mount(env string, cfg *config.Config) *chi.Mux {
 	)
 
 	store := sessions.NewCookieStore([]byte(cfg.Session_secret))
-	store.MaxAge(86400 * 30)
+	store.MaxAge(86400)
 	store.Options.Path = "/"
 	store.Options.HttpOnly = true
 
@@ -144,7 +145,7 @@ func HTTPCommand(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			baseServer := NewServer(logger, objectStore, db)
+			baseServer := NewServer(logger, objectStore, db, &cfg)
 
 			httpServer := &http.Server{
 				Addr:        fmt.Sprintf(":%d", addr),

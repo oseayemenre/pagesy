@@ -22,6 +22,7 @@ func (s *Server) RegisterRoutes() {
 				r.Get("/callback", s.HandleGoogleSignInCallback)
 			})
 
+			r.Post("/onboarding", s.HandleOnboarding)
 			r.Post("/register", s.HandleRegister)
 			r.Post("/login", s.HandleLogin)
 		})

@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"fmt"
 	"github.com/oseayemenre/pagesy/internal/models"
 )
 
@@ -327,7 +326,11 @@ func TestGetBook(t *testing.T) {
 		t.Fatalf("error: %v", err)
 	}
 
-	defer db.Exec(`DELETE FROM books WHERE id=$1`, book_id)
+	db.DB.Exec(`
+			UPDATE books
+			SET approved = true
+			WHERE id = $1;
+		`, book_id)
 
 	tests := []struct {
 		name    string
@@ -356,8 +359,6 @@ func TestGetBook(t *testing.T) {
 			} else {
 				book, err = db.GetBook(context.TODO(), tt.id.String())
 			}
-
-			fmt.Println(err)
 
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)

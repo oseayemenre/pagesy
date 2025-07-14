@@ -8,5 +8,6 @@ type Config struct {
 	Google_client_id     string `mapstructure:"GOOGLE_CLIENT_ID"`
 	Google_client_secret string `mapstructure:"GOOGLE_CLIENT_SECRET"`
 	Session_secret       string `mapstructure:"SESSION_SECRET"`
+	Jwt_secret           string `mapstructure:"JWT_SECRET"`
 	Host                 string `mapstructure:"HOST"`
 }

@@ -269,7 +269,7 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, off
 			JOIN chapters c ON (b.id = c.book_id)
 			JOIN books_genres bg ON (bg.book_id = b.id)
 			JOIN genres g ON (g.id = bg.genre_id)
-			WHERE g.genres = ANY($1)
+			WHERE g.genres = ANY($1) AND b.approved = true
 			GROUP BY b.id
 			ORDER BY b.views DESC
 			OFFSET $2 LIMIT $3;
@@ -321,7 +321,7 @@ func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []strin
 			COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
-			WHERE b.language = ANY($1::languages[])
+			WHERE b.language = ANY($1::languages[]) AND b.approved = true
 			GROUP BY b.id
 			ORDER BY b.views DESC
 			OFFSET $2 LIMIT $3;
@@ -375,7 +375,7 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 			JOIN chapters c ON (b.id = c.book_id)
 			JOIN books_genres bg ON (bg.book_id = b.id)
 			JOIN genres g ON (g.id = bg.genre_id)
-			WHERE b.language = ANY($1::languages[]) AND g.genres = ANY($2)
+			WHERE b.language = ANY($1::languages[]) AND g.genres = ANY($2) AND b.approved = true
 			GROUP BY b.id
 			OFFSET $3 LIMIT $4;
 		`, pq.Array(language), pq.Array(genre), offset, limit)
@@ -426,6 +426,7 @@ func (s *PostgresStore) GetAllBooks(ctx context.Context, offset int, limit int) 
 			COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
+			WHERE b.approved = true
 			GROUP BY b.id
 			ORDER BY b.views DESC
 			OFFSET $1 LIMIT $2;
@@ -472,13 +473,13 @@ func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, e
 
 	err := s.DB.QueryRowContext(ctx, `
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating, b.language, b.completed, b.created_at,
-			u.name,
+			u.username,
 			COUNT (c.id)
 			FROM books b
 			JOIN users u ON (u.id = b.author_id)
-			JOIN chapters c ON (c.book_id = b.id)	
-			WHERE b.id = $1
-			GROUP BY b.id, u.name;
+			JOIN chapters c ON (c.book_id = b.id)
+			WHERE b.id = $1 AND b.approved = true
+			GROUP BY b.id, u.username;
 		`, id).Scan(
 		&book.Id,
 		&book.Name,
@@ -773,6 +774,7 @@ func (s *PostgresStore) GetNewlyUpdated(ctx context.Context, offset int, limit i
 			COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
+			WHERE b.approved = true
 			GROUP BY b.id
 			ORDER BY b.updated_at DESC
 			OFFSET $1 LIMIT $2;

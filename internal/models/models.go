@@ -142,9 +142,9 @@ type HandleGetRecentReadsResponse struct {
 type User struct {
 	Id              uuid.UUID
 	Username        string
+	Display_name    string
 	Email           string
 	Password        string
-	Name            string
 	Image           string
 	Role            string
 	Privileges      []string
@@ -153,8 +153,14 @@ type User struct {
 	Following_count int
 }
 
+type HandleOnboardingParams struct {
+	Username     string `validate:"required"`
+	Display_name string `validate:"required"`
+	Image        string
+	About        string
+}
+
 type HandleRegisterParams struct {
-	Username string `json:"username" validate:"required"`
 	Email    string `json:"email" validate:"email,required"`
 	Password string `json:"password" validate:"required,min=8"`
 }

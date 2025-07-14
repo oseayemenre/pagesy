@@ -128,13 +128,11 @@ definitions:
       email:
         type: string
       password:
-        type: string
-      username:
+        minLength: 8
         type: string
     required:
     - email
     - password
-    - username
     type: object
   models.HandleRegisterResponse:
     properties:
@@ -206,6 +204,56 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Google auth callback url
+      tags:
+      - users
+  /auth/onboarding:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Onboard users with display_name, name, about and image
+      parameters:
+      - description: username
+        in: formData
+        name: username
+        required: true
+        type: string
+      - description: display name
+        in: formData
+        name: display_name
+        required: true
+        type: string
+      - description: about
+        in: formData
+        name: about
+        type: string
+      - description: profile_picture
+        in: formData
+        name: image
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.HandleRegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Onboard users
       tags:
       - users
   /auth/register:

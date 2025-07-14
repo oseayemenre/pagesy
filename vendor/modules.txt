@@ -63,6 +63,7 @@ github.com/go-viper/mapstructure/v2
 github.com/go-viper/mapstructure/v2/internal/errors
 # github.com/golang-jwt/jwt/v5 v5.2.2
 ## explicit; go 1.18
+github.com/golang-jwt/jwt/v5
 # github.com/golang/protobuf v1.5.4
 ## explicit; go 1.17
 # github.com/google/uuid v1.6.0

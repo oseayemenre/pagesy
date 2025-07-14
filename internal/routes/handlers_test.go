@@ -81,10 +81,6 @@ func (s *testStore) CreateUser(ctx context.Context, user *models.User) (*uuid.UU
 	return nil, nil
 }
 
-func (s *testStore) CreateUserOauth(ctx context.Context, user *models.User) (*uuid.UUID, error) {
-	return nil, nil
-}
-
 func (s *testStore) GetNewlyUpdated(ctx context.Context, offset int, limit int) ([]models.Book, error) {
 	return []models.Book{}, nil
 }
@@ -98,6 +94,6 @@ func (s *testStore) CheckIfUserExists(ctx context.Context, email string) (*uuid.
 	return nil, nil
 }
 
-func (s *testStore) GetUserById(ctx context.Context, id string) (*models.User, error) {
+func (s *testStore) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	return nil, nil
 }
