@@ -203,7 +203,9 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var params models.HandleRegisterParams
 
-	if err := s.decodeJson(w, r, &params, "HandleRegister"); err != nil {
+	if err := decodeJson(r, &params); err != nil {
+		s.Logger.Warn(err.Error(), "service", "HandleRegister")
+		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -245,7 +247,9 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	var params models.HandleLoginParams
 
-	if err := s.decodeJson(w, r, params, "HandleLogin"); err != nil {
+	if err := decodeJson(r, &params); err != nil {
+		s.Logger.Warn(err.Error(), "service", "HandleLogin")
+		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 }

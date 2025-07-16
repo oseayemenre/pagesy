@@ -626,7 +626,9 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 	bookId := chi.URLParam(r, "bookId")
 	param := models.ApproveBookParam{}
 
-	if err := s.decodeJson(w, r, param, "HandleApproveBook"); err != nil {
+	if err := decodeJson(r, &param); err != nil {
+		s.Logger.Warn(err.Error(), "service", "HandleApproveBook")
+		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -660,7 +662,9 @@ func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request
 	bookId := chi.URLParam(r, "bookId")
 	param := models.MarkAsCompleteParam{}
 
-	if err := s.decodeJson(w, r, param, "HandleMarkBookAsComplete"); err != nil {
+	if err := decodeJson(r, &param); err != nil {
+		s.Logger.Warn(err.Error(), "service", "HandleMarkBookAsComplete")
+		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
