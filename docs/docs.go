@@ -97,6 +97,13 @@ const docTemplate = `{
                         "description": "profile_picture",
                         "name": "image",
                         "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "app_session=12345",
+                        "name": "Cookie",
+                        "in": "header",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -135,7 +142,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
-                "description": "Register user using emal, username and password",
+                "description": "Register user using email, username and password",
                 "consumes": [
                     "application/json"
                 ],
@@ -158,11 +165,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/models.HandleRegisterResponse"
-                        }
+                    "200": {
+                        "description": "OK"
                     },
                     "400": {
                         "description": "Bad Request",

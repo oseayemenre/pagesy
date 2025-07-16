@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/markbates/goth/gothic"
+	"github.com/oseayemenre/pagesy/internal/bcrypt"
+	"github.com/oseayemenre/pagesy/internal/cookies"
 	"github.com/oseayemenre/pagesy/internal/models"
 	"github.com/oseayemenre/pagesy/internal/shared"
 )
@@ -55,7 +57,7 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 	}
 
 	if id != nil {
-		if err := CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret, "HandleGoogleSignInCallback"); err != nil {
+		if err := cookies.CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret, "HandleGoogleSignInCallback"); err != nil {
 			s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
 			respondWithError(w, http.StatusInternalServerError, err)
 			return
@@ -78,11 +80,13 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 // @Param display_name formData string true "display name"
 // @Param about formData string false "about"
 // @Param image formData file false "profile_picture"
+// @Param Cookie header string true "app_session=12345"
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 404 {object} models.ErrorResponse
 // @Failure 413 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
 // @Success 201 {object} models.HandleRegisterResponse
+// @Header 200 {string} Set-Cookie "access_token=12345 refresh_token=12345"
 // @Router /auth/onboarding [post]
 func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 	session, _ := gothic.Store.Get(r, "app_session")
@@ -174,7 +178,7 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 	delete(session.Values, "user_email")
 	delete(session.Values, "user_password")
 
-	if err := CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret, "HandleOnboarding"); err != nil {
+	if err := cookies.CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret, "HandleOnboarding"); err != nil {
 		s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
@@ -185,7 +189,7 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 
 // HandleRegister godoc
 // @Summary Register user
-// @Description Register user using emal, username and password
+// @Description Register user using email, username and password
 // @Tags users
 // @Accept application/json
 // @Produce json
@@ -193,12 +197,13 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 409 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Success 201 {object} models.HandleRegisterResponse
+// @Success 302
+// @Header 302 {string} Set-Cookie "app_session"
 // @Router /auth/register [post]
 func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var params models.HandleRegisterParams
 
-	if err := s.decodeJson(w, r, params, "HandleRegister"); err != nil {
+	if err := s.decodeJson(w, r, &params, "HandleRegister"); err != nil {
 		return
 	}
 
@@ -222,7 +227,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hashedPaswword, err := HashPassword(params.Password)
+	hashedPaswword, err := bcrypt.HashPassword(params.Password)
 
 	if err != nil {
 		s.Logger.Error(err.Error(), "service", "HandleRegister")

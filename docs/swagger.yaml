@@ -230,6 +230,11 @@ paths:
         in: formData
         name: image
         type: file
+      - description: app_session=12345
+        in: header
+        name: Cookie
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -260,7 +265,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Register user using emal, username and password
+      description: Register user using email, username and password
       parameters:
       - description: user
         in: body
@@ -271,10 +276,8 @@ paths:
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/models.HandleRegisterResponse'
+        "200":
+          description: OK
         "400":
           description: Bad Request
           schema:
