@@ -12,11 +12,15 @@ import (
 func TestUploadBook(t *testing.T) {
 	db := setUpTestDb(t)
 
-	author_id, _ := db.CreateUser(context.TODO(), &models.User{
+	author_id, err := db.CreateUser(context.TODO(), &models.User{
 		Username: "fake_username",
 		Email:    "fake_email@email.com",
 		Password: "fake_password",
 	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	defer func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)

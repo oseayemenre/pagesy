@@ -2,6 +2,8 @@ package routes
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -9,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/oseayemenre/pagesy/internal/models"
 	"github.com/oseayemenre/pagesy/internal/shared"
 )
 
@@ -111,6 +115,11 @@ func TestHandleUploadBooksService(t *testing.T) {
 			writer.Close()
 
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/books", body)
+			req = req.WithContext(context.WithValue(context.TODO(), "user", &models.User{
+				Id:   uuid.New(),
+				Role: "",
+			}))
+
 			req.Header.Set("Content-Type", writer.FormDataContentType())
 
 			rr := httptest.NewRecorder()
@@ -153,6 +162,12 @@ func helperTestGetBooks(t *testing.T, path string, handler http.HandlerFunc) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(path, tt.offset, tt.limit), nil)
+
+			req = req.WithContext(context.WithValue(context.TODO(), "user", &models.User{
+				Id:   uuid.New(),
+				Role: "",
+			}))
+
 			rr := httptest.NewRecorder()
 
 			handler(rr, req)
@@ -262,18 +277,7 @@ func TestHandleEditBookService(t *testing.T) {
 	}
 }
 
-func helperPatchBookRequests(t *testing.T, path string, handler http.HandlerFunc) {
-	req := httptest.NewRequest(http.MethodPatch, path, bytes.NewBuffer([]byte("")))
-	rr := httptest.NewRecorder()
-
-	handler(rr, req)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected %d, got %d", http.StatusBadRequest, rr.Code)
-	}
-}
-
-func HandleMarkBookAsCompleteService(t *testing.T) {
+func TestHandleMarkBookAsCompleteService(t *testing.T) {
 	s := &Server{
 		Server: &shared.Server{
 			Logger:      &testLogger{},
@@ -282,10 +286,39 @@ func HandleMarkBookAsCompleteService(t *testing.T) {
 		},
 	}
 
-	helperPatchBookRequests(t, "/api/v1/books/1/complete", s.HandleApproveBook)
+	tests := []struct {
+		name         string
+		body         any
+		expectedCode int
+	}{
+		{
+			name:         "should return an error if data could not be validated",
+			body:         struct{ key string }{key: "value"},
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "should mark book as complete",
+			body:         &models.MarkAsCompleteParam{Completed: true},
+			expectedCode: http.StatusNoContent,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshal_body, _ := json.Marshal(tt.body)
+			req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1/complete", bytes.NewBuffer(marshal_body))
+			rr := httptest.NewRecorder()
+
+			s.HandleMarkBookAsComplete(rr, req)
+
+			if rr.Code != tt.expectedCode {
+				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
+			}
+		})
+	}
 }
 
-func HandleApproveBookService(t *testing.T) {
+func TestHandleApproveBookService(t *testing.T) {
 	s := &Server{
 		Server: &shared.Server{
 			Logger:      &testLogger{},
@@ -294,7 +327,36 @@ func HandleApproveBookService(t *testing.T) {
 		},
 	}
 
-	helperPatchBookRequests(t, "/api/v1/books/1/approval", s.HandleApproveBook)
+	tests := []struct {
+		name         string
+		body         any
+		expectedCode int
+	}{
+		{
+			name:         "should return an error if data could not be validated",
+			body:         struct{ key string }{key: "value"},
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "should approve book",
+			body:         &models.ApproveBookParam{Approve: true},
+			expectedCode: http.StatusNoContent,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshal_body, _ := json.Marshal(tt.body)
+			req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1/approval", bytes.NewBuffer(marshal_body))
+			rr := httptest.NewRecorder()
+
+			s.HandleApproveBook(rr, req)
+
+			if rr.Code != tt.expectedCode {
+				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
+			}
+		})
+	}
 }
 
 func TestHandleGetRecentReads(t *testing.T) {

@@ -2,11 +2,17 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/models"
+)
+
+var (
+	ErrUserNotFound = errors.New("user not found")
 )
 
 func (s *PostgresStore) CheckIfUserExists(ctx context.Context, email string) (*uuid.UUID, error) {
@@ -19,16 +25,20 @@ func (s *PostgresStore) CheckIfUserExists(ctx context.Context, email string) (*u
 	return &id, nil
 }
 
-func (s *PostgresStore) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+func (s *PostgresStore) GetUserById(ctx context.Context, id string) (*models.User, error) {
 	var user models.User
 
 	if err := s.DB.QueryRowContext(ctx, `
-			SELECT u.id, r.name
+			SELECT r.name
 			FROM users u
 			JOIN users_roles ur ON (ur.user_id = u.id)
 			JOIN roles r ON (ur.role_id = r.id)
-			WHERE u.email = $1;
-		`, email).Scan(&user.Id, &user.Role); err != nil {
+			WHERE u.id = $1;
+		`, id).Scan(&user.Role); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrUserNotFound
+		}
+
 		return nil, fmt.Errorf("error querying users table: %w", err)
 	}
 

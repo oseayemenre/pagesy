@@ -94,6 +94,6 @@ func (s *testStore) CheckIfUserExists(ctx context.Context, email string) (*uuid.
 	return nil, nil
 }
 
-func (s *testStore) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+func (s *testStore) GetUserById(ctx context.Context, id string) (*models.User, error) {
 	return nil, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/models"
 )
 
@@ -24,7 +25,7 @@ func TestCheckIfUserExists(t *testing.T) {
 	}
 }
 
-func TestGetUserByEmail(t *testing.T) {
+func TestGetUserById(t *testing.T) {
 	db := setUpTestDb(t)
 	new_user := &models.User{
 		Username:     "test_username",
@@ -36,10 +37,31 @@ func TestGetUserByEmail(t *testing.T) {
 
 	defer db.Exec(`DELETE FROM users WHERE id = $1`, id)
 
-	user, _ := db.GetUserByEmail(context.TODO(), "test_email")
+	tests := []struct {
+		name    string
+		id      string
+		wantErr bool
+	}{
+		{
+			name:    "should return an error if no user is found",
+			id:      uuid.New().String(),
+			wantErr: true,
+		},
+		{
+			name:    "should get user",
+			id:      id.String(),
+			wantErr: false,
+		},
+	}
 
-	if user == nil {
-		t.Fatalf("user not found")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := db.GetUserById(context.TODO(), tt.id)
+
+			if tt.wantErr != (err != nil) {
+				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)
+			}
+		})
 	}
 }
 

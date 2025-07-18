@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/markbates/goth/gothic"
+	"github.com/oseayemenre/pagesy/internal/jwt"
+	"github.com/oseayemenre/pagesy/internal/models"
+	"github.com/oseayemenre/pagesy/internal/store"
 )
 
 type responseWriterWrapper struct {
@@ -73,7 +75,7 @@ const (
 func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, err := r.Cookie("access_token") //TODO: handle this
+			token, err := r.Cookie("access_token")
 
 			if err != nil {
 				s.Logger.Warn(fmt.Sprintf("error retrieving cookie: %v", err), "status", "permission denied")
@@ -81,23 +83,24 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 				return
 			}
 
-			r = r.WithContext(context.WithValue(r.Context(), "provider", "google"))
+			id, err := jwt.DecodeJWTToken(token.Value, s.Config.Jwt_secret)
 
-			session, _ := gothic.Store.Get(r, "app_session")
-
-			email, ok := session.Values["user_email"].(string)
-
-			if !ok || email == "" {
-				s.Logger.Warn("no user in session", "status", "permission denied")
-				respondWithError(w, http.StatusNotFound, fmt.Errorf("no user in session"))
+			if err != nil {
+				s.Logger.Warn(err.Error(), "status", "permission denied")
+				respondWithError(w, http.StatusUnauthorized, err)
 				return
 			}
 
-			db_user, err := s.Store.GetUserByEmail(r.Context(), email)
+			db_user, err := s.Store.GetUserById(r.Context(), id)
 
 			if err != nil {
-				s.Logger.Warn(err.Error(), "service", "middleware")
-				respondWithError(w, http.StatusNotFound, err)
+				if err == store.ErrUserNotFound {
+					s.Logger.Error(err.Error(), "service", "middleware")
+					respondWithError(w, http.StatusNotFound, err)
+					return
+				}
+				s.Logger.Error(err.Error(), "service", "middleware")
+				respondWithError(w, http.StatusInternalServerError, err)
 				return
 			}
 
@@ -118,12 +121,17 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 				return
 			}
 
-			user := struct {
-				id   uuid.UUID
-				role string
-			}{
-				id:   db_user.Id,
-				role: db_user.Role,
+			uuid_id, err := uuid.Parse(id)
+
+			if err != nil {
+				s.Logger.Error(fmt.Sprintf("error parsing uuid: %v", err), "service", "middleware")
+				respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error parsing uuid: %v", err))
+				return
+			}
+
+			user := &models.User{
+				Id:   uuid_id,
+				Role: db_user.Role,
 			}
 
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), "user", user)))

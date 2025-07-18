@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/models"
 	"github.com/oseayemenre/pagesy/internal/shared"
 	"github.com/oseayemenre/pagesy/internal/store"
@@ -38,6 +37,9 @@ import (
 // @Failure 500 {object} models.ErrorResponse
 // @Router /books [post]
 func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
+	user_context := r.Context().Value("user")
+	user := user_context.(*models.User)
+
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 
 	if err := r.ParseMultipartForm(8 << 20); err != nil {
@@ -100,19 +102,10 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//TODO: Dummy id here. Would handle this properly later
-	authorId, err := uuid.Parse("172122bf-e310-42b9-a69f-7382c0d4a74b")
-
-	if err != nil {
-		s.Server.Logger.Error(fmt.Sprintf("error parsing uuid: %v", err), "service", "HandleUploadBooks")
-		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error parsing uuid: %v", err))
-		return
-	}
-
 	bookId, err := s.Server.Store.UploadBook(r.Context(), &models.Book{
 		Name:        params.Name,
 		Description: params.Description,
-		Author_Id:   authorId,
+		Author_Id:   user.Id,
 		Genres:      strings.Split(params.Genres, ","),
 		Chapter_Draft: models.Chapter{
 			Title:   params.ChapterDraft.Title,
@@ -194,13 +187,8 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} models.HandleGetBooksStatsResponse
 // @Router /books/stats [get]
 func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
-	user := struct {
-		id   string
-		role string
-	}{
-		id:   "dc5e215a-afd4-4f70-aa80-3e360fa1d9e4",
-		role: "creator",
-	} //TODO: implement get user later
+	user_context := r.Context().Value("user")
+	user := user_context.(*models.User)
 
 	var id string
 
@@ -221,10 +209,10 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user.role == "admin" && creatorId != "" {
+	if user.Role == "admin" && creatorId != "" {
 		id = creatorId
 	} else {
-		id = user.id
+		id = user.Id.String()
 	}
 
 	book, err := s.Store.GetBooksStats(r.Context(), id, offset, limit)
@@ -639,6 +627,7 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.Store.ApproveBook(r.Context(), bookId, param.Approve); err != nil {
+		fmt.Println(err)
 		s.Server.Logger.Error(err.Error(), "service", "HandleApproveBook")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
@@ -695,11 +684,8 @@ func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request
 // @Success 200 {object} models.HandleGetRecentReadsResponse
 // @Router /books/recents [get]
 func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
-	user := struct {
-		id string
-	}{
-		id: "172122bf-e310-42b9-a69f-7382c0d4a74b",
-	} //TODO: implement get user later
+	user_context := r.Context().Value("user")
+	user := user_context.(*models.User)
 
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 
@@ -717,7 +703,7 @@ func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	books, err := s.Store.GetRecentReads(r.Context(), user.id, offset, limit)
+	books, err := s.Store.GetRecentReads(r.Context(), user.Id.String(), offset, limit)
 
 	if err != nil {
 		if err == store.ErrNoBooksInRecents {

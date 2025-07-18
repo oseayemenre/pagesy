@@ -22,8 +22,22 @@ func CreateJWTToken(id string, secret string) (string, error) {
 	}).SignedString([]byte(secret))
 
 	if err != nil {
-		return "", fmt.Errorf("error decoding jwt token: %v", err)
+		return "", fmt.Errorf("error creating jwt token: %v", err)
 	}
 
 	return token, nil
+}
+
+func DecodeJWTToken(token string, secret string) (string, error) {
+	userClaims := &UserClaims{}
+
+	_, err := jwt.ParseWithClaims(token, userClaims, func(t *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("error decoding jwt token: %v", err)
+	}
+
+	return userClaims.Id, nil
 }

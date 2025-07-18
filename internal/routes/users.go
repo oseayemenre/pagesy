@@ -178,6 +178,14 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 	delete(session.Values, "user_email")
 	delete(session.Values, "user_password")
 
+	session.Options.MaxAge = -1
+
+	if err := session.Save(r, w); err != nil {
+		s.Server.Logger.Error(fmt.Sprintf("error deleting session: %v", err), "service", "HandleOnboarding")
+		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error deleting session: %v", err))
+		return
+	}
+
 	if err := cookies.CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret, "HandleOnboarding"); err != nil {
 		s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
 		respondWithError(w, http.StatusInternalServerError, err)
