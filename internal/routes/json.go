@@ -19,7 +19,7 @@ func respondWithError(w http.ResponseWriter, code int, error error) {
 }
 
 func decodeJson(r *http.Request, params any) error {
-	err := json.NewDecoder(r.Body).Decode(&params)
+	err := json.NewDecoder(r.Body).Decode(params)
 
 	if err != nil {
 		return fmt.Errorf("error decoding json: %v", err)

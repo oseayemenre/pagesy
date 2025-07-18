@@ -61,5 +61,3 @@ func TestHandleRegister(t *testing.T) {
 		})
 	}
 }
-
-func TestHandleOnboarding(t *testing.T) {}
