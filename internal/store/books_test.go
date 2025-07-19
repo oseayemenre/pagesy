@@ -206,7 +206,7 @@ func TestGetBooksByGenre(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := db.GetBooksByGenre(context.TODO(), tt.genres, 0, 5)
+			_, err := db.GetBooksByGenre(context.TODO(), tt.genres, 0, 5, "DESC")
 
 			if (err != nil && err != ErrNoBooksUnderThisGenre) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisGenre))
@@ -237,7 +237,7 @@ func TestGetBooksByLanguage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := db.GetBooksByLanguage(context.TODO(), tt.languages, 0, 5)
+			_, err := db.GetBooksByLanguage(context.TODO(), tt.languages, 0, 5, "DESC")
 
 			if (err != nil && err != ErrNoBooksUnderThisLanguage) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisLanguage))
@@ -277,7 +277,7 @@ func TestGetBooksByGenreAndLanguage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := db.GetBooksByGenreAndLanguage(context.TODO(), tt.genres, tt.languages, 0, 5)
+			_, err := db.GetBooksByGenreAndLanguage(context.TODO(), tt.genres, tt.languages, 0, 5, "DESC")
 
 			if (err != nil && err != ErrNoBooksUnderThisGenreOrLanguage) != tt.wantErr {
 				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisGenreOrLanguage))

@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func CreateAccessAndRefreshTokens(w http.ResponseWriter, id string, secret string, service string) error {
+func CreateAccessAndRefreshTokens(w http.ResponseWriter, id string, secret string) error {
 	access_token, err := jwt.CreateJWTToken(id, secret)
 
 	if err != nil {

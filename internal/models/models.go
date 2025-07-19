@@ -170,7 +170,7 @@ type HandleRegisterResponse struct {
 }
 
 type HandleLoginParams struct {
-	Email    string `json:"email" validate:"email"`
+	Email    string `json:"email"`
 	Username string `json:"username"`
 	Password string `json:"password" validate:"required"`
 }

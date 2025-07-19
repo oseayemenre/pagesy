@@ -19,7 +19,7 @@ const docTemplate = `{
             "get": {
                 "description": "Sign in with google",
                 "tags": [
-                    "users"
+                    "auth"
                 ],
                 "summary": "Sign in with google",
                 "responses": {
@@ -36,12 +36,73 @@ const docTemplate = `{
             "get": {
                 "description": "Google auth callback url",
                 "tags": [
-                    "users"
+                    "auth"
                 ],
                 "summary": "Google auth callback url",
                 "responses": {
                     "302": {
                         "description": "Found"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Login using either email, username or both and password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login",
+                "parameters": [
+                    {
+                        "description": "user credentials",
+                        "name": "user_credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.HandleLoginParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "string",
+                                "description": "access_token=12345 refresh_token=12345"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
                     },
                     "404": {
                         "description": "Not Found",
@@ -68,7 +129,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "auth"
                 ],
                 "summary": "Onboard users",
                 "parameters": [
@@ -111,6 +172,12 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/models.HandleRegisterResponse"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "string",
+                                "description": "access_token=12345 refresh_token=12345"
+                            }
                         }
                     },
                     "400": {
@@ -150,7 +217,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "auth"
                 ],
                 "summary": "Register user",
                 "parameters": [
@@ -165,8 +232,14 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK"
+                    "302": {
+                        "description": "Found",
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "string",
+                                "description": "app_session"
+                            }
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -955,6 +1028,23 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.RecentReadsResponseBooks"
                     }
+                }
+            }
+        },
+        "models.HandleLoginParams": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },

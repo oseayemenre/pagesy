@@ -17,6 +17,7 @@ func (s *Server) RegisterRoutes() {
 	s.Server.Router.Route("/api/v1", func(r chi.Router) {
 		r.Use(s.LoggingMiddleware)
 		r.Route("/auth", func(r chi.Router) {
+			r.Use(s.RedirectIfCookieExistsAndIsValid)
 			r.Route("/google", func(r chi.Router) {
 				r.Get("/", s.HandleGoogleSignIn)
 				r.Get("/callback", s.HandleGoogleSignInCallback)

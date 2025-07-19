@@ -214,6 +214,7 @@ func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int
 			JOIN chapters c ON (c.book_id = b.id)
 			WHERE b.author_id = $1
 			GROUP BY b.id
+			ORDER BY b.created_at DESC
 			OFFSET $2 LIMIT $3;
 		`, id, offset, limit)
 
@@ -261,8 +262,8 @@ func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int
 	return books, nil
 }
 
-func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, offset int, limit int) ([]models.Book, error) {
-	rows1, err := s.DB.QueryContext(ctx, `
+func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string) ([]models.Book, error) {
+	rows1, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
 			FROM books b
@@ -271,9 +272,9 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, off
 			JOIN genres g ON (g.id = bg.genre_id)
 			WHERE g.genres = ANY($1) AND b.approved = true
 			GROUP BY b.id
-			ORDER BY b.views DESC
+			ORDER BY b.views %s
 			OFFSET $2 LIMIT $3;
-		`, pq.Array(genre), offset, limit)
+		`, sort), pq.Array(genre), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting books by genre: %v", err)
@@ -315,17 +316,17 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, off
 	return books, nil
 }
 
-func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []string, offset int, limit int) ([]models.Book, error) {
-	rows, err := s.DB.QueryContext(ctx, `
+func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []string, offset int, limit int, sort string) ([]models.Book, error) {
+	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
 			WHERE b.language = ANY($1::languages[]) AND b.approved = true
 			GROUP BY b.id
-			ORDER BY b.views DESC
+			ORDER BY b.views %s 
 			OFFSET $2 LIMIT $3;
-		`, pq.Array(language), offset, limit)
+		`, sort), pq.Array(language), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting books by language: %v", err)
@@ -367,8 +368,8 @@ func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []strin
 	return books, nil
 }
 
-func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int) ([]models.Book, error) {
-	rows, err := s.DB.QueryContext(ctx, `
+func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string) ([]models.Book, error) {
+	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
 			FROM books b
@@ -377,8 +378,9 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 			JOIN genres g ON (g.id = bg.genre_id)
 			WHERE b.language = ANY($1::languages[]) AND g.genres = ANY($2) AND b.approved = true
 			GROUP BY b.id
+			ORDER BY b.views %s
 			OFFSET $3 LIMIT $4;
-		`, pq.Array(language), pq.Array(genre), offset, limit)
+		`, sort), pq.Array(language), pq.Array(genre), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting books by genre and language: %v", err)
@@ -420,17 +422,17 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 	return books, nil
 }
 
-func (s *PostgresStore) GetAllBooks(ctx context.Context, offset int, limit int) ([]models.Book, error) {
-	rows, err := s.DB.QueryContext(ctx, `
+func (s *PostgresStore) GetAllBooks(ctx context.Context, offset int, limit int, sort string) ([]models.Book, error) {
+	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
 			WHERE b.approved = true
-			GROUP BY b.id
+			GROUP BY b.id %s
 			ORDER BY b.views DESC
 			OFFSET $1 LIMIT $2;
-		`, offset, limit)
+		`, sort), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting all books: %v", err)

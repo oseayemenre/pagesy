@@ -123,6 +123,17 @@ definitions:
           $ref: '#/definitions/models.RecentReadsResponseBooks'
         type: array
     type: object
+  models.HandleLoginParams:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    type: object
   models.HandleRegisterParams:
     properties:
       email:
@@ -188,7 +199,7 @@ paths:
           description: Temporary Redirect
       summary: Sign in with google
       tags:
-      - users
+      - auth
   /auth/google/callback:
     get:
       description: Google auth callback url
@@ -205,7 +216,47 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Google auth callback url
       tags:
-      - users
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login using either email, username or both and password
+      parameters:
+      - description: user credentials
+        in: body
+        name: user_credentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.HandleLoginParams'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          headers:
+            Set-Cookie:
+              description: access_token=12345 refresh_token=12345
+              type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
   /auth/onboarding:
     post:
       consumes:
@@ -240,6 +291,10 @@ paths:
       responses:
         "201":
           description: Created
+          headers:
+            Set-Cookie:
+              description: access_token=12345 refresh_token=12345
+              type: string
           schema:
             $ref: '#/definitions/models.HandleRegisterResponse'
         "400":
@@ -260,7 +315,7 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Onboard users
       tags:
-      - users
+      - auth
   /auth/register:
     post:
       consumes:
@@ -276,8 +331,12 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "302":
+          description: Found
+          headers:
+            Set-Cookie:
+              description: app_session
+              type: string
         "400":
           description: Bad Request
           schema:
@@ -292,7 +351,7 @@ paths:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Register user
       tags:
-      - users
+      - auth
   /books:
     get:
       description: Get books by genre, language, both or get all books

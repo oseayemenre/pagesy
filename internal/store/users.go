@@ -15,10 +15,10 @@ var (
 	ErrUserNotFound = errors.New("user not found")
 )
 
-func (s *PostgresStore) CheckIfUserExists(ctx context.Context, email string) (*uuid.UUID, error) {
+func (s *PostgresStore) CheckIfUserExists(ctx context.Context, email string, username string) (*uuid.UUID, error) {
 	var id uuid.UUID
 
-	if err := s.DB.QueryRowContext(ctx, `SELECT id from users WHERE email = $1;`, email).Scan(&id); err != nil {
+	if err := s.DB.QueryRowContext(ctx, `SELECT id from users WHERE email = $1 OR username = $2;`, email, username).Scan(&id); err != nil {
 		return nil, fmt.Errorf("error retrieving user id: %w", err)
 	}
 
@@ -121,4 +121,16 @@ func (s *PostgresStore) CreateUser(ctx context.Context, user *models.User) (*uui
 	}
 
 	return &id, nil
+}
+
+func (s *PostgresStore) GetUserPassword(ctx context.Context, id string) (string, error) {
+	var password string
+
+	if err := s.DB.QueryRowContext(ctx, `
+			SELECT password FROM users WHERE id = $1; 
+		`, id).Scan(&password); err != nil {
+		return "", fmt.Errorf("error getting user password: %v", err)
+	}
+
+	return password, nil
 }

@@ -138,3 +138,24 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 		})
 	}
 }
+
+func (s *Server) RedirectIfCookieExistsAndIsValid(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token, err := r.Cookie("access_token")
+
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		_, err = jwt.DecodeJWTToken(token.Value, s.Config.Jwt_secret)
+
+		if err != nil {
+			s.Logger.Warn(err.Error(), "status", "permission denied")
+			respondWithError(w, http.StatusUnauthorized, err)
+			return
+		}
+
+		http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: change when ther's a frontend
+	})
+}

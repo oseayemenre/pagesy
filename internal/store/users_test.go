@@ -18,10 +18,10 @@ func TestCheckIfUserExists(t *testing.T) {
 
 	defer db.Exec(`DELETE FROM users WHERE id = $1`, id)
 
-	user_id, _ := db.CheckIfUserExists(context.TODO(), "test_email")
+	user_id, _ := db.CheckIfUserExists(context.TODO(), "test_email", "")
 
 	if user_id.String() != id.String() {
-		t.Fatalf("expcted %s, got %s", id.String(), user_id.String())
+		t.Fatalf("expected %s, got %s", id.String(), user_id.String())
 	}
 }
 
@@ -79,5 +79,29 @@ func TestCreateUser(t *testing.T) {
 
 	if id == nil {
 		t.Fatalf("user not found")
+	}
+}
+
+func TestGetUserPassword(t *testing.T) {
+	db := setUpTestDb(t)
+	new_user := &models.User{
+		Username:     "test_username",
+		Display_name: "test_display_name",
+		Email:        "test_email",
+		Password:     "test_password",
+	}
+
+	id, _ := db.CreateUser(context.TODO(), new_user)
+
+	defer db.Exec(`DELETE FROM users WHERE id = $1`, id)
+
+	password, err := db.GetUserPassword(context.TODO(), id.String())
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if password != new_user.Password {
+		t.Fatalf("expected %s, got %s", new_user.Password, password)
 	}
 }

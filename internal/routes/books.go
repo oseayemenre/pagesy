@@ -311,6 +311,7 @@ func handleGetBooksHelper(w http.ResponseWriter, books []models.Book) {
 func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	genre := r.URL.Query()["genre"]
 	language := r.URL.Query()["language"]
+	sort := r.URL.Query().Get("sort")
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	if err != nil {
@@ -327,8 +328,12 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if sort == "" {
+		sort = "DESC"
+	}
+
 	if len(genre) > 0 && len(language) < 1 {
-		books, err := s.Store.GetBooksByGenre(r.Context(), genre, offset, limit)
+		books, err := s.Store.GetBooksByGenre(r.Context(), genre, offset, limit, sort)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisGenre {
@@ -345,7 +350,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(genre) < 1 && len(language) > 0 {
-		books, err := s.Store.GetBooksByLanguage(r.Context(), language, offset, limit)
+		books, err := s.Store.GetBooksByLanguage(r.Context(), language, offset, limit, sort)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisLanguage {
@@ -362,7 +367,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(genre) > 0 && len(language) > 0 {
-		books, err := s.Store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit)
+		books, err := s.Store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisGenreOrLanguage {
@@ -378,7 +383,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	books, err := s.Store.GetAllBooks(r.Context(), offset, limit)
+	books, err := s.Store.GetAllBooks(r.Context(), offset, limit, sort)
 	if err != nil {
 		s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
 		respondWithError(w, http.StatusInternalServerError, err)
@@ -627,7 +632,6 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.Store.ApproveBook(r.Context(), bookId, param.Approve); err != nil {
-		fmt.Println(err)
 		s.Server.Logger.Error(err.Error(), "service", "HandleApproveBook")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return

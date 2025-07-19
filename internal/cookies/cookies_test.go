@@ -8,7 +8,7 @@ import (
 func TestCreateAccessAndRefreshTokens(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	if err := CreateAccessAndRefreshTokens(w, "123", "secret", "test-service"); err != nil {
+	if err := CreateAccessAndRefreshTokens(w, "123", "secret"); err != nil {
 		t.Fatal(err)
 	}
 

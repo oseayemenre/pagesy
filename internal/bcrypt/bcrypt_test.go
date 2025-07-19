@@ -16,3 +16,11 @@ func TestHashPassword(t *testing.T) {
 		t.Fatalf("Password comparison failed: %v", err)
 	}
 }
+
+func TestComparePassword(t *testing.T) {
+	hash, _ := bcrypt.GenerateFromPassword([]byte("test-password"), bcrypt.DefaultCost)
+
+	if err := ComparePassword("test-password", string(hash)); err != nil {
+		t.Fatal(err)
+	}
+}

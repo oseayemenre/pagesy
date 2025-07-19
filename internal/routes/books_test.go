@@ -134,6 +134,7 @@ func TestHandleUploadBooksService(t *testing.T) {
 }
 
 func helperTestGetBooks(t *testing.T, path string, handler http.HandlerFunc) {
+	t.Helper()
 	tests := []struct {
 		name         string
 		offset       string
