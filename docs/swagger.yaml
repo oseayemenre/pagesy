@@ -257,6 +257,15 @@ paths:
       summary: Login
       tags:
       - auth
+  /auth/logout:
+    post:
+      description: Logout user
+      responses:
+        "204":
+          description: No Content
+      summary: Logout user
+      tags:
+      - auth
   /auth/onboarding:
     post:
       consumes:

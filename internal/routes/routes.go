@@ -17,15 +17,20 @@ func (s *Server) RegisterRoutes() {
 	s.Server.Router.Route("/api/v1", func(r chi.Router) {
 		r.Use(s.LoggingMiddleware)
 		r.Route("/auth", func(r chi.Router) {
-			r.Use(s.RedirectIfCookieExistsAndIsValid)
-			r.Route("/google", func(r chi.Router) {
-				r.Get("/", s.HandleGoogleSignIn)
-				r.Get("/callback", s.HandleGoogleSignInCallback)
+			r.Group(func(r chi.Router) {
+				r.Use(s.RedirectIfCookieExistsAndIsValid)
+				r.Route("/google", func(r chi.Router) {
+					r.Get("/", s.HandleGoogleSignIn)
+					r.Get("/callback", s.HandleGoogleSignInCallback)
+				})
+
+				r.Post("/onboarding", s.HandleOnboarding)
+				r.Post("/register", s.HandleRegister)
+				r.Post("/login", s.HandleLogin)
 			})
 
-			r.Post("/onboarding", s.HandleOnboarding)
-			r.Post("/register", s.HandleRegister)
-			r.Post("/login", s.HandleLogin)
+			r.Post("/logout", s.HandleLogout)
+			r.Post("/refresh-token", s.HandleRefreshToken)
 		})
 
 		r.Route("/books", func(r chi.Router) {

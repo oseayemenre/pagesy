@@ -131,3 +131,55 @@ func TestHandleLogin(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleLogout(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+	rr := httptest.NewRecorder()
+
+	http.SetCookie(rr, &http.Cookie{
+		Name:   "access_token",
+		Value:  "12345678",
+		Path:   "/",
+		MaxAge: 60 * 60,
+	})
+
+	http.SetCookie(rr, &http.Cookie{
+		Name:   "refresh_token",
+		Value:  "12345678",
+		Path:   "/",
+		MaxAge: 60 * 60,
+	})
+
+	s := &Server{
+		Server: &shared.Server{
+			Logger:      &testLogger{},
+			ObjectStore: &testObjectStore{},
+			Store:       &testStore{},
+		},
+	}
+
+	s.HandleLogout(rr, req)
+
+	var hasaccesstoken, hashrefreshtoken bool
+	var access_token, refresh_token string
+
+	for _, w := range rr.Result().Cookies() {
+		if w.Name == "access_token" {
+			access_token = w.Value
+			hasaccesstoken = true
+		}
+
+		if w.Name == "refresh_token" {
+			access_token = w.Value
+			hasaccesstoken = true
+		}
+	}
+
+	if hasaccesstoken && hashrefreshtoken {
+		t.Fatal("expected false got true")
+	}
+
+	if access_token != "" && refresh_token != "" {
+		t.Fatal("value still in cookie")
+	}
+}

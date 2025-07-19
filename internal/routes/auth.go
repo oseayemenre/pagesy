@@ -323,3 +323,34 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	respondWithSuccess(w, http.StatusNoContent, nil)
 }
+
+// HandleLogout godoc
+// @Summary Logout user
+// @Description Logout user
+// @Tags auth
+// @Success 204
+// @Router /auth/logout [post]
+func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:   "access_token",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:   "refresh_token",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
+
+	respondWithSuccess(w, http.StatusNoContent, nil)
+}
+
+// HandleRefreshToken godoc
+// @Summary Refresh token
+// @Description Get new access token
+// @Success 204
+// @Router /auth/refresh-token [post]
+func (s *Server) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {}
