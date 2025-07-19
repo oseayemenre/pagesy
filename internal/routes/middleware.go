@@ -78,8 +78,8 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 			token, err := r.Cookie("access_token")
 
 			if err != nil {
-				s.Logger.Warn(fmt.Sprintf("error retrieving cookie: %v", err), "status", "permission denied")
-				respondWithError(w, http.StatusNotFound, fmt.Errorf("error retrieving cookie: %v", err))
+				s.Logger.Warn("access token cookie not found", "status", "permission denied")
+				respondWithError(w, http.StatusNotFound, fmt.Errorf("access token cookie not found"))
 				return
 			}
 

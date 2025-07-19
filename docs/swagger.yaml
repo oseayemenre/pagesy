@@ -325,6 +325,27 @@ paths:
       summary: Onboard users
       tags:
       - auth
+  /auth/refresh-token:
+    post:
+      description: Get new access token
+      responses:
+        "204":
+          description: No Content
+          headers:
+            Set-Cookie:
+              description: access_token=12345 refresh_token=12345
+              type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Refresh token
+      tags:
+      - auth
   /auth/register:
     post:
       consumes:

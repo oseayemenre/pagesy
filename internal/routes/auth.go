@@ -13,6 +13,7 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/oseayemenre/pagesy/internal/bcrypt"
 	"github.com/oseayemenre/pagesy/internal/cookies"
+	"github.com/oseayemenre/pagesy/internal/jwt"
 	"github.com/oseayemenre/pagesy/internal/models"
 	"github.com/oseayemenre/pagesy/internal/shared"
 )
@@ -351,6 +352,46 @@ func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 // HandleRefreshToken godoc
 // @Summary Refresh token
 // @Description Get new access token
+// @Tags auth
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Success 204
+// @Header 204 {string} Set-Cookie "access_token=12345 refresh_token=12345"
 // @Router /auth/refresh-token [post]
-func (s *Server) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {}
+func (s *Server) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("refresh_token")
+
+	if err != nil {
+		s.Server.Logger.Warn("refresh token cookie not found", "service", "HandleRefreshToken")
+		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("refresh token cookie not found"))
+		return
+	}
+
+	id, err := jwt.DecodeJWTToken(token.Value, s.Config.Jwt_secret)
+
+	if err != nil {
+		s.Logger.Warn(err.Error(), "service", "HandleRefreshToken")
+		respondWithError(w, http.StatusUnauthorized, err)
+		return
+	}
+
+	access_token, err := jwt.CreateJWTToken(id, s.Config.Jwt_secret)
+
+	if err != nil {
+		s.Logger.Warn(err.Error(), "service", "HandleRefreshToken")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    access_token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   24 * 60 * 60,
+	})
+
+	respondWithSuccess(w, http.StatusNoContent, nil)
+}
