@@ -262,7 +262,18 @@ func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int
 	return books, nil
 }
 
-func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string) ([]models.Book, error) {
+func sortByFieldHelper(sort string) string {
+	if sort == "updated" {
+		sort = "b.updated_at"
+	} else {
+		sort = "b.views"
+	}
+
+	return sort
+}
+
+func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]models.Book, error) {
+	field := sortByFieldHelper(sort)
 	rows1, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
@@ -272,9 +283,9 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, off
 			JOIN genres g ON (g.id = bg.genre_id)
 			WHERE g.genres = ANY($1) AND b.approved = true
 			GROUP BY b.id
-			ORDER BY b.views %s
+			ORDER BY %s %s
 			OFFSET $2 LIMIT $3;
-		`, sort), pq.Array(genre), offset, limit)
+		`, field, order), pq.Array(genre), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting books by genre: %v", err)
@@ -316,7 +327,9 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, off
 	return books, nil
 }
 
-func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []string, offset int, limit int, sort string) ([]models.Book, error) {
+func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []string, offset int, limit int, sort string, order string) ([]models.Book, error) {
+	field := sortByFieldHelper(sort)
+
 	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
@@ -324,9 +337,9 @@ func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []strin
 			JOIN chapters c ON (b.id = c.book_id)
 			WHERE b.language = ANY($1::languages[]) AND b.approved = true
 			GROUP BY b.id
-			ORDER BY b.views %s 
+			ORDER BY %s %s 
 			OFFSET $2 LIMIT $3;
-		`, sort), pq.Array(language), offset, limit)
+		`, field, order), pq.Array(language), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting books by language: %v", err)
@@ -368,7 +381,9 @@ func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []strin
 	return books, nil
 }
 
-func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string) ([]models.Book, error) {
+func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string, order string) ([]models.Book, error) {
+	field := sortByFieldHelper(sort)
+
 	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
@@ -378,9 +393,9 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 			JOIN genres g ON (g.id = bg.genre_id)
 			WHERE b.language = ANY($1::languages[]) AND g.genres = ANY($2) AND b.approved = true
 			GROUP BY b.id
-			ORDER BY b.views %s
+			ORDER BY %s %s
 			OFFSET $3 LIMIT $4;
-		`, sort), pq.Array(language), pq.Array(genre), offset, limit)
+		`, field, order), pq.Array(language), pq.Array(genre), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting books by genre and language: %v", err)
@@ -422,17 +437,19 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 	return books, nil
 }
 
-func (s *PostgresStore) GetAllBooks(ctx context.Context, offset int, limit int, sort string) ([]models.Book, error) {
+func (s *PostgresStore) GetAllBooks(ctx context.Context, offset int, limit int, sort string, order string) ([]models.Book, error) {
+	field := sortByFieldHelper(sort)
+
 	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
 			WHERE b.approved = true
-			GROUP BY b.id %s
-			ORDER BY b.views DESC
+			GROUP BY b.id
+			ORDER BY %s %s
 			OFFSET $1 LIMIT $2;
-		`, sort), offset, limit)
+		`, field, order), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting all books: %v", err)
@@ -765,54 +782,6 @@ func (s *PostgresStore) GetRecentReads(ctx context.Context, id string, offset in
 
 	if len(books) < 1 {
 		return nil, ErrNoBooksInRecents
-	}
-
-	return books, nil
-}
-
-func (s *PostgresStore) GetNewlyUpdated(ctx context.Context, offset int, limit int) ([]models.Book, error) {
-	rows, err := s.DB.QueryContext(ctx, `
-			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
-			COUNT(c.id)
-			FROM books b
-			JOIN chapters c ON (b.id = c.book_id)
-			WHERE b.approved = true
-			GROUP BY b.id
-			ORDER BY b.updated_at DESC
-			OFFSET $1 LIMIT $2;
-		`, offset, limit)
-
-	if err != nil {
-		return nil, fmt.Errorf("error getting all books: %v", err)
-	}
-
-	defer rows.Close()
-
-	var bookIDs []uuid.UUID
-	booksMap := make(map[uuid.UUID]*models.Book)
-
-	for rows.Next() {
-		var book models.Book
-		if err := rows.Scan(
-			&book.Id,
-			&book.Name,
-			&book.Description,
-			&book.Image,
-			&book.Views,
-			&book.Rating,
-			&book.No_Of_Chapters,
-		); err != nil {
-			return nil, fmt.Errorf("error scanning books: %v", err)
-		}
-
-		bookIDs = append(bookIDs, book.Id)
-		booksMap[book.Id] = &book
-	}
-
-	books, err := s.GetGenresAndReleaseSchedules(ctx, &bookIDs, booksMap)
-
-	if err != nil {
-		return nil, err
 	}
 
 	return books, nil

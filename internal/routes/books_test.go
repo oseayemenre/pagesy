@@ -371,15 +371,3 @@ func TestHandleGetRecentReads(t *testing.T) {
 
 	helperTestGetBooks(t, "/api/v1/books/recents?offset=%s&limit=%s", s.HandleGetRecentReads)
 }
-
-func TestHandleGetNewlyUpdated(t *testing.T) {
-	s := &Server{
-		Server: &shared.Server{
-			Logger:      &testLogger{},
-			ObjectStore: &testObjectStore{},
-			Store:       &testStore{},
-		},
-	}
-
-	helperTestGetBooks(t, "/api/v1/books/new?offset=%s&limit=%s", s.HandleGetNewlyUpdated)
-}

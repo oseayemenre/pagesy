@@ -19,25 +19,25 @@ import (
 )
 
 // HandleGoogleSignIn godoc
-// @Summary Sign in with google
-// @Description Sign in with google
-// @Tags auth
-// @Success 302
-// @Success 307
-// @Router /auth/google [get]
+//	@Summary		Sign in with google
+//	@Description	Sign in with google
+//	@Tags			auth
+//	@Success		302
+//	@Success		307
+//	@Router			/auth/google [get]
 func (s *Server) HandleGoogleSignIn(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(context.WithValue(r.Context(), "provider", "google"))
 	gothic.BeginAuthHandler(w, r)
 }
 
 // HandleGoogleSignInCallback godoc
-// @Summary Google auth callback url
-// @Description Google auth callback url
-// @Tags auth
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 302
-// @Router /auth/google/callback [get]
+//	@Summary		Google auth callback url
+//	@Description	Google auth callback url
+//	@Tags			auth
+//	@Failure		404	{object}	models.ErrorResponse
+//	@Failure		500	{object}	models.ErrorResponse
+//	@Success		302
+//	@Router			/auth/google/callback [get]
 func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(context.WithValue(r.Context(), "provider", "google"))
 
@@ -72,23 +72,23 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 }
 
 // HandleOnboarding godoc
-// @Summary Onboard users
-// @Description Onboard users with display_name, name, about and image
-// @Tags auth
-// @Accept multipart/form-data
-// @Produce json
-// @Param username formData string true "username"
-// @Param display_name formData string true "display name"
-// @Param about formData string false "about"
-// @Param image formData file false "profile_picture"
-// @Param Cookie header string true "app_session=12345"
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 413 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 201 {object} models.HandleRegisterResponse
-// @Header 201 {string} Set-Cookie "access_token=12345 refresh_token=12345"
-// @Router /auth/onboarding [post]
+//	@Summary		Onboard users
+//	@Description	Onboard users with display_name, name, about and image
+//	@Tags			auth
+//	@Accept			multipart/form-data
+//	@Produce		json
+//	@Param			username		formData	string	true	"username"
+//	@Param			display_name	formData	string	true	"display name"
+//	@Param			about			formData	string	false	"about"
+//	@Param			image			formData	file	false	"profile_picture"
+//	@Param			Cookie			header		string	true	"app_session=12345"
+//	@Failure		400				{object}	models.ErrorResponse
+//	@Failure		404				{object}	models.ErrorResponse
+//	@Failure		413				{object}	models.ErrorResponse
+//	@Failure		500				{object}	models.ErrorResponse
+//	@Success		201				{object}	models.HandleRegisterResponse
+//	@Header			201				{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
+//	@Router			/auth/onboarding [post]
 func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 	session, _ := gothic.Store.Get(r, "app_session")
 
@@ -197,18 +197,18 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleRegister godoc
-// @Summary Register user
-// @Description Register user using email, username and password
-// @Tags auth
-// @Accept application/json
-// @Produce json
-// @Param user body models.HandleRegisterParams true "user"
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 409 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 302
-// @Header 302 {string} Set-Cookie "app_session"
-// @Router /auth/register [post]
+//	@Summary		Register user
+//	@Description	Register user using email, username and password
+//	@Tags			auth
+//	@Accept			application/json
+//	@Produce		json
+//	@Param			user	body		models.HandleRegisterParams	true	"user"
+//	@Failure		400		{object}	models.ErrorResponse
+//	@Failure		409		{object}	models.ErrorResponse
+//	@Failure		500		{object}	models.ErrorResponse
+//	@Success		302
+//	@Header			302	{string}	Set-Cookie	"app_session"
+//	@Router			/auth/register [post]
 func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var params models.HandleRegisterParams
 
@@ -254,19 +254,19 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleLogin godoc
-// @Summary Login
-// @Description Login using either email, username or both and password
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param user_credentials body models.HandleLoginParams true "user credentials"
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 401 {object} models.ErrorResponse
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 204
-// @Header 204 {string} Set-Cookie "access_token=12345 refresh_token=12345"
-// @Router /auth/login [post]
+//	@Summary		Login
+//	@Description	Login using either email, username or both and password
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			user_credentials	body		models.HandleLoginParams	true	"user credentials"
+//	@Failure		400					{object}	models.ErrorResponse
+//	@Failure		401					{object}	models.ErrorResponse
+//	@Failure		404					{object}	models.ErrorResponse
+//	@Failure		500					{object}	models.ErrorResponse
+//	@Success		204
+//	@Header			204	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
+//	@Router			/auth/login [post]
 func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	var params models.HandleLoginParams
@@ -326,11 +326,11 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleLogout godoc
-// @Summary Logout user
-// @Description Logout user
-// @Tags auth
-// @Success 204
-// @Router /auth/logout [post]
+//	@Summary		Logout user
+//	@Description	Logout user
+//	@Tags			auth
+//	@Success		204
+//	@Router			/auth/logout [post]
 func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:   "access_token",
@@ -350,14 +350,14 @@ func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleRefreshToken godoc
-// @Summary Refresh token
-// @Description Get new access token
-// @Tags auth
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 204
-// @Header 204 {string} Set-Cookie "access_token=12345 refresh_token=12345"
-// @Router /auth/refresh-token [post]
+//	@Summary		Refresh token
+//	@Description	Get new access token
+//	@Tags			auth
+//	@Failure		404	{object}	models.ErrorResponse
+//	@Failure		500	{object}	models.ErrorResponse
+//	@Success		204
+//	@Header			204	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
+//	@Router			/auth/refresh-token [post]
 func (s *Server) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	token, err := r.Cookie("refresh_token")
 

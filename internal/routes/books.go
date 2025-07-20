@@ -16,26 +16,27 @@ import (
 )
 
 // HandleUploadBooks godoc
-// @Summary Upload a new book
-// @Description Uploads a book with metadata, schedule, draft chapter, and book cover image
-// @Tags books
-// @Accept multipart/form-data
-// @Produce json
-// @Param name formData string true "Book name"
-// @Param description formData string true "Book description"
-// @Param genre formData []string true "Genre"
-// @Param language formData string true "Book language"
-// @Param chapter_title formData string true "Draft chapter title"
-// @Param chapter_content formData string true "Draft chapter content"
-// @Param release_schedule_day formData []string true "Release days (e.g. Monday, Tuesday)"
-// @Param release_schedule_chapter formData []int true "Chapters per day (e.g. 1, 2)"
-// @Param book_cover formData file false "Book cover image (max 3MB)"
-// @Success 201 {object} models.HandleUploadBooksResponse
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 413 {object} models.ErrorResponse
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Router /books [post]
+//
+//	@Summary		Upload a new book
+//	@Description	Uploads a book with metadata, schedule, draft chapter, and book cover image
+//	@Tags			books
+//	@Accept			multipart/form-data
+//	@Produce		json
+//	@Param			name						formData	string		true	"Book name"
+//	@Param			description					formData	string		true	"Book description"
+//	@Param			genre						formData	[]string	true	"Genre"
+//	@Param			language					formData	string		true	"Book language"
+//	@Param			chapter_title				formData	string		true	"Draft chapter title"
+//	@Param			chapter_content				formData	string		true	"Draft chapter content"
+//	@Param			release_schedule_day		formData	[]string	true	"Release days (e.g. Monday, Tuesday)"
+//	@Param			release_schedule_chapter	formData	[]int		true	"Chapters per day (e.g. 1, 2)"
+//	@Param			book_cover					formData	file		false	"Book cover image (max 3MB)"
+//	@Success		201							{object}	models.HandleUploadBooksResponse
+//	@Failure		400							{object}	models.ErrorResponse
+//	@Failure		413							{object}	models.ErrorResponse
+//	@Failure		404							{object}	models.ErrorResponse
+//	@Failure		500							{object}	models.ErrorResponse
+//	@Router			/books [post]
 func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	user_context := r.Context().Value("user")
 	user := user_context.(*models.User)
@@ -176,16 +177,17 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleGetBooks GoDoc
-// @Summary Get books stats
-// @Description Get all books by id
-// @Tags books
-// @Produce json
-// @Param creator_id query string false "creator id"
-// @Param offset query string true "offset"
-// @Param limit query string true "limit"
-// @Failure 500 {object} models.ErrorResponse
-// @Success 200 {object} models.HandleGetBooksStatsResponse
-// @Router /books/stats [get]
+//
+//	@Summary		Get books stats
+//	@Description	Get all books by id
+//	@Tags			books
+//	@Produce		json
+//	@Param			creator_id	query		string	false	"creator id"
+//	@Param			offset		query		string	true	"offset"
+//	@Param			limit		query		string	true	"limit"
+//	@Failure		500			{object}	models.ErrorResponse
+//	@Success		200			{object}	models.HandleGetBooksStatsResponse
+//	@Router			/books/stats [get]
 func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	user_context := r.Context().Value("user")
 	user := user_context.(*models.User)
@@ -297,21 +299,26 @@ func handleGetBooksHelper(w http.ResponseWriter, books []models.Book) {
 }
 
 // HandleGetBooks godoc
-// @Summary Get books
-// @Description Get books by genre, language, both or get all books
-// @Produce json
-// @Tags books
-// @Param genre query string false "book genres"
-// @Param language query string false "book language"
-// @Param offset query string false "offset number"
-// @Param limit query string false "limit number"
-// @Success 200 {object} models.HandleGetBooksResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Router /books [get]
+//
+//	@Summary		Get books
+//	@Description	Get books by genre, language, both or get all books
+//	@Produce		json
+//	@Tags			books
+//	@Param			genre		query		string	false	"book genres"
+//	@Param			language	query		string	false	"book language"
+//	@Param			offset		query		string	true	"offset number"
+//	@Param			limit		query		string	true	"limit number"
+//	@Param			sort		query		string	false	"sort by e.g views or updated"
+//	@Param			order		query		string	false	"order e.g asc or desc"
+//	@Success		200			{object}	models.HandleGetBooksResponse
+//	@Failure		500			{object}	models.ErrorResponse
+//	@Router			/books [get]
 func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	genre := r.URL.Query()["genre"]
 	language := r.URL.Query()["language"]
-	sort := r.URL.Query().Get("sort")
+	sort := strings.ToLower(r.URL.Query().Get("sort"))
+	order := strings.ToLower(r.URL.Query().Get("order"))
+
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	if err != nil {
@@ -328,12 +335,16 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if sort == "" {
-		sort = "DESC"
+	if sort != "updated" && sort != "views" {
+		sort = "views"
+	}
+
+	if order != "asc" && order != "desc" {
+		order = "desc"
 	}
 
 	if len(genre) > 0 && len(language) < 1 {
-		books, err := s.Store.GetBooksByGenre(r.Context(), genre, offset, limit, sort)
+		books, err := s.Store.GetBooksByGenre(r.Context(), genre, offset, limit, sort, order)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisGenre {
@@ -350,7 +361,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(genre) < 1 && len(language) > 0 {
-		books, err := s.Store.GetBooksByLanguage(r.Context(), language, offset, limit, sort)
+		books, err := s.Store.GetBooksByLanguage(r.Context(), language, offset, limit, sort, order)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisLanguage {
@@ -367,7 +378,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(genre) > 0 && len(language) > 0 {
-		books, err := s.Store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort)
+		books, err := s.Store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisGenreOrLanguage {
@@ -383,7 +394,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	books, err := s.Store.GetAllBooks(r.Context(), offset, limit, sort)
+	books, err := s.Store.GetAllBooks(r.Context(), offset, limit, sort, order)
 	if err != nil {
 		s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
 		respondWithError(w, http.StatusInternalServerError, err)
@@ -394,15 +405,16 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleGetBook godoc
-// @Summary Get book
-// @Description Get book by id
-// @Tags books
-// @Produce json
-// @Param bookId path string true "book id"
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 200 {object} models.HandleGetBookResponse
-// @Router /books/{bookId} [get]
+//
+//	@Summary		Get book
+//	@Description	Get book by id
+//	@Tags			books
+//	@Produce		json
+//	@Param			bookId	path		string	true	"book id"
+//	@Failure		404		{object}	models.ErrorResponse
+//	@Failure		500		{object}	models.ErrorResponse
+//	@Success		200		{object}	models.HandleGetBookResponse
+//	@Router			/books/{bookId} [get]
 func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "bookId")
 
@@ -445,15 +457,16 @@ func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleDeleteBook Godoc
-// @Summary Delete book
-// @Description Delete book by id
-// @Tags books
-// @Produce json
-// @Param bookId path string true "book id"
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 204
-// @Router /books/{bookId} [delete]
+//
+//	@Summary		Delete book
+//	@Description	Delete book by id
+//	@Tags			books
+//	@Produce		json
+//	@Param			bookId	path		string	true	"book id"
+//	@Failure		404		{object}	models.ErrorResponse
+//	@Failure		500		{object}	models.ErrorResponse
+//	@Success		204
+//	@Router			/books/{bookId} [delete]
 func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "bookId")
 
@@ -469,23 +482,24 @@ func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleEditBook Godoc
-// @Summary Edit book details
-// @Description Edit book name, image, description, genre or release schedule
-// @Tags books
-// @Accept multipart/form-data
-// @Param bookId path string true "Book Id"
-// @Param name formData string false "Book name"
-// @Param description formData string false "Book Description"
-// @Param image formData string false "Book Image"
-// @Param genres formData []string false "Book Genres"
-// @Param release_schedule_day formData []string false "Release schedule days"
-// @Param release_schedule_chapter formData []string false "Release schedule chapters"
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 404 {object} models.ErrorResponse
-// @Failure 413 {object} models.ErrorResponse
-// @Faiure 500 {object} models.ErrorResponse
-// @Success 204
-// @Router /books/{bookId} [patch]
+//
+//	@Summary		Edit book details
+//	@Description	Edit book name, image, description, genre or release schedule
+//	@Tags			books
+//	@Accept			multipart/form-data
+//	@Param			bookId						path		string		true	"Book Id"
+//	@Param			name						formData	string		false	"Book name"
+//	@Param			description					formData	string		false	"Book Description"
+//	@Param			image						formData	string		false	"Book Image"
+//	@Param			genres						formData	[]string	false	"Book Genres"
+//	@Param			release_schedule_day		formData	[]string	false	"Release schedule days"
+//	@Param			release_schedule_chapter	formData	[]string	false	"Release schedule chapters"
+//	@Failure		400							{object}	models.ErrorResponse
+//	@Failure		404							{object}	models.ErrorResponse
+//	@Failure		413							{object}	models.ErrorResponse
+//	@Faiure			500 {object} models.ErrorResponse
+//	@Success		204
+//	@Router			/books/{bookId} [patch]
 func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 	bookId := chi.URLParam(r, "bookId")
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
@@ -605,16 +619,17 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleApproveBook godoc
-// @Summary Approve book
-// @Description Approve book by id
-// @Tags books
-// @Produce json
-// @Param bookId path string true "Book ID"
-// @Param param body models.ApproveBookParam true "Approve book body"
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 204
-// @Router /books/{bookId}/approval [patch]
+//
+//	@Summary		Approve book
+//	@Description	Approve book by id
+//	@Tags			books
+//	@Produce		json
+//	@Param			bookId	path		string					true	"Book ID"
+//	@Param			param	body		models.ApproveBookParam	true	"Approve book body"
+//	@Failure		400		{object}	models.ErrorResponse
+//	@Failure		500		{object}	models.ErrorResponse
+//	@Success		204
+//	@Router			/books/{bookId}/approval [patch]
 func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 	bookId := chi.URLParam(r, "bookId")
 	param := models.ApproveBookParam{}
@@ -641,16 +656,17 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleMarkBookAsComplete godoc
-// @Summary Mark book as complete
-// @Description Mark book as complete using id
-// @Tags books
-// @Produce json
-// @Param bookId path string true "Book ID"
-// @Param param body models.MarkAsCompleteParam true "Mark book as complete body"
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 204
-// @Router /books/{bookId}/complete [patch]
+//
+//	@Summary		Mark book as complete
+//	@Description	Mark book as complete using id
+//	@Tags			books
+//	@Produce		json
+//	@Param			bookId	path		string						true	"Book ID"
+//	@Param			param	body		models.MarkAsCompleteParam	true	"Mark book as complete body"
+//	@Failure		400		{object}	models.ErrorResponse
+//	@Failure		500		{object}	models.ErrorResponse
+//	@Success		204
+//	@Router			/books/{bookId}/complete [patch]
 func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request) {
 	bookId := chi.URLParam(r, "bookId")
 	param := models.MarkAsCompleteParam{}
@@ -677,16 +693,17 @@ func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request
 }
 
 // HandleGetRecentReads godoc
-// @Summary Get recent reads
-// @Description Get user's recent reads
-// @Produce json
-// @Tags books
-// @Param offset query string true "offset"
-// @Param limit query string true "limit"
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 200 {object} models.HandleGetRecentReadsResponse
-// @Router /books/recents [get]
+//
+//	@Summary		Get recent reads
+//	@Description	Get user's recent reads
+//	@Produce		json
+//	@Tags			books
+//	@Param			offset	query		string	true	"offset"
+//	@Param			limit	query		string	true	"limit"
+//	@Failure		400		{object}	models.ErrorResponse
+//	@Failure		500		{object}	models.ErrorResponse
+//	@Success		200		{object}	models.HandleGetRecentReadsResponse
+//	@Router			/books/recents [get]
 func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
 	user_context := r.Context().Value("user")
 	user := user_context.(*models.User)
@@ -752,43 +769,4 @@ func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithSuccess(w, http.StatusOK, &models.HandleGetRecentReadsResponse{Books: recentBooks})
-}
-
-// HandleGetNewlyUpdated godoc
-// @Summary Get newly updated books
-// @Description Get newly updated books
-// @Tags books
-// @Produce json
-// @Param offset query string true "offset number"
-// @Param limit query string true "limit number"
-// @Failure 400 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Success 200 {object} models.HandleGetBooksResponse
-// @Router /books/new [get]
-func (s *Server) HandleGetNewlyUpdated(w http.ResponseWriter, r *http.Request) {
-	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
-
-	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetNewlyUpdated")
-		respondWithError(w, http.StatusBadRequest, err)
-		return
-	}
-
-	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
-
-	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetNewlyUpdated")
-		respondWithError(w, http.StatusBadRequest, err)
-		return
-	}
-
-	books, err := s.Store.GetNewlyUpdated(r.Context(), offset, limit)
-
-	if err != nil {
-		s.Server.Logger.Error(err.Error(), "service", "HandleGetNewlyUpdated")
-		respondWithError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	handleGetBooksHelper(w, books)
 }

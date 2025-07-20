@@ -397,10 +397,20 @@ paths:
       - description: offset number
         in: query
         name: offset
+        required: true
         type: string
       - description: limit number
         in: query
         name: limit
+        required: true
+        type: string
+      - description: sort by e.g views or updated
+        in: query
+        name: sort
+        type: string
+      - description: order e.g asc or desc
+        in: query
+        name: order
         type: string
       produces:
       - application/json
@@ -673,38 +683,6 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Mark book as complete
-      tags:
-      - books
-  /books/new:
-    get:
-      description: Get newly updated books
-      parameters:
-      - description: offset number
-        in: query
-        name: offset
-        required: true
-        type: string
-      - description: limit number
-        in: query
-        name: limit
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.HandleGetBooksResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-      summary: Get newly updated books
       tags:
       - books
   /books/recents:

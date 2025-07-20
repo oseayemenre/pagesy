@@ -38,19 +38,19 @@ func (s *testStore) GetBooksStats(ctx context.Context, id string, offset int, li
 	return []models.Book{}, nil
 }
 
-func (s *testStore) GetBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string) ([]models.Book, error) {
+func (s *testStore) GetBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]models.Book, error) {
 	return []models.Book{}, nil
 }
 
-func (s *testStore) GetBooksByLanguage(ctx context.Context, language []string, offset int, limit int, sort string) ([]models.Book, error) {
+func (s *testStore) GetBooksByLanguage(ctx context.Context, language []string, offset int, limit int, sort string, order string) ([]models.Book, error) {
 	return []models.Book{}, nil
 }
 
-func (s *testStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string) ([]models.Book, error) {
+func (s *testStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string, order string) ([]models.Book, error) {
 	return []models.Book{}, nil
 }
 
-func (s *testStore) GetAllBooks(ctx context.Context, offset int, limit int, sort string) ([]models.Book, error) {
+func (s *testStore) GetAllBooks(ctx context.Context, offset int, limit int, sort string, order string) ([]models.Book, error) {
 	return []models.Book{}, nil
 }
 
@@ -80,10 +80,6 @@ func (s *testStore) GetRecentReads(ctx context.Context, id string, offset int, l
 
 func (s *testStore) CreateUser(ctx context.Context, user *models.User) (*uuid.UUID, error) {
 	return nil, nil
-}
-
-func (s *testStore) GetNewlyUpdated(ctx context.Context, offset int, limit int) ([]models.Book, error) {
-	return []models.Book{}, nil
 }
 
 func (s *testStore) CheckIfUserExists(ctx context.Context, email string, username string) (*uuid.UUID, error) {
