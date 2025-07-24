@@ -805,6 +805,65 @@ const docTemplate = `{
                 }
             }
         },
+        "/books/{bookId}/chapters": {
+            "post": {
+                "description": "Upload chapter using title, chapter number, content and book id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chapters"
+                ],
+                "summary": "Upload chapter",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book id",
+                        "name": "bookId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "chapter",
+                        "name": "chapter",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.HandleUploadChapterParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.HandleUploadChapterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/books/{bookId}/complete": {
             "patch": {
                 "description": "Mark book as complete using id",
@@ -868,6 +927,9 @@ const docTemplate = `{
         "models.ChaptersBookPreview": {
             "type": "object",
             "properties": {
+                "chapter_no": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -1085,6 +1147,33 @@ const docTemplate = `{
             }
         },
         "models.HandleUploadBooksResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.HandleUploadChapterParams": {
+            "type": "object",
+            "required": [
+                "chapter_no",
+                "content",
+                "title"
+            ],
+            "properties": {
+                "chapter_no": {
+                    "type": "integer"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.HandleUploadChapterResponse": {
             "type": "object",
             "properties": {
                 "id": {

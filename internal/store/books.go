@@ -17,7 +17,7 @@ var (
 	ErrCreatorsBooksNotFound             = errors.New("creator doesn't have any books")
 	ErrNoBooksUnderThisGenre             = errors.New("no books under this genre yet")
 	ErrNoBooksUnderThisLanguage          = errors.New("no books under this language yet")
-	ErrNoBooksUnderThisGenreOrLanguage   = errors.New("no books under this genre or language yet")
+	ErrNoBooksUnderThisGenreAndLanguage  = errors.New("no books under this genre and language yet")
 	ErrBookNotFound                      = errors.New("book not found")
 	ErrShouldAtLeasePassOneFieldToUpdate = errors.New("one field at least is required to update")
 	ErrNoBooksInRecents                  = errors.New("no books in recents yet")
@@ -425,7 +425,7 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 	}
 
 	if len(booksMap) < 1 {
-		return nil, ErrNoBooksUnderThisGenreOrLanguage
+		return nil, ErrNoBooksUnderThisGenreAndLanguage
 	}
 
 	books, err := s.GetGenresAndReleaseSchedules(ctx, &bookIDs, booksMap)
@@ -568,7 +568,7 @@ func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, e
 	}
 
 	rows3, err := s.DB.QueryContext(ctx, `
-			SELECT title, created_at FROM chapters WHERE book_id = $1;
+			SELECT title, chapter_no, created_at FROM chapters WHERE book_id = $1;
 		`, book.Id)
 
 	if err != nil {
@@ -582,6 +582,7 @@ func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, e
 
 		if err := rows3.Scan(
 			&chapter.Title,
+			&chapter.Chapter_no,
 			&chapter.Created_at,
 		); err != nil {
 			return nil, fmt.Errorf("error scanning chapters: %v", err)

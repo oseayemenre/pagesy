@@ -14,12 +14,22 @@ type Schedule struct {
 }
 
 type Chapter struct {
+	Title      string
+	Chapter_no int
+	Content    string
+	Book_Id    uuid.UUID
+	Created_at string
+}
+
+type ChapterDraft struct {
 	Title      string `json:"title" validate:"required"`
+	Chapter_no int    `json:"chapter_no,omitempty"`
 	Content    string `json:"content" validate:"required"`
 	Created_at string `json:"created_at"`
 }
 
 type ChaptersBookPreview struct {
+	Chapter_no int    `json:"chapter_no"`
 	Title      string `json:"title"`
 	Created_at string `json:"created_at"`
 }
@@ -53,7 +63,7 @@ type HandleUploadBooksRequest struct {
 	Genres           string `validate:"required"`
 	Release_schedule []Schedule
 	Language         string `validate:"required"`
-	ChapterDraft     *Chapter
+	ChapterDraft     *ChapterDraft
 }
 
 type HandleUploadBooksResponse struct {
@@ -173,4 +183,14 @@ type HandleLoginParams struct {
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	Password string `json:"password" validate:"required"`
+}
+
+type HandleUploadChapterParams struct {
+	Title      string `json:"title" validate:"required"`
+	Chapter_no int    `json:"chapter_no" validate:"required"`
+	Content    string `json:"content" validate:"required"`
+}
+
+type HandleUploadChapterResponse struct {
+	Id string `json:"id"`
 }

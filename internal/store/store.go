@@ -28,6 +28,7 @@ type Store interface {
 	GetUserById(ctx context.Context, id string) (*models.User, error)
 	CreateUser(ctx context.Context, user *models.User) (*uuid.UUID, error)
 	GetUserPassword(ctx context.Context, id string) (string, error)
+	UploadChapter(ctx context.Context, userId string, chapter *models.Chapter) (*uuid.UUID, error)
 }
 
 type PostgresStore struct {

@@ -124,8 +124,8 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 			uuid_id, err := uuid.Parse(id)
 
 			if err != nil {
-				s.Logger.Error(fmt.Sprintf("error parsing uuid: %v", err), "service", "middleware")
-				respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error parsing uuid: %v", err))
+				s.Logger.Error("id is not a valid uuid", "service", "middleware")
+				respondWithError(w, http.StatusBadRequest, fmt.Errorf("id is not a valid uuid"))
 				return
 			}
 
@@ -156,6 +156,6 @@ func (s *Server) RedirectIfCookieExistsAndIsValid(next http.Handler) http.Handle
 			return
 		}
 
-		http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: change when ther's a frontend
+		http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: change when there's a frontend
 	})
 }

@@ -37,7 +37,7 @@ import (
 //	@Failure		404							{object}	models.ErrorResponse
 //	@Failure		500							{object}	models.ErrorResponse
 //	@Router			/books [post]
-func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
+func (s *Server) HandleUploadBook(w http.ResponseWriter, r *http.Request) {
 	user_context := r.Context().Value("user")
 	user := user_context.(*models.User)
 
@@ -56,7 +56,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		Description: r.FormValue("description"),
 		Genres:      r.FormValue("genre"),
 		Language:    r.FormValue("language"),
-		ChapterDraft: &models.Chapter{
+		ChapterDraft: &models.ChapterDraft{
 			Title:   r.FormValue("chapter_title"),
 			Content: r.FormValue("chapter_content"),
 		},
@@ -103,6 +103,34 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	file, header, cover_err := r.FormFile("book_cover")
+
+	var url string
+	var fileData []byte
+
+	if cover_err == nil {
+		defer file.Close()
+
+		fileData, err := io.ReadAll(file)
+		if err != nil {
+			s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
+			return
+		}
+
+		if len(fileData) > 3<<20 {
+			s.Server.Logger.Error("book cover too large", "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusRequestEntityTooLarge, fmt.Errorf("book cover too large"))
+			return
+		}
+
+		if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
+			s.Server.Logger.Warn("invalid file type", "service", "HandleUploadBooks")
+			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
+			return
+		}
+	}
+
 	bookId, err := s.Server.Store.UploadBook(r.Context(), &models.Book{
 		Name:        params.Name,
 		Description: params.Description,
@@ -126,37 +154,12 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, header, err := r.FormFile("book_cover")
-
-	var url string
-
-	if err == nil {
-		defer file.Close()
-
-		fileData, err := io.ReadAll(file)
-		if err != nil {
-			s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleUploadBooks")
-			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
-			return
-		}
-
-		if len(fileData) > 3<<20 {
-			s.Server.Logger.Error("book cover too large", "service", "HandleUploadBooks")
-			respondWithError(w, http.StatusRequestEntityTooLarge, fmt.Errorf("book cover too large"))
-			return
-		}
-
-		if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
-			s.Server.Logger.Warn("invalid file type", "service", "HandleUploadBooks")
-			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
-			return
-		}
-
+	if cover_err == nil {
 		url, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%s", bookId.String(), header.Filename))
 
 		if err != nil {
 			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
-			respondWithError(w, http.StatusBadRequest, err)
+			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
 
@@ -167,7 +170,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err != nil && err != http.ErrMissingFile {
+	if cover_err != nil && cover_err != http.ErrMissingFile {
 		s.Server.Logger.Error(fmt.Sprintf("error uploading image: %v", err), "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error uploading image: %v", err))
 		return
@@ -176,7 +179,7 @@ func (s *Server) HandleUploadBooks(w http.ResponseWriter, r *http.Request) {
 	respondWithSuccess(w, http.StatusCreated, &models.HandleUploadBooksResponse{Id: bookId.String()})
 }
 
-// HandleGetBooks GoDoc
+// HandleGetBooksStats GoDoc
 //
 //	@Summary		Get books stats
 //	@Description	Get all books by id
@@ -381,7 +384,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 		books, err := s.Store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
 
 		if err != nil {
-			if err == store.ErrNoBooksUnderThisGenreOrLanguage {
+			if err == store.ErrNoBooksUnderThisGenreAndLanguage {
 				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
 				return
 			}
@@ -436,6 +439,7 @@ func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {
 
 	for _, chapters := range book.Chapters {
 		chaptersForPreview = append(chaptersForPreview, models.ChaptersBookPreview{
+			Chapter_no: chapters.Chapter_no,
 			Title:      chapters.Title,
 			Created_at: chapters.Created_at,
 		})
@@ -565,7 +569,7 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			s.Server.Logger.Error(err.Error(), "service", "HandleEditBook")
-			respondWithError(w, http.StatusBadRequest, err)
+			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
 	}
@@ -636,7 +640,7 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 
 	if err := decodeJson(r, &param); err != nil {
 		s.Logger.Warn(err.Error(), "service", "HandleApproveBook")
-		respondWithError(w, http.StatusInternalServerError, err)
+		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -673,7 +677,7 @@ func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request
 
 	if err := decodeJson(r, &param); err != nil {
 		s.Logger.Warn(err.Error(), "service", "HandleMarkBookAsComplete")
-		respondWithError(w, http.StatusInternalServerError, err)
+		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 

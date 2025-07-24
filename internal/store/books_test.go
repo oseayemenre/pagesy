@@ -279,8 +279,8 @@ func TestGetBooksByGenreAndLanguage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := db.GetBooksByGenreAndLanguage(context.TODO(), tt.genres, tt.languages, 0, 5, "views", "desc")
 
-			if (err != nil && err != ErrNoBooksUnderThisGenreOrLanguage) != tt.wantErr {
-				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisGenreOrLanguage))
+			if (err != nil && err != ErrNoBooksUnderThisGenreAndLanguage) != tt.wantErr {
+				t.Fatalf("wanted: %v, got: %v", tt.wantErr, (err != nil && err != ErrNoBooksUnderThisGenreAndLanguage))
 			}
 		})
 	}

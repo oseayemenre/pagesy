@@ -34,7 +34,7 @@ func (s *Server) RegisterRoutes() {
 		})
 
 		r.Route("/books", func(r chi.Router) {
-			r.With(s.CheckPermission(PermissionUploadBooks)).Post("/", s.HandleUploadBooks)
+			r.With(s.CheckPermission(PermissionUploadBooks)).Post("/", s.HandleUploadBook)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks)).Get("/stats", s.HandleGetBooksStats)
 			r.With(s.CheckPermission(PermissionGetCreatorBooks, PermissionGetBooks)).Get("/", s.HandleGetBooks)
 			r.With(s.CheckPermission(PermissionGetRecentReads)).Get("/recents", s.HandleGetRecentReads)
@@ -48,7 +48,7 @@ func (s *Server) RegisterRoutes() {
 				r.With(s.CheckPermission(PermissionMarkComplete)).Patch("/complete", s.HandleMarkBookAsComplete)
 
 				r.Route("/chapters", func(r chi.Router) {
-					r.Post("/", nil)
+					r.With(s.CheckPermission(PermissionUploadChapters)).Post("/", s.HandleUploadChapter)
 					r.Get("/{chapterId}", nil)
 					r.Delete("/{chapterId}", nil)
 					r.Get("/{chapterId}/pages/{pageNumber}", nil)

@@ -9,6 +9,8 @@ definitions:
     type: object
   models.ChaptersBookPreview:
     properties:
+      chapter_no:
+        type: integer
       created_at:
         type: string
       title:
@@ -151,6 +153,24 @@ definitions:
         type: string
     type: object
   models.HandleUploadBooksResponse:
+    properties:
+      id:
+        type: string
+    type: object
+  models.HandleUploadChapterParams:
+    properties:
+      chapter_no:
+        type: integer
+      content:
+        type: string
+      title:
+        type: string
+    required:
+    - chapter_no
+    - content
+    - title
+    type: object
+  models.HandleUploadChapterResponse:
     properties:
       id:
         type: string
@@ -654,6 +674,45 @@ paths:
       summary: Approve book
       tags:
       - books
+  /books/{bookId}/chapters:
+    post:
+      consumes:
+      - application/json
+      description: Upload chapter using title, chapter number, content and book id
+      parameters:
+      - description: book id
+        in: path
+        name: bookId
+        required: true
+        type: string
+      - description: chapter
+        in: body
+        name: chapter
+        required: true
+        schema:
+          $ref: '#/definitions/models.HandleUploadChapterParams'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.HandleUploadChapterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Upload chapter
+      tags:
+      - chapters
   /books/{bookId}/complete:
     patch:
       description: Mark book as complete using id

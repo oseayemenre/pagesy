@@ -19,6 +19,7 @@ import (
 )
 
 // HandleGoogleSignIn godoc
+//
 //	@Summary		Sign in with google
 //	@Description	Sign in with google
 //	@Tags			auth
@@ -31,6 +32,7 @@ func (s *Server) HandleGoogleSignIn(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleGoogleSignInCallback godoc
+//
 //	@Summary		Google auth callback url
 //	@Description	Google auth callback url
 //	@Tags			auth
@@ -72,6 +74,7 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 }
 
 // HandleOnboarding godoc
+//
 //	@Summary		Onboard users
 //	@Description	Onboard users with display_name, name, about and image
 //	@Tags			auth
@@ -197,6 +200,7 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleRegister godoc
+//
 //	@Summary		Register user
 //	@Description	Register user using email, username and password
 //	@Tags			auth
@@ -214,7 +218,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 	if err := decodeJson(r, &params); err != nil {
 		s.Logger.Warn(err.Error(), "service", "HandleRegister")
-		respondWithError(w, http.StatusInternalServerError, err)
+		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -254,6 +258,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleLogin godoc
+//
 //	@Summary		Login
 //	@Description	Login using either email, username or both and password
 //	@Tags			auth
@@ -273,7 +278,7 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	if err := decodeJson(r, &params); err != nil {
 		s.Logger.Warn(err.Error(), "service", "HandleLogin")
-		respondWithError(w, http.StatusInternalServerError, err)
+		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -326,6 +331,7 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleLogout godoc
+//
 //	@Summary		Logout user
 //	@Description	Logout user
 //	@Tags			auth
@@ -350,6 +356,7 @@ func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleRefreshToken godoc
+//
 //	@Summary		Refresh token
 //	@Description	Get new access token
 //	@Tags			auth
