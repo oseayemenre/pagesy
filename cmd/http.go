@@ -20,10 +20,9 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/google"
 	_ "github.com/oseayemenre/pagesy/docs"
+	"github.com/oseayemenre/pagesy/internal/api"
 	"github.com/oseayemenre/pagesy/internal/config"
 	"github.com/oseayemenre/pagesy/internal/logger"
-	"github.com/oseayemenre/pagesy/internal/routes"
-	"github.com/oseayemenre/pagesy/internal/shared"
 	"github.com/oseayemenre/pagesy/internal/store"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -31,17 +30,24 @@ import (
 )
 
 type Server struct {
-	*shared.Server
+	router      *chi.Mux
+	logger      logger.Logger
+	objectStore store.ObjectStore
+	store       store.Store
+	config      *config.Config
 }
 
-func NewServer(logger logger.Logger, objectStore store.ObjectStore, store store.Store, cfg *config.Config) *Server {
+func NewServer(
+	logger logger.Logger,
+	objectStore store.ObjectStore,
+	store store.Store,
+	cfg *config.Config,
+) *Server {
 	return &Server{
-		Server: &shared.Server{
-			Logger:      logger,
-			ObjectStore: objectStore,
-			Store:       store,
-			Config:      cfg,
-		},
+		logger:      logger,
+		objectStore: objectStore,
+		store:       store,
+		config:      cfg,
 	}
 }
 
@@ -76,9 +82,15 @@ func (s *Server) Mount(env string, cfg *config.Config) *chi.Mux {
 		w.Write([]byte("woosh! 🚀🚀\n"))
 	})
 
-	s.Server.Router = r
+	s.router = r
 
-	server := routes.NewServer(s.Server)
+	server := api.New(
+		s.router,
+		s.logger,
+		s.objectStore,
+		s.store,
+		s.config,
+	)
 
 	server.RegisterRoutes()
 

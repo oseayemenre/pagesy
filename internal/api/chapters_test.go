@@ -1,4 +1,4 @@
-package routes
+package api
 
 import (
 	"bytes"
@@ -12,16 +12,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/models"
-	"github.com/oseayemenre/pagesy/internal/shared"
 )
 
 func TestHandleUploadChapter(t *testing.T) {
-	s := &Server{
-		Server: &shared.Server{
-			Logger:      &testLogger{},
-			ObjectStore: &testObjectStore{},
-			Store:       &testStore{},
-		},
+	a := &Api{
+		logger:      &testLogger{},
+		objectStore: &testObjectStore{},
+		store:       &testStore{},
 	}
 
 	tests := []struct {
@@ -75,7 +72,7 @@ func TestHandleUploadChapter(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			s.HandleUploadChapter(rr, req)
+			a.HandleUploadChapter(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)

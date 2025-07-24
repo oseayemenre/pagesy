@@ -1,4 +1,4 @@
-package routes
+package api
 
 import (
 	"context"
@@ -27,7 +27,6 @@ func (s *testObjectStore) UploadFile(ctx context.Context, file io.Reader, id str
 }
 
 type testStore struct {
-	userExists                     bool
 	uploadBookFunc                 func(ctx context.Context, book *models.Book) (*uuid.UUID, error)
 	updateImageFunc                func(ctx context.Context, url string, id string) error
 	getBooksStatsFunc              func(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
@@ -37,10 +36,12 @@ type testStore struct {
 	getAllBooksFunc                func(ctx context.Context, offset int, limit int, sort string, order string) ([]models.Book, error)
 	getBookFunc                    func(ctx context.Context, id string) (*models.Book, error)
 	deleteBookFunc                 func(ctx context.Context, id string) error
-	getRecentReadsFunc             func(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
 	editBookFunc                   func(ctx context.Context, book *models.HandleEditBookParam) error
 	approveBookFunc                func(ctx context.Context, id string, approve bool) error
 	completeBookFunc               func(ctx context.Context, id string, complete bool) error
+	getRecentReadsFunc             func(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
+	userExistsFunc                 func(ctx context.Context, email string, username string) (*uuid.UUID, error)
+	getUserPasswordFunc            func(ctx context.Context, id string) (string, error)
 }
 
 func (s *testStore) UploadBook(ctx context.Context, book *models.Book) (*uuid.UUID, error) {
@@ -142,9 +143,8 @@ func (s *testStore) CreateUser(ctx context.Context, user *models.User) (*uuid.UU
 }
 
 func (s *testStore) CheckIfUserExists(ctx context.Context, email string, username string) (*uuid.UUID, error) {
-	if s.userExists {
-		id := uuid.New()
-		return &id, nil
+	if s.userExistsFunc != nil {
+		return s.userExistsFunc(ctx, email, username)
 	}
 
 	return nil, nil
@@ -155,6 +155,10 @@ func (s *testStore) GetUserById(ctx context.Context, id string) (*models.User, e
 }
 
 func (s *testStore) GetUserPassword(ctx context.Context, id string) (string, error) {
+	if s.getUserPasswordFunc != nil {
+		return s.getUserPasswordFunc(ctx, id)
+	}
+
 	hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
 	return string(hash), nil
 }

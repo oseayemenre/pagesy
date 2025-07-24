@@ -1,4 +1,4 @@
-package routes
+package api
 
 import (
 	"bytes"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/oseayemenre/pagesy/internal/models"
-	"github.com/oseayemenre/pagesy/internal/shared"
 	"github.com/oseayemenre/pagesy/internal/store"
 )
 
@@ -37,14 +36,14 @@ import (
 //	@Failure		404							{object}	models.ErrorResponse
 //	@Failure		500							{object}	models.ErrorResponse
 //	@Router			/books [post]
-func (s *Server) HandleUploadBook(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleUploadBook(w http.ResponseWriter, r *http.Request) {
 	user_context := r.Context().Value("user")
 	user := user_context.(*models.User)
 
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 
 	if err := r.ParseMultipartForm(8 << 20); err != nil {
-		s.Server.Logger.Warn(fmt.Sprintf("error parsing form: %v", err), "service", "HandleUploadBooks")
+		a.logger.Warn(fmt.Sprintf("error parsing form: %v", err), "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error parsing form: %v", err))
 		return
 	}
@@ -66,7 +65,7 @@ func (s *Server) HandleUploadBook(w http.ResponseWriter, r *http.Request) {
 	chapters := strings.Split(r.FormValue("release_schedule_chapter"), ",")
 
 	if len(days) != len(chapters) {
-		s.Server.Logger.Warn("chapter length and days length must be the same", "service", "HandleUploadBooks")
+		a.logger.Warn("chapter length and days length must be the same", "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("chapter length and days length must be the same"))
 		return
 	}
@@ -75,7 +74,7 @@ func (s *Server) HandleUploadBook(w http.ResponseWriter, r *http.Request) {
 		ch, err := strconv.Atoi(chapters[i])
 
 		if err != nil {
-			s.Server.Logger.Warn("error converting type string to int", "service", "HandleUploadBooks")
+			a.logger.Warn("error converting type string to int", "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusBadRequest, fmt.Errorf("error converting type string to int"))
 			return
 		}
@@ -89,8 +88,8 @@ func (s *Server) HandleUploadBook(w http.ResponseWriter, r *http.Request) {
 			schedule)
 	}
 
-	if err := shared.Validate.Struct(&params); err != nil {
-		s.Server.Logger.Warn(fmt.Sprintf("validation error: %v", err), "service", "HandleUploadBooks")
+	if err := validate.Struct(&params); err != nil {
+		a.logger.Warn(fmt.Sprintf("validation error: %v", err), "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("validation error: %v", err))
 		return
 	}
@@ -113,25 +112,25 @@ func (s *Server) HandleUploadBook(w http.ResponseWriter, r *http.Request) {
 
 		fileData, err := io.ReadAll(file)
 		if err != nil {
-			s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleUploadBooks")
+			a.logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
 			return
 		}
 
 		if len(fileData) > 3<<20 {
-			s.Server.Logger.Error("book cover too large", "service", "HandleUploadBooks")
+			a.logger.Error("book cover too large", "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusRequestEntityTooLarge, fmt.Errorf("book cover too large"))
 			return
 		}
 
 		if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
-			s.Server.Logger.Warn("invalid file type", "service", "HandleUploadBooks")
+			a.logger.Warn("invalid file type", "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
 			return
 		}
 	}
 
-	bookId, err := s.Server.Store.UploadBook(r.Context(), &models.Book{
+	bookId, err := a.store.UploadBook(r.Context(), &models.Book{
 		Name:        params.Name,
 		Description: params.Description,
 		Author_Id:   user.Id,
@@ -146,32 +145,32 @@ func (s *Server) HandleUploadBook(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == store.ErrGenresNotFound {
-			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+			a.logger.Error(err.Error(), "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusNotFound, err)
 		}
-		s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+		a.logger.Error(err.Error(), "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	if cover_err == nil {
-		url, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%s", bookId.String(), header.Filename))
+		url, err = a.objectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%s", bookId.String(), header.Filename))
 
 		if err != nil {
-			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+			a.logger.Error(err.Error(), "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		if err := s.Store.UpdateBookImage(r.Context(), url, bookId.String()); err != nil {
-			s.Server.Logger.Error(err.Error(), "service", "HandleUploadBooks")
+		if err := a.store.UpdateBookImage(r.Context(), url, bookId.String()); err != nil {
+			a.logger.Error(err.Error(), "service", "HandleUploadBooks")
 			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
 	}
 
 	if cover_err != nil && cover_err != http.ErrMissingFile {
-		s.Server.Logger.Error(fmt.Sprintf("error uploading image: %v", err), "service", "HandleUploadBooks")
+		a.logger.Error(fmt.Sprintf("error uploading image: %v", err), "service", "HandleUploadBooks")
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error uploading image: %v", err))
 		return
 	}
@@ -191,7 +190,7 @@ func (s *Server) HandleUploadBook(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500			{object}	models.ErrorResponse
 //	@Success		200			{object}	models.HandleGetBooksStatsResponse
 //	@Router			/books/stats [get]
-func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	user_context := r.Context().Value("user")
 	user := user_context.(*models.User)
 
@@ -201,7 +200,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetBooksStats")
+		a.logger.Warn("error converting string to int", "service", "HandleGetBooksStats")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -209,7 +208,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetBooksStats")
+		a.logger.Warn("error converting string to int", "service", "HandleGetBooksStats")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -220,7 +219,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 		id = user.Id.String()
 	}
 
-	book, err := s.Store.GetBooksStats(r.Context(), id, offset, limit)
+	book, err := a.store.GetBooksStats(r.Context(), id, offset, limit)
 
 	if err != nil {
 		if err == store.ErrCreatorsBooksNotFound {
@@ -228,7 +227,7 @@ func (s *Server) HandleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		s.Server.Logger.Error(err.Error(), "service", "HandleGetBooksStats")
+		a.logger.Error(err.Error(), "service", "HandleGetBooksStats")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -316,7 +315,7 @@ func handleGetBooksHelper(w http.ResponseWriter, books []models.Book) {
 //	@Success		200			{object}	models.HandleGetBooksResponse
 //	@Failure		500			{object}	models.ErrorResponse
 //	@Router			/books [get]
-func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	genre := r.URL.Query()["genre"]
 	language := r.URL.Query()["language"]
 	sort := strings.ToLower(r.URL.Query().Get("sort"))
@@ -325,7 +324,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetBooks")
+		a.logger.Warn("error converting string to int", "service", "HandleGetBooks")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -333,7 +332,7 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetBooks")
+		a.logger.Warn("error converting string to int", "service", "HandleGetBooks")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -347,14 +346,14 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(genre) > 0 && len(language) < 1 {
-		books, err := s.Store.GetBooksByGenre(r.Context(), genre, offset, limit, sort, order)
+		books, err := a.store.GetBooksByGenre(r.Context(), genre, offset, limit, sort, order)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisGenre {
 				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
 				return
 			}
-			s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
+			a.logger.Error(err.Error(), "service", "HandleGetBooks")
 			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -364,14 +363,14 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(genre) < 1 && len(language) > 0 {
-		books, err := s.Store.GetBooksByLanguage(r.Context(), language, offset, limit, sort, order)
+		books, err := a.store.GetBooksByLanguage(r.Context(), language, offset, limit, sort, order)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisLanguage {
 				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
 				return
 			}
-			s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
+			a.logger.Error(err.Error(), "service", "HandleGetBooks")
 			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -381,14 +380,14 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(genre) > 0 && len(language) > 0 {
-		books, err := s.Store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
+		books, err := a.store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
 
 		if err != nil {
 			if err == store.ErrNoBooksUnderThisGenreAndLanguage {
 				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
 				return
 			}
-			s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
+			a.logger.Error(err.Error(), "service", "HandleGetBooks")
 			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -397,9 +396,9 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	books, err := s.Store.GetAllBooks(r.Context(), offset, limit, sort, order)
+	books, err := a.store.GetAllBooks(r.Context(), offset, limit, sort, order)
 	if err != nil {
-		s.Server.Logger.Error(err.Error(), "service", "HandleGetBooks")
+		a.logger.Error(err.Error(), "service", "HandleGetBooks")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -418,19 +417,19 @@ func (s *Server) HandleGetBooks(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500		{object}	models.ErrorResponse
 //	@Success		200		{object}	models.HandleGetBookResponse
 //	@Router			/books/{bookId} [get]
-func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleGetBook(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "bookId")
 
-	book, err := s.Store.GetBook(r.Context(), id)
+	book, err := a.store.GetBook(r.Context(), id)
 
 	if err != nil {
 		if err == store.ErrBookNotFound {
-			s.Server.Logger.Warn(err.Error(), "service", "HandleGetBook")
+			a.logger.Warn(err.Error(), "service", "HandleGetBook")
 			respondWithError(w, http.StatusNotFound, err)
 			return
 
 		}
-		s.Server.Logger.Error(err.Error(), "service", "HandleGetBook")
+		a.logger.Error(err.Error(), "service", "HandleGetBook")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -471,13 +470,13 @@ func (s *Server) HandleGetBook(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500		{object}	models.ErrorResponse
 //	@Success		204
 //	@Router			/books/{bookId} [delete]
-func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "bookId")
 
-	err := s.Store.DeleteBook(r.Context(), id)
+	err := a.store.DeleteBook(r.Context(), id)
 
 	if err != nil {
-		s.Server.Logger.Warn(err.Error(), "service", "HandleDeleteBook")
+		a.logger.Warn(err.Error(), "service", "HandleDeleteBook")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -504,12 +503,12 @@ func (s *Server) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 //	@Faiure			500 {object} models.ErrorResponse
 //	@Success		204
 //	@Router			/books/{bookId} [patch]
-func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 	bookId := chi.URLParam(r, "bookId")
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 
 	if err := r.ParseMultipartForm(8 << 20); err != nil {
-		s.Server.Logger.Warn(fmt.Sprintf("error parsing form: %v", err), "service", "HandleEditBook")
+		a.logger.Warn(fmt.Sprintf("error parsing form: %v", err), "service", "HandleEditBook")
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error parsing form: %v", err))
 		return
 	}
@@ -528,7 +527,7 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(days) != len(chapters) {
-		s.Server.Logger.Warn("chapter length and days length must be the same", "service", "HandleEditBook")
+		a.logger.Warn("chapter length and days length must be the same", "service", "HandleEditBook")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("chapter length and days length must be the same"))
 		return
 	}
@@ -548,34 +547,34 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 
 		fileData, err := io.ReadAll(file)
 		if err != nil {
-			s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleEditBook")
+			a.logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleEditBook")
 			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
 			return
 		}
 
 		if len(fileData) > 3<<20 {
-			s.Server.Logger.Error("book cover too large", "service", "HandleEditBook")
+			a.logger.Error("book cover too large", "service", "HandleEditBook")
 			respondWithError(w, http.StatusRequestEntityTooLarge, fmt.Errorf("book cover too large"))
 			return
 		}
 
 		if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
-			s.Server.Logger.Warn("invalid file type", "service", "HandleEditBook")
+			a.logger.Warn("invalid file type", "service", "HandleEditBook")
 			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
 			return
 		}
 
-		url, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%s", bookId, header.Filename))
+		url, err = a.objectStore.UploadFile(r.Context(), bytes.NewReader(fileData), fmt.Sprintf("%s_%s", bookId, header.Filename))
 
 		if err != nil {
-			s.Server.Logger.Error(err.Error(), "service", "HandleEditBook")
+			a.logger.Error(err.Error(), "service", "HandleEditBook")
 			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
 	}
 
 	if err != nil && err != http.ErrMissingFile {
-		s.Server.Logger.Error(fmt.Sprintf("error uploading image: %v", err), "service", "HandleEditBook")
+		a.logger.Error(fmt.Sprintf("error uploading image: %v", err), "service", "HandleEditBook")
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error uploading image: %v", err))
 		return
 	}
@@ -593,7 +592,7 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 			ch, err := strconv.Atoi(chapters[i])
 
 			if err != nil {
-				s.Server.Logger.Warn("error converting type string to int", "service", "HandleEditBook")
+				a.logger.Warn("error converting type string to int", "service", "HandleEditBook")
 				respondWithError(w, http.StatusBadRequest, fmt.Errorf("error converting type string to int"))
 				return
 			}
@@ -608,13 +607,13 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := s.Store.EditBook(r.Context(), params); err != nil {
+	if err := a.store.EditBook(r.Context(), params); err != nil {
 		if err == store.ErrShouldAtLeasePassOneFieldToUpdate {
-			s.Server.Logger.Warn(err.Error(), "service", "HandleEditBook")
+			a.logger.Warn(err.Error(), "service", "HandleEditBook")
 			respondWithError(w, http.StatusBadRequest, err)
 			return
 		}
-		s.Server.Logger.Error(err.Error(), "service", "HandleEditBook")
+		a.logger.Error(err.Error(), "service", "HandleEditBook")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -634,24 +633,24 @@ func (s *Server) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500		{object}	models.ErrorResponse
 //	@Success		204
 //	@Router			/books/{bookId}/approval [patch]
-func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 	bookId := chi.URLParam(r, "bookId")
 	param := models.ApproveBookParam{}
 
 	if err := decodeJson(r, &param); err != nil {
-		s.Logger.Warn(err.Error(), "service", "HandleApproveBook")
+		a.logger.Warn(err.Error(), "service", "HandleApproveBook")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if err := shared.Validate.Struct(&param); err != nil {
-		s.Server.Logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleApproveBook")
+	if err := validate.Struct(&param); err != nil {
+		a.logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleApproveBook")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error validating fields: %v", err))
 		return
 	}
 
-	if err := s.Store.ApproveBook(r.Context(), bookId, param.Approve); err != nil {
-		s.Server.Logger.Error(err.Error(), "service", "HandleApproveBook")
+	if err := a.store.ApproveBook(r.Context(), bookId, param.Approve); err != nil {
+		a.logger.Error(err.Error(), "service", "HandleApproveBook")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -671,24 +670,24 @@ func (s *Server) HandleApproveBook(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500		{object}	models.ErrorResponse
 //	@Success		204
 //	@Router			/books/{bookId}/complete [patch]
-func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request) {
 	bookId := chi.URLParam(r, "bookId")
 	param := models.MarkAsCompleteParam{}
 
 	if err := decodeJson(r, &param); err != nil {
-		s.Logger.Warn(err.Error(), "service", "HandleMarkBookAsComplete")
+		a.logger.Warn(err.Error(), "service", "HandleMarkBookAsComplete")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if err := shared.Validate.Struct(&param); err != nil {
-		s.Server.Logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleMarkBookAsComplete")
+	if err := validate.Struct(&param); err != nil {
+		a.logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleMarkBookAsComplete")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error validating fields: %v", err))
 		return
 	}
 
-	if err := s.Store.MarkBookAsComplete(r.Context(), bookId, param.Completed); err != nil {
-		s.Server.Logger.Error(err.Error(), "service", "HandleMarkBookAsComplete")
+	if err := a.store.MarkBookAsComplete(r.Context(), bookId, param.Completed); err != nil {
+		a.logger.Error(err.Error(), "service", "HandleMarkBookAsComplete")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -708,14 +707,14 @@ func (s *Server) HandleMarkBookAsComplete(w http.ResponseWriter, r *http.Request
 //	@Failure		500		{object}	models.ErrorResponse
 //	@Success		200		{object}	models.HandleGetRecentReadsResponse
 //	@Router			/books/recents [get]
-func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
 	user_context := r.Context().Value("user")
 	user := user_context.(*models.User)
 
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		a.logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -723,21 +722,21 @@ func (s *Server) HandleGetRecentReads(w http.ResponseWriter, r *http.Request) {
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
 
 	if err != nil {
-		s.Server.Logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
+		a.logger.Warn("error converting string to int", "service", "HandleGetRecentReads")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	books, err := s.Store.GetRecentReads(r.Context(), user.Id.String(), offset, limit)
+	books, err := a.store.GetRecentReads(r.Context(), user.Id.String(), offset, limit)
 
 	if err != nil {
 		if err == store.ErrNoBooksInRecents {
-			s.Server.Logger.Warn(err.Error(), "service", "HandleGetRecentReads")
+			a.logger.Warn(err.Error(), "service", "HandleGetRecentReads")
 			respondWithSuccess(w, http.StatusOK, &models.HandleGetRecentReadsResponse{Books: []models.RecentReadsResponseBooks{}})
 			return
 		}
 
-		s.Server.Logger.Error(err.Error(), "service", "HandleGetRecentReads")
+		a.logger.Error(err.Error(), "service", "HandleGetRecentReads")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}

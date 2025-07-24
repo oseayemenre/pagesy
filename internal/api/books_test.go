@@ -1,4 +1,4 @@
-package routes
+package api
 
 import (
 	"bytes"
@@ -14,7 +14,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/models"
-	"github.com/oseayemenre/pagesy/internal/shared"
 	"github.com/oseayemenre/pagesy/internal/store"
 )
 
@@ -170,16 +169,14 @@ func TestHandleUploadBooksService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Server: &shared.Server{
-					Logger: &testLogger{},
-					ObjectStore: &testObjectStore{
-						uploadFileFunc: tt.uploadFileFunc,
-					},
-					Store: &testStore{
-						uploadBookFunc:  tt.uploadBookFunc,
-						updateImageFunc: tt.updateImageFunc,
-					},
+			a := &Api{
+				logger: &testLogger{},
+				objectStore: &testObjectStore{
+					uploadFileFunc: tt.uploadFileFunc,
+				},
+				store: &testStore{
+					uploadBookFunc:  tt.uploadBookFunc,
+					updateImageFunc: tt.updateImageFunc,
 				},
 			}
 
@@ -210,7 +207,7 @@ func TestHandleUploadBooksService(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			s.HandleUploadBook(rr, req)
+			a.HandleUploadBook(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
@@ -261,13 +258,11 @@ func TestHandleGetBooksStatsService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Server: &shared.Server{
-					Logger:      &testLogger{},
-					ObjectStore: &testObjectStore{},
-					Store: &testStore{
-						getBooksStatsFunc: tt.getBooksStatsFunc,
-					},
+			a := &Api{
+				logger:      &testLogger{},
+				objectStore: &testObjectStore{},
+				store: &testStore{
+					getBooksStatsFunc: tt.getBooksStatsFunc,
 				},
 			}
 
@@ -280,7 +275,7 @@ func TestHandleGetBooksStatsService(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			s.HandleGetBooksStats(rr, req)
+			a.HandleGetBooksStats(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
@@ -374,16 +369,14 @@ func TestHandleGetBooksService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Server: &shared.Server{
-					Logger:      &testLogger{},
-					ObjectStore: &testObjectStore{},
-					Store: &testStore{
-						getBooksByGenreFunc:            tt.getBooksByGenreFunc,
-						getBooksByLanguageFunc:         tt.getBooksByLanguageFunc,
-						getBooksByGenreAndLanguageFunc: tt.getBooksByGenreAndLanguageFunc,
-						getAllBooksFunc:                tt.getAllBooksFunc,
-					},
+			a := &Api{
+				logger:      &testLogger{},
+				objectStore: &testObjectStore{},
+				store: &testStore{
+					getBooksByGenreFunc:            tt.getBooksByGenreFunc,
+					getBooksByLanguageFunc:         tt.getBooksByLanguageFunc,
+					getBooksByGenreAndLanguageFunc: tt.getBooksByGenreAndLanguageFunc,
+					getAllBooksFunc:                tt.getAllBooksFunc,
 				},
 			}
 
@@ -396,7 +389,7 @@ func TestHandleGetBooksService(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			s.HandleGetBooks(rr, req)
+			a.HandleGetBooks(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
@@ -433,13 +426,11 @@ func TestHandleGetBookService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Server: &shared.Server{
-					Logger:      &testLogger{},
-					ObjectStore: &testObjectStore{},
-					Store: &testStore{
-						getBookFunc: tt.getBookFunc,
-					},
+			a := &Api{
+				logger:      &testLogger{},
+				objectStore: &testObjectStore{},
+				store: &testStore{
+					getBookFunc: tt.getBookFunc,
 				},
 			}
 
@@ -452,7 +443,7 @@ func TestHandleGetBookService(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			s.HandleGetBook(rr, req)
+			a.HandleGetBook(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
@@ -482,13 +473,11 @@ func TestHandleDeleteBookService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Server: &shared.Server{
-					Logger:      &testLogger{},
-					ObjectStore: &testObjectStore{},
-					Store: &testStore{
-						deleteBookFunc: tt.deleteBookFunc,
-					},
+			a := &Api{
+				logger:      &testLogger{},
+				objectStore: &testObjectStore{},
+				store: &testStore{
+					deleteBookFunc: tt.deleteBookFunc,
 				},
 			}
 
@@ -501,7 +490,7 @@ func TestHandleDeleteBookService(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			s.HandleDeleteBook(rr, req)
+			a.HandleDeleteBook(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
@@ -593,15 +582,13 @@ func TestHandleEditBookService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Server: &shared.Server{
-					Logger: &testLogger{},
-					ObjectStore: &testObjectStore{
-						uploadFileFunc: tt.uploadFileFunc,
-					},
-					Store: &testStore{
-						editBookFunc: tt.editBookFunc,
-					},
+			a := &Api{
+				logger: &testLogger{},
+				objectStore: &testObjectStore{
+					uploadFileFunc: tt.uploadFileFunc,
+				},
+				store: &testStore{
+					editBookFunc: tt.editBookFunc,
 				},
 			}
 
@@ -630,7 +617,7 @@ func TestHandleEditBookService(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			s.HandleEditBook(rr, req)
+			a.HandleEditBook(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
@@ -673,13 +660,11 @@ func TestHandleApproveBookService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Server: &shared.Server{
-					Logger:      &testLogger{},
-					ObjectStore: &testObjectStore{},
-					Store: &testStore{
-						approveBookFunc: tt.approveBookFunc,
-					},
+			a := &Api{
+				logger:      &testLogger{},
+				objectStore: &testObjectStore{},
+				store: &testStore{
+					approveBookFunc: tt.approveBookFunc,
 				},
 			}
 
@@ -687,7 +672,7 @@ func TestHandleApproveBookService(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1/approval", bytes.NewBuffer(marshal_body))
 			rr := httptest.NewRecorder()
 
-			s.HandleApproveBook(rr, req)
+			a.HandleApproveBook(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
@@ -730,13 +715,11 @@ func TestHandleMarkBookAsCompleteService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Server: &shared.Server{
-					Logger:      &testLogger{},
-					ObjectStore: &testObjectStore{},
-					Store: &testStore{
-						completeBookFunc: tt.completeBookFunc,
-					},
+			a := &Api{
+				logger:      &testLogger{},
+				objectStore: &testObjectStore{},
+				store: &testStore{
+					completeBookFunc: tt.completeBookFunc,
 				},
 			}
 
@@ -744,7 +727,7 @@ func TestHandleMarkBookAsCompleteService(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1/complete", bytes.NewBuffer(marshal_body))
 			rr := httptest.NewRecorder()
 
-			s.HandleMarkBookAsComplete(rr, req)
+			a.HandleMarkBookAsComplete(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)
@@ -795,13 +778,11 @@ func TestHandleGetRecentReads(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				Server: &shared.Server{
-					Logger:      &testLogger{},
-					ObjectStore: &testObjectStore{},
-					Store: &testStore{
-						getRecentReadsFunc: tt.getRecentReadsFunc,
-					},
+			a := &Api{
+				logger:      &testLogger{},
+				objectStore: &testObjectStore{},
+				store: &testStore{
+					getRecentReadsFunc: tt.getRecentReadsFunc,
 				},
 			}
 
@@ -814,7 +795,7 @@ func TestHandleGetRecentReads(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			s.HandleGetRecentReads(rr, req)
+			a.HandleGetRecentReads(rr, req)
 
 			if rr.Code != tt.expectedCode {
 				t.Fatalf("expected %d, got %d", tt.expectedCode, rr.Code)

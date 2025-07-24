@@ -1,4 +1,4 @@
-package routes
+package api
 
 import (
 	"bytes"
@@ -15,7 +15,6 @@ import (
 	"github.com/oseayemenre/pagesy/internal/cookies"
 	"github.com/oseayemenre/pagesy/internal/jwt"
 	"github.com/oseayemenre/pagesy/internal/models"
-	"github.com/oseayemenre/pagesy/internal/shared"
 )
 
 // HandleGoogleSignIn godoc
@@ -26,7 +25,7 @@ import (
 //	@Success		302
 //	@Success		307
 //	@Router			/auth/google [get]
-func (s *Server) HandleGoogleSignIn(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleGoogleSignIn(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(context.WithValue(r.Context(), "provider", "google"))
 	gothic.BeginAuthHandler(w, r)
 }
@@ -40,28 +39,28 @@ func (s *Server) HandleGoogleSignIn(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500	{object}	models.ErrorResponse
 //	@Success		302
 //	@Router			/auth/google/callback [get]
-func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(context.WithValue(r.Context(), "provider", "google"))
 
 	user, err := gothic.CompleteUserAuth(w, r)
 
 	if err != nil {
-		s.Logger.Warn(fmt.Sprintf("error retrieving user details: %v", err), "service", "HandleGoogleSignInCallback")
+		a.logger.Warn(fmt.Sprintf("error retrieving user details: %v", err), "service", "HandleGoogleSignInCallback")
 		respondWithError(w, http.StatusNotFound, fmt.Errorf("error retrieving user details: %v", err))
 		return
 	}
 
-	id, err := s.Store.CheckIfUserExists(r.Context(), user.Email, "")
+	id, err := a.store.CheckIfUserExists(r.Context(), user.Email, "")
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.Logger.Warn(err.Error(), "service", "HandleGoogleSignInCallback")
+		a.logger.Warn(err.Error(), "service", "HandleGoogleSignInCallback")
 		respondWithError(w, http.StatusNotFound, err)
 		return
 	}
 
 	if id != nil {
-		if err := cookies.CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret); err != nil {
-			s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
+		if err := cookies.CreateAccessAndRefreshTokens(w, id.String(), a.config.Jwt_secret); err != nil {
+			a.logger.Error(err.Error(), "service", "HandleOnboarding")
 			respondWithError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -92,13 +91,13 @@ func (s *Server) HandleGoogleSignInCallback(w http.ResponseWriter, r *http.Reque
 //	@Success		201				{object}	models.HandleRegisterResponse
 //	@Header			201				{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/onboarding [post]
-func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 	session, _ := gothic.Store.Get(r, "app_session")
 
 	email, ok := session.Values["user_email"].(string)
 
 	if !ok || email == "" {
-		s.Logger.Warn("no user in session", "status", "permission denied")
+		a.logger.Warn("no user in session", "status", "permission denied")
 		respondWithError(w, http.StatusNotFound, fmt.Errorf("no user in session"))
 		return
 	}
@@ -108,7 +107,7 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 500<<10)
 
 	if err := r.ParseMultipartForm(500 << 10); err != nil {
-		s.Logger.Warn(fmt.Sprintf("error parsing data: %v", err), "service", "HandleOnboarding")
+		a.logger.Warn(fmt.Sprintf("error parsing data: %v", err), "service", "HandleOnboarding")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -119,8 +118,8 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 		About:        r.FormValue("about"),
 	}
 
-	if err := shared.Validate.Struct(&params); err != nil {
-		s.Server.Logger.Warn(fmt.Sprintf("validation error: %v", err), "service", "HandleOnboarding")
+	if err := validate.Struct(&params); err != nil {
+		a.logger.Warn(fmt.Sprintf("validation error: %v", err), "service", "HandleOnboarding")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("validation error: %v", err))
 		return
 	}
@@ -128,7 +127,7 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("image")
 
 	if err != nil && err != http.ErrMissingFile {
-		s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleOnboarding")
+		a.logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleOnboarding")
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
 		return
 	}
@@ -138,33 +137,33 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 		image, err := io.ReadAll(file)
 
 		if err != nil {
-			s.Server.Logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleOnboarding")
+			a.logger.Error(fmt.Sprintf("error reading bytes: %v", err), "service", "HandleOnboarding")
 			respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error reading bytes: %v", err))
 			return
 		}
 
 		if len(image) > 400<<10 {
-			s.Server.Logger.Error("image too large", "service", "HandleOnboarding")
+			a.logger.Error("image too large", "service", "HandleOnboarding")
 			respondWithError(w, http.StatusRequestEntityTooLarge, fmt.Errorf("image too large"))
 			return
 		}
 
 		if contentType := http.DetectContentType(image); !strings.HasPrefix(contentType, "image/") {
-			s.Server.Logger.Warn("invalid file type", "service", "HandleOnboarding")
+			a.logger.Warn("invalid file type", "service", "HandleOnboarding")
 			respondWithError(w, http.StatusBadRequest, fmt.Errorf("invalid file type"))
 			return
 		}
 
-		params.Image, err = s.Server.ObjectStore.UploadFile(r.Context(), bytes.NewReader(image), fmt.Sprintf("%s_%s", email, header.Filename))
+		params.Image, err = a.objectStore.UploadFile(r.Context(), bytes.NewReader(image), fmt.Sprintf("%s_%s", email, header.Filename))
 
 		if err != nil {
-			s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
+			a.logger.Error(err.Error(), "service", "HandleOnboarding")
 			respondWithError(w, http.StatusBadRequest, err)
 			return
 		}
 	}
 
-	id, err := s.Store.CreateUser(r.Context(), &models.User{
+	id, err := a.store.CreateUser(r.Context(), &models.User{
 		Username:     params.Username,
 		Display_name: params.Display_name,
 		Email:        email,
@@ -174,7 +173,7 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
+		a.logger.Error(err.Error(), "service", "HandleOnboarding")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -185,13 +184,13 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 	session.Options.MaxAge = -1
 
 	if err := session.Save(r, w); err != nil {
-		s.Server.Logger.Error(fmt.Sprintf("error deleting session: %v", err), "service", "HandleOnboarding")
+		a.logger.Error(fmt.Sprintf("error deleting session: %v", err), "service", "HandleOnboarding")
 		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("error deleting session: %v", err))
 		return
 	}
 
-	if err := cookies.CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret); err != nil {
-		s.Server.Logger.Error(err.Error(), "service", "HandleOnboarding")
+	if err := cookies.CreateAccessAndRefreshTokens(w, id.String(), a.config.Jwt_secret); err != nil {
+		a.logger.Error(err.Error(), "service", "HandleOnboarding")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -213,31 +212,31 @@ func (s *Server) HandleOnboarding(w http.ResponseWriter, r *http.Request) {
 //	@Success		302
 //	@Header			302	{string}	Set-Cookie	"app_session"
 //	@Router			/auth/register [post]
-func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var params models.HandleRegisterParams
 
 	if err := decodeJson(r, &params); err != nil {
-		s.Logger.Warn(err.Error(), "service", "HandleRegister")
+		a.logger.Warn(err.Error(), "service", "HandleRegister")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if err := shared.Validate.Struct(&params); err != nil {
-		s.Logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleRegister")
+	if err := validate.Struct(&params); err != nil {
+		a.logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleRegister")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error validating fields: %v", err))
 		return
 	}
 
-	id, err := s.Store.CheckIfUserExists(r.Context(), params.Email, "")
+	id, err := a.store.CheckIfUserExists(r.Context(), params.Email, "")
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.Logger.Error(err.Error(), "service", "HandleRegister")
+		a.logger.Error(err.Error(), "service", "HandleRegister")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	if id != nil {
-		s.Logger.Warn("user already exists", "service", "HandleRegister")
+		a.logger.Warn("user already exists", "service", "HandleRegister")
 		respondWithError(w, http.StatusConflict, fmt.Errorf("user already exists"))
 		return
 	}
@@ -245,7 +244,7 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	hashedPaswword, err := bcrypt.HashPassword(params.Password)
 
 	if err != nil {
-		s.Logger.Error(err.Error(), "service", "HandleRegister")
+		a.logger.Error(err.Error(), "service", "HandleRegister")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -272,57 +271,57 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 //	@Success		204
 //	@Header			204	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/login [post]
-func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	var params models.HandleLoginParams
 
 	if err := decodeJson(r, &params); err != nil {
-		s.Logger.Warn(err.Error(), "service", "HandleLogin")
+		a.logger.Warn(err.Error(), "service", "HandleLogin")
 		respondWithError(w, http.StatusBadRequest, err)
 		return
 	}
 
 	if params.Email == "" && params.Username == "" {
-		s.Logger.Warn("email and username cannot be empty", "service", "HandleLogin")
+		a.logger.Warn("email and username cannot be empty", "service", "HandleLogin")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("email and username cannot be empty"))
 		return
 	}
 
-	if err := shared.Validate.Struct(&params); err != nil {
-		s.Logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleLogin")
+	if err := validate.Struct(&params); err != nil {
+		a.logger.Warn(fmt.Sprintf("error validating fields: %v", err), "service", "HandleLogin")
 		respondWithError(w, http.StatusBadRequest, fmt.Errorf("error validating fields: %v", err))
 		return
 	}
 
-	id, err := s.Store.CheckIfUserExists(r.Context(), params.Email, params.Username)
+	id, err := a.store.CheckIfUserExists(r.Context(), params.Email, params.Username)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			s.Logger.Warn("account does not exist", "service", "HandleLogin")
+			a.logger.Warn("account does not exist", "service", "HandleLogin")
 			respondWithError(w, http.StatusNotFound, fmt.Errorf("account does not exist"))
 			return
 		}
-		s.Logger.Error(err.Error(), "service", "HandleLogin")
+		a.logger.Error(err.Error(), "service", "HandleLogin")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	password, err := s.Store.GetUserPassword(r.Context(), id.String())
+	password, err := a.store.GetUserPassword(r.Context(), id.String())
 
 	if err != nil {
-		s.Logger.Error(err.Error(), "service", "HandleLogin")
+		a.logger.Error(err.Error(), "service", "HandleLogin")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	if err := bcrypt.ComparePassword(params.Password, password); err != nil {
-		s.Logger.Warn(err.Error(), "service", "HandleLogin")
+		a.logger.Warn(err.Error(), "service", "HandleLogin")
 		respondWithError(w, http.StatusUnauthorized, err)
 		return
 	}
 
-	if err := cookies.CreateAccessAndRefreshTokens(w, id.String(), s.Config.Jwt_secret); err != nil {
-		s.Server.Logger.Error(err.Error(), "service", "HandleLogin")
+	if err := cookies.CreateAccessAndRefreshTokens(w, id.String(), a.config.Jwt_secret); err != nil {
+		a.logger.Error(err.Error(), "service", "HandleLogin")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -337,7 +336,7 @@ func (s *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 //	@Tags			auth
 //	@Success		204
 //	@Router			/auth/logout [post]
-func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:   "access_token",
 		Value:  "",
@@ -365,27 +364,27 @@ func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
 //	@Success		204
 //	@Header			204	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/refresh-token [post]
-func (s *Server) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
+func (a *Api) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	token, err := r.Cookie("refresh_token")
 
 	if err != nil {
-		s.Server.Logger.Warn("refresh token cookie not found", "service", "HandleRefreshToken")
-		respondWithError(w, http.StatusInternalServerError, fmt.Errorf("refresh token cookie not found"))
+		a.logger.Warn("refresh token cookie not found", "service", "HandleRefreshToken")
+		respondWithError(w, http.StatusNotFound, fmt.Errorf("refresh token cookie not found"))
 		return
 	}
 
-	id, err := jwt.DecodeJWTToken(token.Value, s.Config.Jwt_secret)
+	id, err := jwt.DecodeJWTToken(token.Value, a.config.Jwt_secret)
 
 	if err != nil {
-		s.Logger.Warn(err.Error(), "service", "HandleRefreshToken")
+		a.logger.Warn(err.Error(), "service", "HandleRefreshToken")
 		respondWithError(w, http.StatusUnauthorized, err)
 		return
 	}
 
-	access_token, err := jwt.CreateJWTToken(id, s.Config.Jwt_secret)
+	access_token, err := jwt.CreateJWTToken(id, a.config.Jwt_secret)
 
 	if err != nil {
-		s.Logger.Warn(err.Error(), "service", "HandleRefreshToken")
+		a.logger.Warn(err.Error(), "service", "HandleRefreshToken")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return
 	}

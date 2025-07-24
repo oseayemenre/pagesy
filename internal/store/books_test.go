@@ -22,9 +22,9 @@ func TestUploadBook(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	defer func() {
+	t.Cleanup(func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
-	}()
+	})
 
 	tests := []struct {
 		name    string
@@ -152,9 +152,9 @@ func TestGetBooksStats(t *testing.T) {
 		Password: "fake_password",
 	})
 
-	defer func() {
+	t.Cleanup(func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
-	}()
+	})
 
 	tests := []struct {
 		name      string
@@ -295,9 +295,9 @@ func TestGetBook(t *testing.T) {
 		Password: "fake_password",
 	})
 
-	defer func() {
+	t.Cleanup(func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
-	}()
+	})
 
 	book_id, err := db.UploadBook(context.TODO(), &models.Book{
 		Name:        "test book",
@@ -396,9 +396,9 @@ func TestGetRecentReads(t *testing.T) {
 		Password: "fake_password",
 	})
 
-	defer func() {
+	t.Cleanup(func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", id)
-	}()
+	})
 
 	t.Run("should return an error if recent books is empty", func(t *testing.T) { //this isn't a bad error btw
 		_, err := db.GetRecentReads(context.TODO(), id.String(), 0, 5)

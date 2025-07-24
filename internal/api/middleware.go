@@ -1,4 +1,4 @@
-package routes
+package api
 
 import (
 	"context"
@@ -27,7 +27,7 @@ func (w *responseWriterWrapper) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-func (s *Server) LoggingMiddleware(next http.Handler) http.Handler {
+func (a *Api) LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -37,7 +37,7 @@ func (s *Server) LoggingMiddleware(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		s.Server.Logger.Info(
+		a.logger.Info(
 			"request",
 			slog.String("method", r.Method),
 			slog.String("path", r.URL.String()),
@@ -72,34 +72,34 @@ const (
 	PermissionEditBook               = "books:edit"
 )
 
-func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.Handler {
+func (a *Api) CheckPermission(permissions ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, err := r.Cookie("access_token")
 
 			if err != nil {
-				s.Logger.Warn("access token cookie not found", "status", "permission denied")
+				a.logger.Warn("access token cookie not found", "status", "permission denied")
 				respondWithError(w, http.StatusNotFound, fmt.Errorf("access token cookie not found"))
 				return
 			}
 
-			id, err := jwt.DecodeJWTToken(token.Value, s.Config.Jwt_secret)
+			id, err := jwt.DecodeJWTToken(token.Value, a.config.Jwt_secret)
 
 			if err != nil {
-				s.Logger.Warn(err.Error(), "status", "permission denied")
+				a.logger.Warn(err.Error(), "status", "permission denied")
 				respondWithError(w, http.StatusUnauthorized, err)
 				return
 			}
 
-			db_user, err := s.Store.GetUserById(r.Context(), id)
+			db_user, err := a.store.GetUserById(r.Context(), id)
 
 			if err != nil {
 				if err == store.ErrUserNotFound {
-					s.Logger.Error(err.Error(), "service", "middleware")
+					a.logger.Error(err.Error(), "service", "middleware")
 					respondWithError(w, http.StatusNotFound, err)
 					return
 				}
-				s.Logger.Error(err.Error(), "service", "middleware")
+				a.logger.Error(err.Error(), "service", "middleware")
 				respondWithError(w, http.StatusInternalServerError, err)
 				return
 			}
@@ -116,7 +116,7 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 			}
 
 			if !hasPermission {
-				s.Server.Logger.Warn("role does not have permission to access this route", "status", "permission denied")
+				a.logger.Warn("role does not have permission to access this route", "status", "permission denied")
 				respondWithError(w, http.StatusForbidden, fmt.Errorf("role does not have permission to access this route"))
 				return
 			}
@@ -124,7 +124,7 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 			uuid_id, err := uuid.Parse(id)
 
 			if err != nil {
-				s.Logger.Error("id is not a valid uuid", "service", "middleware")
+				a.logger.Error("id is not a valid uuid", "service", "middleware")
 				respondWithError(w, http.StatusBadRequest, fmt.Errorf("id is not a valid uuid"))
 				return
 			}
@@ -139,7 +139,7 @@ func (s *Server) CheckPermission(permissions ...string) func(http.Handler) http.
 	}
 }
 
-func (s *Server) RedirectIfCookieExistsAndIsValid(next http.Handler) http.Handler {
+func (a *Api) RedirectIfCookieExistsAndIsValid(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, err := r.Cookie("access_token")
 
@@ -148,10 +148,10 @@ func (s *Server) RedirectIfCookieExistsAndIsValid(next http.Handler) http.Handle
 			return
 		}
 
-		_, err = jwt.DecodeJWTToken(token.Value, s.Config.Jwt_secret)
+		_, err = jwt.DecodeJWTToken(token.Value, a.config.Jwt_secret)
 
 		if err != nil {
-			s.Logger.Warn(err.Error(), "status", "permission denied")
+			a.logger.Warn(err.Error(), "status", "permission denied")
 			respondWithError(w, http.StatusUnauthorized, err)
 			return
 		}
