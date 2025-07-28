@@ -378,8 +378,18 @@ func TestGetBook(t *testing.T) {
 func TestEditBook(t *testing.T) {
 	db := setUpTestDb(t)
 
+	id, _ := db.CreateUser(context.TODO(), &models.User{
+		Username: "fake_username",
+		Email:    "fake_email@email.com",
+		Password: "fake_password",
+	})
+
+	t.Cleanup(func() {
+		db.DB.Exec("DELETE FROM users WHERE id = $1", id)
+	})
+
 	t.Run("should return an error if at least one field isn't passed", func(t *testing.T) {
-		err := db.EditBook(context.TODO(), &models.HandleEditBookParam{})
+		err := db.EditBook(context.TODO(), &models.HandleEditBookParam{}, id.String())
 
 		if (err != nil) != true {
 			t.Fatalf("expected %v, got %v", true, err != nil)

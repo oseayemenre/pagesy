@@ -136,6 +136,11 @@ definitions:
     required:
     - password
     type: object
+  models.HandleMarkBookForSubscriptionParams:
+    properties:
+      subscription:
+        type: boolean
+    type: object
   models.HandleRegisterParams:
     properties:
       email:
@@ -744,6 +749,35 @@ paths:
       summary: Mark book as complete
       tags:
       - books
+  /books/{bookId}/subscriptions:
+    patch:
+      description: Mark book for subscription
+      parameters:
+      - description: book id
+        in: path
+        name: bookId
+        required: true
+        type: string
+      - description: mark book for subscription body
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/models.HandleMarkBookForSubscriptionParams'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Mark book for subscription
+      tags:
+      - subscriptions
   /books/recents:
     get:
       description: Get user's recent reads

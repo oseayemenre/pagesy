@@ -79,6 +79,10 @@ func (a *Api) RegisterRoutes() {
 					r.Delete("/{commentId}", nil)
 					r.Patch("/{commentId}", nil)
 				})
+
+				r.Route("/subscriptions", func(r chi.Router) {
+					r.Patch("/", a.HandleMarkBookForSubscription)
+				})
 			})
 		})
 

@@ -194,3 +194,7 @@ type HandleUploadChapterParams struct {
 type HandleUploadChapterResponse struct {
 	Id string `json:"id"`
 }
+
+type HandleMarkBookForSubscriptionParams struct {
+	Subscription bool `json:"subscription" validate:"required"`
+}

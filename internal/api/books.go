@@ -471,9 +471,10 @@ func (a *Api) HandleGetBook(w http.ResponseWriter, r *http.Request) {
 //	@Success		204
 //	@Router			/books/{bookId} [delete]
 func (a *Api) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "bookId")
+	user := r.Context().Value("user").(*models.User)
+	bookId := chi.URLParam(r, "bookId")
 
-	err := a.store.DeleteBook(r.Context(), id)
+	err := a.store.DeleteBook(r.Context(), bookId, user.Id.String())
 
 	if err != nil {
 		a.logger.Warn(err.Error(), "service", "HandleDeleteBook")
@@ -504,6 +505,7 @@ func (a *Api) HandleDeleteBook(w http.ResponseWriter, r *http.Request) {
 //	@Success		204
 //	@Router			/books/{bookId} [patch]
 func (a *Api) HandleEditBook(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value("user").(*models.User)
 	bookId := chi.URLParam(r, "bookId")
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 
@@ -607,7 +609,7 @@ func (a *Api) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := a.store.EditBook(r.Context(), params); err != nil {
+	if err := a.store.EditBook(r.Context(), params, user.Id.String()); err != nil {
 		if err == store.ErrShouldAtLeasePassOneFieldToUpdate {
 			a.logger.Warn(err.Error(), "service", "HandleEditBook")
 			respondWithError(w, http.StatusBadRequest, err)

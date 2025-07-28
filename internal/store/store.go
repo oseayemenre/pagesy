@@ -19,8 +19,8 @@ type Store interface {
 	GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string, order string) ([]models.Book, error)
 	GetAllBooks(ctx context.Context, offset int, limit int, sort string, order string) ([]models.Book, error)
 	GetBook(ctx context.Context, id string) (*models.Book, error)
-	DeleteBook(ctx context.Context, id string) error
-	EditBook(ctx context.Context, book *models.HandleEditBookParam) error
+	DeleteBook(ctx context.Context, bookId string, userId string) error
+	EditBook(ctx context.Context, book *models.HandleEditBookParam, userId string) error
 	ApproveBook(ctx context.Context, id string, approve bool) error
 	MarkBookAsComplete(ctx context.Context, id string, complete bool) error
 	GetRecentReads(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
@@ -29,6 +29,8 @@ type Store interface {
 	CreateUser(ctx context.Context, user *models.User) (*uuid.UUID, error)
 	GetUserPassword(ctx context.Context, id string) (string, error)
 	UploadChapter(ctx context.Context, userId string, chapter *models.Chapter) (*uuid.UUID, error)
+	CheckIfBookIsEligibleForSubscription(ctx context.Context, bookId string) (bool, error)
+	MarkBookForSubscription(ctx context.Context, bookId string, userId string, eligible bool) error
 }
 
 type PostgresStore struct {

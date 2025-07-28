@@ -910,6 +910,50 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/books/{bookId}/subscriptions": {
+            "patch": {
+                "description": "Mark book for subscription",
+                "tags": [
+                    "subscriptions"
+                ],
+                "summary": "Mark book for subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book id",
+                        "name": "bookId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "mark book for subscription body",
+                        "name": "subscription",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.HandleMarkBookForSubscriptionParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1119,6 +1163,14 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "models.HandleMarkBookForSubscriptionParams": {
+            "type": "object",
+            "properties": {
+                "subscription": {
+                    "type": "boolean"
                 }
             }
         },

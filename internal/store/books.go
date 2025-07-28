@@ -26,26 +26,28 @@ var (
 func (s *PostgresStore) GetGenresAndReleaseSchedules(ctx context.Context, bookIDs *[]uuid.UUID, booksMap map[uuid.UUID]*models.Book) ([]models.Book, error) {
 	var books []models.Book
 
-	rows1, err := s.DB.QueryContext(ctx, `
+	query := `
 			SELECT bg.book_id, g.genres 
 			FROM genres g
 			JOIN books_genres bg ON (bg.genre_id = g.id)
 			WHERE bg.book_id = ANY($1);
-		`, pq.Array(*bookIDs))
+	`
+
+	genres, err := s.DB.QueryContext(ctx, query, pq.Array(*bookIDs))
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting genres: %v", err)
 	}
 
-	defer rows1.Close()
+	defer genres.Close()
 
-	for rows1.Next() {
+	for genres.Next() {
 		genre := struct {
 			bookId uuid.UUID
 			genre  string
 		}{}
 
-		if err := rows1.Scan(&genre.bookId, &genre.genre); err != nil {
+		if err := genres.Scan(&genre.bookId, &genre.genre); err != nil {
 			return nil, fmt.Errorf("error scanning book genres: %v", err)
 		}
 
@@ -54,20 +56,22 @@ func (s *PostgresStore) GetGenresAndReleaseSchedules(ctx context.Context, bookID
 		}
 	}
 
-	rows2, err := s.DB.QueryContext(ctx, `
+	query = `
 			SELECT book_id, day, no_of_chapters FROM release_schedule WHERE book_id = ANY($1)
-		`, pq.Array(*bookIDs))
+	`
+
+	release_schedules, err := s.DB.QueryContext(ctx, query, pq.Array(*bookIDs))
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting release schedule: %v", err)
 	}
 
-	defer rows2.Close()
+	defer release_schedules.Close()
 
-	for rows2.Next() {
+	for release_schedules.Next() {
 		release_schedule := models.Schedule{}
 
-		if err := rows2.Scan(&release_schedule.BookId, &release_schedule.Day, &release_schedule.Chapters); err != nil {
+		if err := release_schedules.Scan(&release_schedule.BookId, &release_schedule.Day, &release_schedule.Chapters); err != nil {
 			return nil, fmt.Errorf("error scanning release schedule: %v", err)
 		}
 
@@ -98,10 +102,12 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) (*uui
 
 	var bookID uuid.UUID
 
-	err = tx.QueryRowContext(ctx, `
+	query := `
 			INSERT INTO books (name, description, author_id, language)
 			VALUES ($1, $2, $3, $4) RETURNING id;
-		`, book.Name, book.Description, book.Author_Id, book.Language).Scan(&bookID)
+	`
+
+	err = tx.QueryRowContext(ctx, query, book.Name, book.Description, book.Author_Id, book.Language).Scan(&bookID)
 
 	if err != nil {
 		return nil, fmt.Errorf("error inserting into book table: %v", err)
@@ -117,10 +123,9 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) (*uui
 		argPosition += 3
 	}
 
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(`
-			INSERT INTO release_schedule(book_id, day, no_of_chapters)
-			VALUES %s; 
-		`, strings.Join(valueStrings, ",")), valueArgs...)
+	query = fmt.Sprintf("INSERT INTO release_schedule(book_id, day, no_of_chapters) VALUES %s;", strings.Join(valueStrings, ","))
+
+	_, err = tx.ExecContext(ctx, query, valueArgs...)
 
 	if err != nil {
 		return nil, fmt.Errorf("error inserting release_schedule: %v", err)
@@ -129,9 +134,11 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) (*uui
 	var genreIDs []string
 
 	var rows *sql.Rows
-	rows, err = tx.QueryContext(ctx, `
-			SELECT id FROM genres WHERE genres = ANY($1);
-		`, pq.Array(book.Genres))
+
+	query = `
+		SELECT id FROM genres WHERE genres = ANY($1);
+	`
+	rows, err = tx.QueryContext(ctx, query, pq.Array(book.Genres))
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving genre ids: %v", err)
@@ -162,20 +169,20 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) (*uui
 		argPosition += 2
 	}
 
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(`
-			INSERT INTO books_genres(book_id, genre_id)
-			VALUES %s
-			ON CONFLICT DO NOTHING;
-		`, strings.Join(valueStrings, ",")), valueArgs...)
+	query = fmt.Sprintf("INSERT INTO books_genres(book_id, genre_id) VALUES %s ON CONFLICT DO NOTHING;", strings.Join(valueStrings, ","))
+
+	_, err = tx.ExecContext(ctx, query, valueArgs...)
 
 	if err != nil {
 		return nil, fmt.Errorf("error inserting into book_genres: %v", err)
 	}
 
-	_, err = tx.ExecContext(ctx, `
+	query = `
 			INSERT INTO chapters(chapter_no, title, content, book_id)
 			VALUES (0, $1, $2, $3);
-		`, book.Chapter_Draft.Title, book.Chapter_Draft.Content, bookID)
+	`
+
+	_, err = tx.ExecContext(ctx, query, book.Chapter_Draft.Title, book.Chapter_Draft.Content, bookID)
 
 	if err != nil {
 		return nil, fmt.Errorf("error inserting draft chapter: %v", err)
@@ -191,11 +198,12 @@ func (s *PostgresStore) UploadBook(ctx context.Context, book *models.Book) (*uui
 }
 
 func (s *PostgresStore) UpdateBookImage(ctx context.Context, url string, id string) error {
-	_, err := s.DB.ExecContext(ctx, `
+	query := `
 			UPDATE books
 			SET image = $1
 			WHERE id = $2;
-		`, url, id)
+	`
+	_, err := s.DB.ExecContext(ctx, query, url, id)
 
 	if err != nil {
 		return fmt.Errorf("error updating book image: %v", err)
@@ -207,7 +215,7 @@ func (s *PostgresStore) UpdateBookImage(ctx context.Context, url string, id stri
 func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int, limit int) ([]models.Book, error) {
 	booksMap := make(map[uuid.UUID]*models.Book)
 
-	rows1, err := s.DB.QueryContext(ctx, `
+	query := `
 			SELECT b.id, b.name, b.description, b.image, b.views, b.language, b.completed, b.approved, b.created_at, b.updated_at, 
 						 COUNT(c.id) AS chapter_count
 			FROM books b 
@@ -216,20 +224,22 @@ func (s *PostgresStore) GetBooksStats(ctx context.Context, id string, offset int
 			GROUP BY b.id
 			ORDER BY b.created_at DESC
 			OFFSET $2 LIMIT $3;
-		`, id, offset, limit)
+	`
+
+	rows, err := s.DB.QueryContext(ctx, query, id, offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving books: %v", err)
 	}
 
-	defer rows1.Close()
+	defer rows.Close()
 
 	var bookIds []uuid.UUID
 
-	for rows1.Next() {
+	for rows.Next() {
 		var book models.Book
 
-		if err := rows1.Scan(
+		if err := rows.Scan(
 			&book.Id,
 			&book.Name,
 			&book.Description,
@@ -274,7 +284,8 @@ func sortByFieldHelper(sort string) string {
 
 func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]models.Book, error) {
 	field := sortByFieldHelper(sort)
-	rows1, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
+
+	query := fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
 			FROM books b
@@ -285,20 +296,22 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, off
 			GROUP BY b.id
 			ORDER BY %s %s
 			OFFSET $2 LIMIT $3;
-		`, field, order), pq.Array(genre), offset, limit)
+		`, field, order)
+
+	rows, err := s.DB.QueryContext(ctx, query, pq.Array(genre), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting books by genre: %v", err)
 	}
 
-	defer rows1.Close()
+	defer rows.Close()
 
 	var bookIDs []uuid.UUID
 	booksMap := map[uuid.UUID]*models.Book{}
 
-	for rows1.Next() {
+	for rows.Next() {
 		book := models.Book{}
-		if err := rows1.Scan(
+		if err := rows.Scan(
 			&book.Id,
 			&book.Name,
 			&book.Description,
@@ -330,7 +343,7 @@ func (s *PostgresStore) GetBooksByGenre(ctx context.Context, genre []string, off
 func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []string, offset int, limit int, sort string, order string) ([]models.Book, error) {
 	field := sortByFieldHelper(sort)
 
-	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
 			FROM books b
@@ -339,7 +352,9 @@ func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []strin
 			GROUP BY b.id
 			ORDER BY %s %s 
 			OFFSET $2 LIMIT $3;
-		`, field, order), pq.Array(language), offset, limit)
+		`, field, order)
+
+	rows, err := s.DB.QueryContext(ctx, query, pq.Array(language), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting books by language: %v", err)
@@ -384,7 +399,7 @@ func (s *PostgresStore) GetBooksByLanguage(ctx context.Context, language []strin
 func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string, order string) ([]models.Book, error) {
 	field := sortByFieldHelper(sort)
 
-	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
 			FROM books b
@@ -395,7 +410,9 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 			GROUP BY b.id
 			ORDER BY %s %s
 			OFFSET $3 LIMIT $4;
-		`, field, order), pq.Array(language), pq.Array(genre), offset, limit)
+		`, field, order)
+
+	rows, err := s.DB.QueryContext(ctx, query, pq.Array(language), pq.Array(genre), offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting books by genre and language: %v", err)
@@ -440,7 +457,7 @@ func (s *PostgresStore) GetBooksByGenreAndLanguage(ctx context.Context, genre []
 func (s *PostgresStore) GetAllBooks(ctx context.Context, offset int, limit int, sort string, order string) ([]models.Book, error) {
 	field := sortByFieldHelper(sort)
 
-	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
 			COUNT(c.id)
 			FROM books b
@@ -449,7 +466,9 @@ func (s *PostgresStore) GetAllBooks(ctx context.Context, offset int, limit int, 
 			GROUP BY b.id
 			ORDER BY %s %s
 			OFFSET $1 LIMIT $2;
-		`, field, order), offset, limit)
+		`, field, order)
+
+	rows, err := s.DB.QueryContext(ctx, query, offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting all books: %v", err)
@@ -490,7 +509,7 @@ func (s *PostgresStore) GetAllBooks(ctx context.Context, offset int, limit int, 
 func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, error) {
 	book := &models.Book{}
 
-	err := s.DB.QueryRowContext(ctx, `
+	query := `
 			SELECT b.id, b.name, b.description, b.image, b.views, b.rating, b.language, b.completed, b.created_at,
 			u.username,
 			COUNT (c.id)
@@ -499,7 +518,9 @@ func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, e
 			JOIN chapters c ON (c.book_id = b.id)
 			WHERE b.id = $1 AND b.approved = true
 			GROUP BY b.id, u.username;
-		`, id).Scan(
+	`
+
+	err := s.DB.QueryRowContext(ctx, query, id).Scan(
 		&book.Id,
 		&book.Name,
 		&book.Description,
@@ -521,43 +542,47 @@ func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, e
 		return nil, fmt.Errorf("error scanning book: %v", err)
 	}
 
-	rows1, err := s.DB.QueryContext(ctx, `
+	query = `
 			SELECT g.genres 
 			FROM genres g
 			JOIN books_genres bg ON (bg.genre_id = g.id)
 			WHERE bg.book_id = $1;
-		`, book.Id)
+	`
+
+	genres, err := s.DB.QueryContext(ctx, query, book.Id)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting genres: %v", err)
 	}
 
-	defer rows1.Close()
+	defer genres.Close()
 
-	for rows1.Next() {
+	for genres.Next() {
 		var genre string
 
-		if err := rows1.Scan(&genre); err != nil {
+		if err := genres.Scan(&genre); err != nil {
 			return nil, fmt.Errorf("error scanning genre: %v", err)
 		}
 
 		book.Genres = append(book.Genres, genre)
 	}
 
-	rows2, err := s.DB.QueryContext(ctx, `
+	query = `
 			SELECT day, no_of_chapters FROM release_schedule WHERE book_id = $1;
-		`, book.Id)
+	`
+
+	release_schedules, err := s.DB.QueryContext(ctx, query, book.Id)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting release schedule: %v", err)
 	}
 
-	defer rows2.Close()
+	defer release_schedules.Close()
 
-	for rows2.Next() {
+	for release_schedules.Next() {
 		var schedule models.Schedule
 
-		if err := rows2.Scan(
+		if err := release_schedules.Scan(
 			&schedule.Day,
 			&schedule.Chapters,
 		); err != nil {
@@ -567,20 +592,22 @@ func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, e
 		book.Release_schedule = append(book.Release_schedule, schedule)
 	}
 
-	rows3, err := s.DB.QueryContext(ctx, `
+	query = `
 			SELECT title, chapter_no, created_at FROM chapters WHERE book_id = $1;
-		`, book.Id)
+	`
+
+	chapters, err := s.DB.QueryContext(ctx, query, book.Id)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting chapters: %v", err)
 	}
 
-	defer rows3.Close()
+	defer chapters.Close()
 
-	for rows3.Next() {
+	for chapters.Next() {
 		var chapter models.Chapter
 
-		if err := rows3.Scan(
+		if err := chapters.Scan(
 			&chapter.Title,
 			&chapter.Chapter_no,
 			&chapter.Created_at,
@@ -594,15 +621,26 @@ func (s *PostgresStore) GetBook(ctx context.Context, id string) (*models.Book, e
 	return book, nil
 }
 
-func (s *PostgresStore) DeleteBook(ctx context.Context, id string) error {
-	_, err := s.DB.ExecContext(ctx, `DELETE FROM books WHERE id = $1`, id)
+func (s *PostgresStore) DeleteBook(ctx context.Context, bookId string, userId string) error {
+	query := `
+			DELETE FROM books WHERE id = $1 
+			AND 
+			(author_id = $2 OR EXISTS(
+				SELECT 1 
+				FROM users_roles ur 
+				JOIN roles r ON (ur.role_id = r.id)
+				WHERE ur.user_id = $2 AND r.name = 'admin'
+			));
+	`
+
+	_, err := s.DB.ExecContext(ctx, query, bookId, userId)
 	if err != nil {
 		return fmt.Errorf("error deleting book: %v", err)
 	}
 	return nil
 }
 
-func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBookParam) error {
+func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBookParam, userId string) error {
 	index := 0
 	clauses := []string{}
 	arguments := []interface{}{}
@@ -643,12 +681,10 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 		}
 	}()
 
+	query := fmt.Sprintf(`UPDATE books SET %v WHERE id = $%d AND author_id = $%d;`, strings.Join(clauses, ","), index+1, index+2)
+
 	if len(clauses) > 0 {
-		_, err = tx.ExecContext(ctx, fmt.Sprintf(`
-			UPDATE books
-			SET %v
-			WHERE id = $%d;
-			`, strings.Join(clauses, ","), index+1), arguments...)
+		_, err = tx.ExecContext(ctx, query, arguments...)
 
 		if err != nil {
 			return fmt.Errorf("error updating book: %v", err)
@@ -656,7 +692,11 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 	}
 
 	if len(book.Release_schedule) > 0 {
-		_, err = tx.ExecContext(ctx, "DELETE FROM release_schedule WHERE book_id = $1", book.Id)
+		query = `
+				DELETE FROM release_schedule WHERE book_id = $1;
+		`
+
+		_, err = tx.ExecContext(ctx, query, book.Id)
 
 		clauses = []string{}
 		arguments = []interface{}{}
@@ -679,15 +719,21 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 	}
 
 	if len(book.Genres) > 0 {
+		query = `
+				DELETE FROM books_genres WHERE book_id = $1;
+		`
 
-		_, err = tx.ExecContext(ctx, "DELETE FROM books_genres WHERE book_id = $1", book.Id)
+		_, err = tx.ExecContext(ctx, query, book.Id)
 
 		var genreIDs []string
 
 		var rows *sql.Rows
-		rows, err = tx.QueryContext(ctx, `
-			SELECT id FROM genres WHERE genres = ANY($1);
-			`, pq.Array(book.Genres))
+
+		query := `
+				SELECT id FROM genres WHERE genres = ANY($1);
+		`
+
+		rows, err = tx.QueryContext(ctx, query, pq.Array(book.Genres))
 
 		if err != nil {
 			return fmt.Errorf("error retrieving genre ids: %v", err)
@@ -718,11 +764,13 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 			index += 2
 		}
 
-		_, err = tx.ExecContext(ctx, fmt.Sprintf(`
-			INSERT INTO books_genres(book_id, genre_id)
-			VALUES %s
-			ON CONFLICT DO NOTHING;
-			`, strings.Join(clauses, ",")), arguments...)
+		query = fmt.Sprintf(`
+				INSERT INTO books_genres(book_id, genre_id)
+				VALUES %s
+				ON CONFLICT DO NOTHING;
+				`, strings.Join(clauses, ","))
+
+		_, err = tx.ExecContext(ctx, query, arguments...)
 
 		if err != nil {
 			return fmt.Errorf("error inserting into book_genres: %v", err)
@@ -733,22 +781,26 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 }
 
 func (s *PostgresStore) ApproveBook(ctx context.Context, id string, approve bool) error {
-	if _, err := s.DB.ExecContext(ctx, `
+	query := `
 			UPDATE books
 			SET approved = $1
 			WHERE id = $2;
-		`, approve, id); err != nil {
+	`
+
+	if _, err := s.DB.ExecContext(ctx, query, approve, id); err != nil {
 		return fmt.Errorf("error approving book: %v", err)
 	}
 	return nil
 }
 
 func (s *PostgresStore) MarkBookAsComplete(ctx context.Context, id string, complete bool) error {
-	if _, err := s.DB.ExecContext(ctx, `
+	query := `
 			UPDATE books
 			SET completed = $1
 			WHERE id = $2;
-		`, complete, id); err != nil {
+	`
+
+	if _, err := s.DB.ExecContext(ctx, query, complete, id); err != nil {
 		return fmt.Errorf("error marking book as complete: %v", err)
 	}
 
@@ -758,14 +810,16 @@ func (s *PostgresStore) MarkBookAsComplete(ctx context.Context, id string, compl
 func (s *PostgresStore) GetRecentReads(ctx context.Context, id string, offset int, limit int) ([]models.Book, error) {
 	var books []models.Book
 
-	rows, err := s.DB.QueryContext(ctx, `
+	query := `
 			SELECT b.name, b.image,
 			r.chapter_no, r.updated_at
 			FROM recents r
 			JOIN books b ON (r.book_id = b.id)
 			WHERE r.user_id = $1
 			OFFSET $2 LIMIT $3;
-		`, id, offset, limit)
+	`
+
+	rows, err := s.DB.QueryContext(ctx, query, id, offset, limit)
 
 	if err != nil {
 		return nil, fmt.Errorf("error getting recent reads: %v", err)

@@ -18,7 +18,11 @@ var (
 func (s *PostgresStore) CheckIfUserExists(ctx context.Context, email string, username string) (*uuid.UUID, error) {
 	var id uuid.UUID
 
-	if err := s.DB.QueryRowContext(ctx, `SELECT id from users WHERE email = $1 OR username = $2;`, email, username).Scan(&id); err != nil {
+	query := `
+			SELECT id from users WHERE email = $1 OR username = $2;
+	`
+
+	if err := s.DB.QueryRowContext(ctx, query, email, username).Scan(&id); err != nil {
 		return nil, fmt.Errorf("error retrieving user id: %w", err)
 	}
 
@@ -28,13 +32,15 @@ func (s *PostgresStore) CheckIfUserExists(ctx context.Context, email string, use
 func (s *PostgresStore) GetUserById(ctx context.Context, id string) (*models.User, error) {
 	var user models.User
 
-	if err := s.DB.QueryRowContext(ctx, `
+	query := `
 			SELECT r.name
 			FROM users u
 			JOIN users_roles ur ON (ur.user_id = u.id)
 			JOIN roles r ON (ur.role_id = r.id)
 			WHERE u.id = $1;
-		`, id).Scan(&user.Role); err != nil {
+	`
+
+	if err := s.DB.QueryRowContext(ctx, query, id).Scan(&user.Role); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrUserNotFound
 		}
@@ -42,13 +48,15 @@ func (s *PostgresStore) GetUserById(ctx context.Context, id string) (*models.Use
 		return nil, fmt.Errorf("error querying users table: %w", err)
 	}
 
-	rows, err := s.DB.QueryContext(ctx, `
+	query = `
 			SELECT p.name
 			FROM privileges p
 			JOIN roles_privileges rp ON (rp.privilege_id = p.id)
 			JOIN roles r ON (rp.role_id = r.id)
 			WHERE r.name = $1;
-		`, user.Role)
+	`
+
+	rows, err := s.DB.QueryContext(ctx, query, user.Role)
 
 	if err != nil {
 		return nil, fmt.Errorf("error querying privileges table: %v", err)
@@ -113,10 +121,11 @@ func (s *PostgresStore) CreateUser(ctx context.Context, user *models.User) (*uui
 		clauses_formatted = fmt.Sprintf(", %s", strings.Join(clauses, ","))
 	}
 
-	if err := s.DB.QueryRowContext(ctx, fmt.Sprintf(`
-		INSERT INTO users(username, display_name, email%s)
-		VALUES ($1, $2, $3%s) RETURNING id;`, fields_formatted, clauses_formatted),
-		arguments...).Scan(&id); err != nil {
+	query := fmt.Sprintf(`
+			INSERT INTO users(username, display_name, email%s)
+			VALUES ($1, $2, $3%s) RETURNING id;`, fields_formatted, clauses_formatted)
+
+	if err := s.DB.QueryRowContext(ctx, query, arguments...).Scan(&id); err != nil {
 		return nil, fmt.Errorf("error inserting in users table: %v", err)
 	}
 
@@ -126,9 +135,11 @@ func (s *PostgresStore) CreateUser(ctx context.Context, user *models.User) (*uui
 func (s *PostgresStore) GetUserPassword(ctx context.Context, id string) (string, error) {
 	var password string
 
-	if err := s.DB.QueryRowContext(ctx, `
+	query := `
 			SELECT password FROM users WHERE id = $1; 
-		`, id).Scan(&password); err != nil {
+	`
+
+	if err := s.DB.QueryRowContext(ctx, query, id).Scan(&password); err != nil {
 		return "", fmt.Errorf("error getting user password: %v", err)
 	}
 

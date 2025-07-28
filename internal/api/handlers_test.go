@@ -27,21 +27,23 @@ func (s *testObjectStore) UploadFile(ctx context.Context, file io.Reader, id str
 }
 
 type testStore struct {
-	uploadBookFunc                 func(ctx context.Context, book *models.Book) (*uuid.UUID, error)
-	updateImageFunc                func(ctx context.Context, url string, id string) error
-	getBooksStatsFunc              func(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
-	getBooksByGenreFunc            func(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]models.Book, error)
-	getBooksByLanguageFunc         func(ctx context.Context, language []string, offset int, limit int, sort string, order string) ([]models.Book, error)
-	getBooksByGenreAndLanguageFunc func(ctx context.Context, genre []string, language []string, offset int, limit int, sort string, order string) ([]models.Book, error)
-	getAllBooksFunc                func(ctx context.Context, offset int, limit int, sort string, order string) ([]models.Book, error)
-	getBookFunc                    func(ctx context.Context, id string) (*models.Book, error)
-	deleteBookFunc                 func(ctx context.Context, id string) error
-	editBookFunc                   func(ctx context.Context, book *models.HandleEditBookParam) error
-	approveBookFunc                func(ctx context.Context, id string, approve bool) error
-	completeBookFunc               func(ctx context.Context, id string, complete bool) error
-	getRecentReadsFunc             func(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
-	userExistsFunc                 func(ctx context.Context, email string, username string) (*uuid.UUID, error)
-	getUserPasswordFunc            func(ctx context.Context, id string) (string, error)
+	uploadBookFunc                       func(ctx context.Context, book *models.Book) (*uuid.UUID, error)
+	updateImageFunc                      func(ctx context.Context, url string, id string) error
+	getBooksStatsFunc                    func(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
+	getBooksByGenreFunc                  func(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]models.Book, error)
+	getBooksByLanguageFunc               func(ctx context.Context, language []string, offset int, limit int, sort string, order string) ([]models.Book, error)
+	getBooksByGenreAndLanguageFunc       func(ctx context.Context, genre []string, language []string, offset int, limit int, sort string, order string) ([]models.Book, error)
+	getAllBooksFunc                      func(ctx context.Context, offset int, limit int, sort string, order string) ([]models.Book, error)
+	getBookFunc                          func(ctx context.Context, id string) (*models.Book, error)
+	deleteBookFunc                       func(ctx context.Context, bookId string, userId string) error
+	editBookFunc                         func(ctx context.Context, book *models.HandleEditBookParam, userId string) error
+	approveBookFunc                      func(ctx context.Context, id string, approve bool) error
+	completeBookFunc                     func(ctx context.Context, id string, complete bool) error
+	getRecentReadsFunc                   func(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
+	userExistsFunc                       func(ctx context.Context, email string, username string) (*uuid.UUID, error)
+	getUserPasswordFunc                  func(ctx context.Context, id string) (string, error)
+	checkIfBookIsEligibleForSubscription func(ctx context.Context, bookId string) (bool, error)
+	markBookForSubscription              func(ctx context.Context, bookId string, userId string, eligible bool) error
 }
 
 func (s *testStore) UploadBook(ctx context.Context, book *models.Book) (*uuid.UUID, error) {
@@ -103,16 +105,16 @@ func (s *testStore) GetBook(ctx context.Context, id string) (*models.Book, error
 	return &models.Book{}, nil
 }
 
-func (s *testStore) DeleteBook(ctx context.Context, id string) error {
+func (s *testStore) DeleteBook(ctx context.Context, bookId string, userId string) error {
 	if s.deleteBookFunc != nil {
-		return s.deleteBookFunc(ctx, id)
+		return s.deleteBookFunc(ctx, bookId, userId)
 	}
 	return nil
 }
 
-func (s *testStore) EditBook(ctx context.Context, book *models.HandleEditBookParam) error {
+func (s *testStore) EditBook(ctx context.Context, book *models.HandleEditBookParam, userId string) error {
 	if s.editBookFunc != nil {
-		return s.editBookFunc(ctx, book)
+		return s.editBookFunc(ctx, book, userId)
 	}
 	return nil
 }
@@ -166,4 +168,18 @@ func (s *testStore) GetUserPassword(ctx context.Context, id string) (string, err
 func (s *testStore) UploadChapter(ctx context.Context, userId string, chapter *models.Chapter) (*uuid.UUID, error) {
 	id := uuid.New()
 	return &id, nil
+}
+
+func (s *testStore) CheckIfBookIsEligibleForSubscription(ctx context.Context, bookId string) (bool, error) {
+	if s.checkIfBookIsEligibleForSubscription != nil {
+		return s.checkIfBookIsEligibleForSubscription(ctx, bookId)
+	}
+	return true, nil
+}
+
+func (s *testStore) MarkBookForSubscription(ctx context.Context, bookId string, userId string, eligible bool) error {
+	if s.markBookForSubscription != nil {
+		return s.markBookForSubscription(ctx, bookId, userId, eligible)
+	}
+	return nil
 }

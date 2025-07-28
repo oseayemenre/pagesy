@@ -456,11 +456,11 @@ func TestHandleDeleteBookService(t *testing.T) {
 	tests := []struct {
 		name           string
 		expectedCode   int
-		deleteBookFunc func(ctx context.Context, id string) error
+		deleteBookFunc func(ctx context.Context, bookId string, userId string) error
 	}{
 		{
 			name: "should return 500 if something went wrong",
-			deleteBookFunc: func(ctx context.Context, id string) error {
+			deleteBookFunc: func(ctx context.Context, bookId string, userId string) error {
 				return errors.New("something went wrong")
 			},
 			expectedCode: http.StatusInternalServerError,
@@ -506,7 +506,7 @@ func TestHandleEditBookService(t *testing.T) {
 		coverSizeBytes int
 		coverType      string
 		uploadFileFunc func(ctx context.Context, file io.Reader, id string) (string, error)
-		editBookFunc   func(ctx context.Context, book *models.HandleEditBookParam) error
+		editBookFunc   func(ctx context.Context, book *models.HandleEditBookParam, userId string) error
 		expectedCode   int
 	}{
 		{
@@ -554,7 +554,7 @@ func TestHandleEditBookService(t *testing.T) {
 		{
 			name:       "should return 400 if no field was passed to be edited",
 			formFields: map[string]string{},
-			editBookFunc: func(ctx context.Context, book *models.HandleEditBookParam) error {
+			editBookFunc: func(ctx context.Context, book *models.HandleEditBookParam, userId string) error {
 				return store.ErrShouldAtLeasePassOneFieldToUpdate
 			},
 			expectedCode: http.StatusBadRequest,
@@ -565,7 +565,7 @@ func TestHandleEditBookService(t *testing.T) {
 				"release_schedule_day":     "Sunday",
 				"release_schedule_chapter": "2",
 			},
-			editBookFunc: func(ctx context.Context, book *models.HandleEditBookParam) error {
+			editBookFunc: func(ctx context.Context, book *models.HandleEditBookParam, userId string) error {
 				return errors.New("something went wrong")
 			},
 			expectedCode: http.StatusInternalServerError,
@@ -614,6 +614,10 @@ func TestHandleEditBookService(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1", &buf)
 			req.Header.Set("Content-Type", writer.FormDataContentType())
+			req = req.WithContext(context.WithValue(context.TODO(), "user", &models.User{
+				Id:   uuid.New(),
+				Role: "",
+			}))
 
 			rr := httptest.NewRecorder()
 
