@@ -286,14 +286,17 @@ func TestGetBooksByGenreAndLanguage(t *testing.T) {
 	}
 }
 
-func TestGetBook(t *testing.T) {
-	db := setUpTestDb(t)
-
-	author_id, _ := db.CreateUser(context.TODO(), &models.User{
+func createUserAndUploadBook(t *testing.T, db *PostgresStore) (*uuid.UUID, *uuid.UUID, error) {
+	t.Helper()
+	author_id, err := db.CreateUser(context.TODO(), &models.User{
 		Username: "fake_username",
 		Email:    "fake_email@email.com",
 		Password: "fake_password",
 	})
+
+	if err != nil {
+		return nil, nil, err
+	}
 
 	t.Cleanup(func() {
 		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
@@ -327,7 +330,19 @@ func TestGetBook(t *testing.T) {
 	)
 
 	if err != nil {
-		t.Fatalf("error: %v", err)
+		return nil, nil, err
+	}
+
+	return book_id, author_id, nil
+}
+
+func TestGetBook(t *testing.T) {
+	db := setUpTestDb(t)
+
+	book_id, _, err := createUserAndUploadBook(t, db)
+
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	db.DB.Exec(`

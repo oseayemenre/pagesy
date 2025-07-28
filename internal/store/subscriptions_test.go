@@ -2,54 +2,16 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"testing"
-
-	"github.com/oseayemenre/pagesy/internal/models"
 )
 
 func TestCheckIfBookIsEligibleForSubscription(t *testing.T) {
 	db := setUpTestDb(t)
 
-	author_id, _ := db.CreateUser(context.TODO(), &models.User{
-		Username: "fake_username",
-		Email:    "fake_email@email.com",
-		Password: "fake_password",
-	})
-
-	t.Cleanup(func() {
-		db.DB.Exec("DELETE FROM users WHERE id = $1", author_id)
-	})
-
-	book_id, err := db.UploadBook(context.TODO(), &models.Book{
-		Name:        "test book",
-		Description: "test book description",
-		Image: sql.NullString{
-			String: "test book image",
-			Valid:  true,
-		},
-		Author_Id: *author_id,
-		Language:  "English",
-		Release_schedule: []models.Schedule{
-			{
-				Day:      "Monday",
-				Chapters: 1,
-			},
-			{
-				Day:      "Tuesday",
-				Chapters: 2,
-			},
-		},
-		Genres: []string{"Action"},
-		Chapter_Draft: models.Chapter{
-			Title:   "test book chapter",
-			Content: "test book content",
-		},
-	},
-	)
+	book_id, _, err := createUserAndUploadBook(t, db)
 
 	if err != nil {
-		t.Fatalf("error: %v", err)
+		t.Fatal(err)
 	}
 
 	tests := []struct {
@@ -79,6 +41,61 @@ func TestCheckIfBookIsEligibleForSubscription(t *testing.T) {
 
 			if eligible != false {
 				t.Fatal("expected false got true")
+			}
+		})
+	}
+}
+
+func TestMarkBookForSubscription(t *testing.T) {
+	db := setUpTestDb(t)
+
+	book_id, author_id, err := createUserAndUploadBook(t, db)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name      string
+		bookId    string
+		author_id string
+		wantErr   bool
+	}{
+		{
+			name:    "should return an error if book id isn't a uuid",
+			bookId:  "1",
+			wantErr: true,
+		},
+		{
+			name:      "should mark book for subscription",
+			bookId:    book_id.String(),
+			author_id: author_id.String(),
+			wantErr:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := db.MarkBookForSubscription(context.TODO(), tt.bookId, tt.author_id, true)
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)
+			}
+
+			if tt.wantErr == false {
+				var subscription bool
+
+				query := `
+						SELECT subscription FROM books WHERE id = $1;
+				`
+
+				if err := db.QueryRow(query, book_id).Scan(&subscription); err != nil {
+					t.Fatal(err)
+				}
+
+				if subscription != true {
+					t.Fatal("expected true got false")
+				}
 			}
 		})
 	}
