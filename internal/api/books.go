@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/models"
 	"github.com/oseayemenre/pagesy/internal/store"
 )
@@ -581,12 +583,24 @@ func (a *Api) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := &models.HandleEditBookParam{
-		Id:          bookId,
+	parse_id, err := uuid.Parse(bookId)
+
+	if err != nil {
+		a.logger.Warn("book id is not a uuid", "service", "HandleEditBook")
+		respondWithError(w, http.StatusBadRequest, fmt.Errorf("book id is not a uuid"))
+		return
+	}
+
+	params := &models.Book{
+		Id:          parse_id,
 		Name:        r.FormValue("name"),
 		Description: r.FormValue("description"),
 		Genres:      genres,
-		Image:       url,
+		Author_Id:   user.Id,
+		Image: sql.NullString{
+			String: url,
+			Valid:  true,
+		},
 	}
 
 	if len(days) > 0 && len(chapters) > 0 {
@@ -609,12 +623,19 @@ func (a *Api) HandleEditBook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := a.store.EditBook(r.Context(), params, user.Id.String()); err != nil {
+	if err := a.store.EditBook(r.Context(), params); err != nil {
 		if err == store.ErrShouldAtLeasePassOneFieldToUpdate {
 			a.logger.Warn(err.Error(), "service", "HandleEditBook")
 			respondWithError(w, http.StatusBadRequest, err)
 			return
 		}
+
+		if err == store.ErrBookNotFound {
+			a.logger.Warn(err.Error(), "service", "HandleEditBook")
+			respondWithError(w, http.StatusNotFound, err)
+			return
+		}
+
 		a.logger.Error(err.Error(), "service", "HandleEditBook")
 		respondWithError(w, http.StatusInternalServerError, err)
 		return

@@ -198,3 +198,11 @@ type HandleUploadChapterResponse struct {
 type HandleMarkBookForSubscriptionParams struct {
 	Subscription bool `json:"subscription" validate:"required"`
 }
+
+type HandleBuyCoinsParams struct {
+	Price_id string `json:"price_id" validate:"required"`
+}
+
+type HandleBuyCoinsResponse struct {
+	Url string `json:"url"`
+}

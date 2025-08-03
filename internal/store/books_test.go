@@ -336,6 +336,10 @@ func createUserAndUploadBook(t *testing.T, db *PostgresStore) (*uuid.UUID, *uuid
 	return book_id, author_id, nil
 }
 
+func uuidPtr(id uuid.UUID) *uuid.UUID {
+	return &id
+}
+
 func TestGetBook(t *testing.T) {
 	db := setUpTestDb(t)
 
@@ -357,8 +361,13 @@ func TestGetBook(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "should return an error if book is not found",
+			name:    "should return an error if id is not a uuid",
 			id:      nil,
+			wantErr: true,
+		},
+		{
+			name:    "should return an error if book is not found",
+			id:      uuidPtr(uuid.New()),
 			wantErr: true,
 		},
 		{
@@ -390,26 +399,128 @@ func TestGetBook(t *testing.T) {
 	}
 }
 
+func TestDeleteBook(t *testing.T) {
+	db := setUpTestDb(t)
+
+	book_id, author_id, err := createUserAndUploadBook(t, db)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name      string
+		book_id   string
+		author_id string
+		wantErr   bool
+	}{
+		{
+			name:      "should return an error if book_id or author_id is not a uuid",
+			book_id:   "",
+			author_id: "",
+			wantErr:   true,
+		},
+		{
+			name:      "should delete book",
+			book_id:   book_id.String(),
+			author_id: author_id.String(),
+			wantErr:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := db.DeleteBook(context.TODO(), tt.book_id, tt.author_id)
+			if tt.wantErr != (err != nil) {
+				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)
+			}
+
+			if tt.wantErr == false {
+				query := `
+						SELECT id FROM books WHERE id = $1;
+				`
+
+				var id uuid.UUID
+
+				err := db.QueryRow(query, book_id).Scan(&id)
+
+				if err != sql.ErrNoRows {
+					t.Fatal(err)
+				}
+			}
+		})
+	}
+}
+
 func TestEditBook(t *testing.T) {
 	db := setUpTestDb(t)
 
-	id, _ := db.CreateUser(context.TODO(), &models.User{
-		Username: "fake_username",
-		Email:    "fake_email@email.com",
-		Password: "fake_password",
-	})
+	book_id, author_id, err := createUserAndUploadBook(t, db)
 
-	t.Cleanup(func() {
-		db.DB.Exec("DELETE FROM users WHERE id = $1", id)
-	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	t.Run("should return an error if at least one field isn't passed", func(t *testing.T) {
-		err := db.EditBook(context.TODO(), &models.HandleEditBookParam{}, id.String())
+	tests := []struct {
+		name    string
+		book    *models.Book
+		wantErr bool
+	}{
+		{
+			name:    "should return an error if at least one field isn't passed",
+			book:    &models.Book{},
+			wantErr: true,
+		},
+		{
+			name:    "should return an error if book_id or author_id is not a uuid",
+			book:    &models.Book{Name: "new_name"},
+			wantErr: true,
+		},
+		{
+			name: "should return an error if book is not found",
+			book: &models.Book{
+				Name:      "new_name",
+				Id:        *uuidPtr(uuid.New()),
+				Author_Id: *author_id,
+			},
+			wantErr: true,
+		},
+		{
+			name: "should edit book",
+			book: &models.Book{
+				Name:      "new_name",
+				Id:        *book_id,
+				Author_Id: *author_id,
+			},
+			wantErr: false,
+		},
+	}
 
-		if (err != nil) != true {
-			t.Fatalf("expected %v, got %v", true, err != nil)
-		}
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := db.EditBook(context.TODO(), tt.book)
+
+			if (err != nil) != true {
+				t.Fatalf("expected %v, got %v", true, err != nil)
+			}
+
+			if tt.wantErr == false {
+				query := `
+						SELECT name FROM books WHERE id = $1;
+				`
+
+				var name string
+				if err := db.QueryRow(query, book_id).Scan(&name); err != nil {
+					t.Fatal(err)
+				}
+
+				if name != "new_name" {
+					t.Fatalf("expected new_name, got %s", name)
+				}
+			}
+		})
+	}
+
 }
 
 func TestGetRecentReads(t *testing.T) {

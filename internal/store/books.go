@@ -640,7 +640,7 @@ func (s *PostgresStore) DeleteBook(ctx context.Context, bookId string, userId st
 	return nil
 }
 
-func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBookParam, userId string) error {
+func (s *PostgresStore) EditBook(ctx context.Context, book *models.Book) error {
 	index := 0
 	clauses := []string{}
 	arguments := []interface{}{}
@@ -657,7 +657,7 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 		arguments = append(arguments, book.Description)
 	}
 
-	if book.Image != "" {
+	if book.Image.String != "" {
 		index++
 		clauses = append(clauses, fmt.Sprintf("image=$%d", index))
 		arguments = append(arguments, book.Image)
@@ -681,7 +681,25 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.HandleEditBoo
 		}
 	}()
 
-	query := fmt.Sprintf(`UPDATE books SET %v WHERE id = $%d AND author_id = $%d;`, strings.Join(clauses, ","), index+1, index+2)
+	query := `
+			SELECT EXISTS(SELECT 1 FROM books WHERE id = $1 AND author_id = $2);
+	`
+
+	var exists bool
+
+	err = tx.QueryRowContext(ctx, query, book.Id, book.Author_Id).Scan(&exists)
+
+	fmt.Println(err)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrBookNotFound
+		}
+
+		return fmt.Errorf("error checking if user has book: %v", err)
+	}
+
+	query = fmt.Sprintf(`UPDATE books SET %v WHERE id = $%d;`, strings.Join(clauses, ","), index+1)
 
 	if len(clauses) > 0 {
 		_, err = tx.ExecContext(ctx, query, arguments...)

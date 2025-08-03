@@ -1,12 +1,12 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"bytes"
 	"testing"
 
 	"github.com/google/uuid"
@@ -63,8 +63,8 @@ func TestHandleMarkBookForSubscription(t *testing.T) {
 				logger:      &testLogger{},
 				objectStore: &testObjectStore{},
 				store: &testStore{
-					checkIfBookIsEligibleForSubscription: tt.checkIfBookIsEligibleForSubscription,
-					markBookForSubscription:              tt.markBookForSubscription,
+					checkIfBookIsEligibleForSubscriptionFunc: tt.checkIfBookIsEligibleForSubscription,
+					markBookForSubscriptionFunc:              tt.markBookForSubscription,
 				},
 			}
 

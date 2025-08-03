@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/oseayemenre/pagesy/internal/models"
 	"github.com/oseayemenre/pagesy/internal/store"
@@ -505,8 +507,9 @@ func TestHandleEditBookService(t *testing.T) {
 		formFields     map[string]string
 		coverSizeBytes int
 		coverType      string
+		bookId         string
 		uploadFileFunc func(ctx context.Context, file io.Reader, id string) (string, error)
-		editBookFunc   func(ctx context.Context, book *models.HandleEditBookParam, userId string) error
+		editBookFunc   func(ctx context.Context, book *models.Book) error
 		expectedCode   int
 	}{
 		{
@@ -549,15 +552,26 @@ func TestHandleEditBookService(t *testing.T) {
 				"release_schedule_day":     "Sunday",
 				"release_schedule_chapter": "two",
 			},
+			bookId:       uuid.New().String(),
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:       "should return 400 if no field was passed to be edited",
 			formFields: map[string]string{},
-			editBookFunc: func(ctx context.Context, book *models.HandleEditBookParam, userId string) error {
+			editBookFunc: func(ctx context.Context, book *models.Book) error {
 				return store.ErrShouldAtLeasePassOneFieldToUpdate
 			},
+			bookId:       uuid.New().String(),
 			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:       "should return 404 if book was not found",
+			formFields: map[string]string{},
+			editBookFunc: func(ctx context.Context, book *models.Book) error {
+				return store.ErrBookNotFound
+			},
+			bookId:       uuid.New().String(),
+			expectedCode: http.StatusNotFound,
 		},
 		{
 			name: "should return 500 if something went wrong",
@@ -565,7 +579,8 @@ func TestHandleEditBookService(t *testing.T) {
 				"release_schedule_day":     "Sunday",
 				"release_schedule_chapter": "2",
 			},
-			editBookFunc: func(ctx context.Context, book *models.HandleEditBookParam, userId string) error {
+			bookId: uuid.New().String(),
+			editBookFunc: func(ctx context.Context, book *models.Book) error {
 				return errors.New("something went wrong")
 			},
 			expectedCode: http.StatusInternalServerError,
@@ -576,6 +591,7 @@ func TestHandleEditBookService(t *testing.T) {
 				"release_schedule_day":     "Sunday",
 				"release_schedule_chapter": "2",
 			},
+			bookId:       uuid.New().String(),
 			expectedCode: http.StatusNoContent,
 		},
 	}
@@ -612,12 +628,17 @@ func TestHandleEditBookService(t *testing.T) {
 
 			writer.Close()
 
-			req := httptest.NewRequest(http.MethodPatch, "/api/v1/books/1", &buf)
+			req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/books/%s", tt.bookId), &buf)
 			req.Header.Set("Content-Type", writer.FormDataContentType())
 			req = req.WithContext(context.WithValue(context.TODO(), "user", &models.User{
 				Id:   uuid.New(),
 				Role: "",
 			}))
+
+			ctx := chi.NewRouteContext()
+			ctx.URLParams.Add("bookId", tt.bookId)
+
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
 
 			rr := httptest.NewRecorder()
 

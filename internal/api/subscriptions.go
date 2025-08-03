@@ -9,6 +9,7 @@ import (
 )
 
 // HandleMarkBookForSubscription godoc
+//
 //	@Summary		Mark book for subscription
 //	@Description	Mark book for subscription
 //	@Tags			subscriptions

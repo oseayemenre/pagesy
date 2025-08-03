@@ -954,6 +954,46 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/coins": {
+            "post": {
+                "description": "Buy different coin plans with price id",
+                "tags": [
+                    "coins"
+                ],
+                "summary": "Buy coins",
+                "parameters": [
+                    {
+                        "description": "price_id",
+                        "name": "price_id",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.HandleBuyCoinsParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.HandleBuyCoinsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -986,6 +1026,25 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.HandleBuyCoinsParams": {
+            "type": "object",
+            "required": [
+                "price_id"
+            ],
+            "properties": {
+                "price_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.HandleBuyCoinsResponse": {
+            "type": "object",
+            "properties": {
+                "url": {
                     "type": "string"
                 }
             }
@@ -1168,6 +1227,9 @@ const docTemplate = `{
         },
         "models.HandleMarkBookForSubscriptionParams": {
             "type": "object",
+            "required": [
+                "subscription"
+            ],
             "properties": {
                 "subscription": {
                     "type": "boolean"

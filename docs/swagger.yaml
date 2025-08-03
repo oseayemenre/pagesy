@@ -21,6 +21,18 @@ definitions:
       error:
         type: string
     type: object
+  models.HandleBuyCoinsParams:
+    properties:
+      price_id:
+        type: string
+    required:
+    - price_id
+    type: object
+  models.HandleBuyCoinsResponse:
+    properties:
+      url:
+        type: string
+    type: object
   models.HandleGetBookResponse:
     properties:
       chapters:
@@ -140,6 +152,8 @@ definitions:
     properties:
       subscription:
         type: boolean
+    required:
+    - subscription
     type: object
   models.HandleRegisterParams:
     properties:
@@ -842,4 +856,30 @@ paths:
       summary: Get books stats
       tags:
       - books
+  /coins:
+    post:
+      description: Buy different coin plans with price id
+      parameters:
+      - description: price_id
+        in: body
+        name: price_id
+        required: true
+        schema:
+          $ref: '#/definitions/models.HandleBuyCoinsParams'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HandleBuyCoinsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Buy coins
+      tags:
+      - coins
 swagger: "2.0"

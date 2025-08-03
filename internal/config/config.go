@@ -10,4 +10,5 @@ type Config struct {
 	Session_secret       string `mapstructure:"SESSION_SECRET"`
 	Jwt_secret           string `mapstructure:"JWT_SECRET"`
 	Host                 string `mapstructure:"HOST"`
+	Stripe_secret        string `mapstructure:"STRIPE_SECRET"`
 }

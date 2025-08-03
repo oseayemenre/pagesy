@@ -92,7 +92,8 @@ func (a *Api) RegisterRoutes() {
 			r.Delete("/books/{bookId}", nil)
 		})
 
-		r.Post("/coins", nil)
+		r.With(a.CheckPermission(PermissionBuyCoins)).Post("/coins", a.HandleBuyCoins)
+		r.Post("/webhook", a.HandleWebHook)
 		r.Patch("/users/{userId}/ban", nil)
 	})
 }

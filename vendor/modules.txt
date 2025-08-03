@@ -143,6 +143,12 @@ github.com/spf13/viper/internal/encoding/json
 github.com/spf13/viper/internal/encoding/toml
 github.com/spf13/viper/internal/encoding/yaml
 github.com/spf13/viper/internal/features
+# github.com/stripe/stripe-go/v82 v82.4.0
+## explicit; go 1.18
+github.com/stripe/stripe-go/v82
+github.com/stripe/stripe-go/v82/checkout/session
+github.com/stripe/stripe-go/v82/form
+github.com/stripe/stripe-go/v82/webhook
 # github.com/subosito/gotenv v1.6.0
 ## explicit; go 1.18
 github.com/subosito/gotenv
