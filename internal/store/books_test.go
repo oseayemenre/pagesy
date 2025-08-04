@@ -500,8 +500,8 @@ func TestEditBook(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := db.EditBook(context.TODO(), tt.book)
 
-			if (err != nil) != true {
-				t.Fatalf("expected %v, got %v", true, err != nil)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("expected %v, got %v", tt.wantErr, err != nil)
 			}
 
 			if tt.wantErr == false {

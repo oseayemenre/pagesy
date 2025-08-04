@@ -15,6 +15,7 @@ import (
 //	@Tags			coins
 //	@Param			price_id	body		models.HandleBuyCoinsParams	true	"price_id"
 //	@Failure		400			{object}	models.ErrorResponse
+//	@Failure		404			{object}	models.ErrorResponse
 //	@Failure		500			{object}	models.ErrorResponse
 //	@Success		200			{object}	models.HandleBuyCoinsResponse
 //	@Router			/coins [post]

@@ -689,14 +689,12 @@ func (s *PostgresStore) EditBook(ctx context.Context, book *models.Book) error {
 
 	err = tx.QueryRowContext(ctx, query, book.Id, book.Author_Id).Scan(&exists)
 
-	fmt.Println(err)
-
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return ErrBookNotFound
-		}
-
 		return fmt.Errorf("error checking if user has book: %v", err)
+	}
+
+	if !exists {
+		return ErrBookNotFound
 	}
 
 	query = fmt.Sprintf(`UPDATE books SET %v WHERE id = $%d;`, strings.Join(clauses, ","), index+1)

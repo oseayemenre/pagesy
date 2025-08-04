@@ -16,7 +16,9 @@ func TestCheckIfUserExists(t *testing.T) {
 		Email:        "test_email",
 	})
 
-	defer db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	t.Cleanup(func() {
+		db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	})
 
 	user_id, _ := db.CheckIfUserExists(context.TODO(), "test_email", "")
 
@@ -35,7 +37,9 @@ func TestGetUserById(t *testing.T) {
 
 	id, _ := db.CreateUser(context.TODO(), new_user)
 
-	defer db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	t.Cleanup(func() {
+		db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	})
 
 	tests := []struct {
 		name    string
@@ -75,7 +79,9 @@ func TestCreateUser(t *testing.T) {
 
 	id, _ := db.CreateUser(context.TODO(), new_user)
 
-	defer db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	t.Cleanup(func() {
+		db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	})
 
 	if id == nil {
 		t.Fatalf("user not found")
@@ -93,7 +99,9 @@ func TestGetUserPassword(t *testing.T) {
 
 	id, _ := db.CreateUser(context.TODO(), new_user)
 
-	defer db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	t.Cleanup(func() {
+		db.Exec(`DELETE FROM users WHERE id = $1`, id)
+	})
 
 	password, err := db.GetUserPassword(context.TODO(), id.String())
 

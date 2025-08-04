@@ -25,7 +25,7 @@ func (a *Api) HandleWebHook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	endpointSecret := ""
+	endpointSecret := a.config.Stripe_webhook_secret
 
 	signatureHeader := r.Header.Get("Stripe-Signature")
 	event, err = webhook.ConstructEvent(payload, signatureHeader, endpointSecret)

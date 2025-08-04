@@ -42,6 +42,7 @@ type testStore struct {
 	getRecentReadsFunc                       func(ctx context.Context, id string, offset int, limit int) ([]models.Book, error)
 	userExistsFunc                           func(ctx context.Context, email string, username string) (*uuid.UUID, error)
 	getUserPasswordFunc                      func(ctx context.Context, id string) (string, error)
+	getUserByIdFunc                          func(ctx context.Context, id string) (*models.User, error)
 	checkIfBookIsEligibleForSubscriptionFunc func(ctx context.Context, bookId string) (bool, error)
 	markBookForSubscriptionFunc              func(ctx context.Context, bookId string, userId string, eligible bool) error
 	updateUserCoinCountFunc                  func(ctx context.Context, userId string, amount int) error
@@ -154,6 +155,9 @@ func (s *testStore) CheckIfUserExists(ctx context.Context, email string, usernam
 }
 
 func (s *testStore) GetUserById(ctx context.Context, id string) (*models.User, error) {
+	if s.getUserByIdFunc != nil {
+		return s.getUserByIdFunc(ctx, id)
+	}
 	return nil, nil
 }
 
