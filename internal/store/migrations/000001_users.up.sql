@@ -10,5 +10,6 @@ CREATE TABLE IF NOT EXISTS users(
   about TEXT,
   followers UUID REFERENCES users(id),
   following UUID REFERENCES users(id),
+  clubs TEXT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
