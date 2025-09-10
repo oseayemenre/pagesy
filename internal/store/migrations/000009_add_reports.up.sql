@@ -13,7 +13,7 @@ CREATE TYPE report_type AS ENUM(
 );
 
 CREATE TABLE IF NOT EXISTS report(
-    id TEXT NOT NULL UNIQUE,
+    id UUID NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL UNIQUE REFERENCES users(id),
     category report_category NOT NULL,
     report report_type,
