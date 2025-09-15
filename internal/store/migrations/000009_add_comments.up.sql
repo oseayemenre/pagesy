@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS comments(
     content TEXT NOT NULL,
     isauthor bit,
     isexclusive bit,
+    ispost bit,
     pinned bit,
     entity_id UUID,
     entity_type entity_category,

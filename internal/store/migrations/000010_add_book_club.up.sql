@@ -1,3 +1,10 @@
+CREATE TYPE comment_category AS ENUM(
+    'Comments',
+    'Reports',
+    'Review',
+    'Posts',
+    'Forum'
+);
 CREATE TABLE IF NOT EXISTS book_club(
     id UUID NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
     bk_name TEXT NOT NULL UNIQUE,
