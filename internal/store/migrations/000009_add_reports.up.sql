@@ -18,5 +18,6 @@ CREATE TABLE IF NOT EXISTS report(
     category report_category NOT NULL,
     report report_type,
     comment_id UUID REFERENCES comments(id),
+    seen bool,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
