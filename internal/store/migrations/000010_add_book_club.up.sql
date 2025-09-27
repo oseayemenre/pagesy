@@ -1,10 +1,3 @@
-CREATE TYPE comment_category AS ENUM(
-    'Comments',
-    'Reports',
-    'Review',
-    'Posts',
-    'Forum'
-);
 CREATE TABLE IF NOT EXISTS book_club(
     id UUID NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
     clb_name TEXT NOT NULL UNIQUE,
@@ -17,7 +10,7 @@ CREATE TABLE IF NOT EXISTS book_club(
     modified_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
-CREATE TABLE IF NOT EXIST bk_moderator(
+CREATE TABLE IF NOT EXISTS bk_moderator(
     id UUID NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
     bookclb_id UUID REFERENCES book_club(id),
     user_id UUID REFERENCES users(id),
