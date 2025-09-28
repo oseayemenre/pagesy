@@ -7,7 +7,7 @@ import (
 )
 
 func setUpTestDb(t *testing.T) *PostgresStore {
-	db, err := sql.Open("postgres", "postgres://pagesy:pagesy_password@localhost:5432/pagesy_db?sslmode=disable")
+	db, err := sql.Open("postgres", "postgresql://postgres:jane@localhost/pagesy_db?sslmode=disable")
 
 	if err != nil {
 		t.Fatalf("error opening db connection: %v", err)
