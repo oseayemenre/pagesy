@@ -1,2 +1,0 @@
-DROP TABLE IF EXISTS book_club;
-DROP TABLE IF EXISTS bk_moderator;

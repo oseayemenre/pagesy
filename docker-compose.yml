@@ -1,13 +1,14 @@
-version: '3'
+version: "3"
 
 services:
   postgres:
     image: postgres:17-alpine
+    container_name: pagesy_db
     restart: unless-stopped
     ports:
       - 5432:5432
     environment:
-      - POSTGRES_USER=pagesy
+      - POSTGRES_USER=pagesy_user
       - POSTGRES_PASSWORD=pagesy_password
       - POSTGRES_DB=pagesy_db
     volumes:

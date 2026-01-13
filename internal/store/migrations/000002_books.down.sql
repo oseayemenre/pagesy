@@ -1,6 +1,0 @@
-DROP TABLE IF EXISTS books_genres;
-DROP TABLE IF EXISTS chapters;
-DROP TABLE IF EXISTS release_schedule;
-DROP TABLE IF EXISTS genres;
-DROP TABLE IF EXISTS books;
-DROP TYPE IF EXISTS days;

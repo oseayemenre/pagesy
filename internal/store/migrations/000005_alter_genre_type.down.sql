@@ -1,4 +1,0 @@
-ALTER TABLE genres
-ALTER COLUMN genres TYPE TEXT;
-
-DROP TYPE genre_type;
