@@ -4,5 +4,16 @@ info:
   contact: {}
   title: Pagesy
   version: "1.0"
-paths: {}
+paths:
+  /auth/google:
+    get:
+      description: Sign in with google
+      responses:
+        "302":
+          description: Found
+        "307":
+          description: Temporary Redirect
+      summary: Sign in with google
+      tags:
+      - auth
 swagger: "2.0"

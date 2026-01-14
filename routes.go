@@ -15,14 +15,14 @@ func (s *server) routes() {
 
 	s.router.Get("/swagger/*", httpSwagger.WrapHandler)
 
-	s.router.Get("/api/v1/auth/google", nil)
-	s.router.Get("/api/v1/auth/google/callback", nil)
+	s.router.Get("/api/v1/auth/google", s.handleAuthGoogle)
+	s.router.Get("/api/v1/auth/google/callback", s.handleAuthGoogleCallback)
 
-	s.router.Post("/api/v1/auth/onboarding", nil)
-	s.router.Post("/api/v1/auth/register", nil)
-	s.router.Post("/api/v1/auth/login", nil)
-	s.router.Post("/api/v1/auth/logout", nil)
-	s.router.Post("/api/v1/auth/refresh-token", nil)
+	s.router.Post("/api/v1/auth/onboarding", s.handleAuthOnboarding)
+	s.router.Post("/api/v1/auth/register", s.handleAuthRegister)
+	s.router.Post("/api/v1/auth/login", s.handleAuthLogin)
+	s.router.Post("/api/v1/auth/logout", s.handleAuthLogout)
+	s.router.Post("/api/v1/auth/refresh-token", s.handleAuthRefreshToken)
 
 	s.router.Post("/api/v1/books", nil)
 	s.router.Get("/api/v1/books", nil)

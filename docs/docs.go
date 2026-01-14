@@ -14,7 +14,25 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {}
+    "paths": {
+        "/auth/google": {
+            "get": {
+                "description": "Sign in with google",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Sign in with google",
+                "responses": {
+                    "302": {
+                        "description": "Found"
+                    },
+                    "307": {
+                        "description": "Temporary Redirect"
+                    }
+                }
+            }
+        }
+    }
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it

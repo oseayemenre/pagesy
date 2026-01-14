@@ -13,7 +13,12 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
+	"github.com/markbates/goth/providers/google"
+
 	_ "github.com/lib/pq"
 	_ "github.com/oseayemenre/pagesy/docs"
 )
@@ -40,23 +45,39 @@ func newServer(logger *slog.Logger, store *sql.DB) *server {
 // @BasePath	/api/v1
 func main() {
 	godotenv.Load()
+	goth.UseProviders(
+		google.New(os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET"), fmt.Sprintf("%s/api/v1/auth/google/callback", os.Getenv("HOST"))),
+	)
+
+	store := sessions.NewCookieStore([]byte(os.Getenv("SESSION_SECRET")))
+	store.MaxAge(86400)
+	store.Options.Path = "/"
+	store.Options.HttpOnly = true
+	if os.Getenv("STORE_SECURE") == "true" {
+		store.Options.Secure = true
+	} else {
+		store.Options.Secure = false
+	}
+	store.Options.SameSite = http.SameSiteLaxMode
+
+	gothic.Store = store
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
 	logger.Info("connecting to db...")
-	store, err := sql.Open("postgres", os.Getenv("DB_CONN"))
+	db, err := sql.Open("postgres", os.Getenv("DB_CONN"))
 
 	if err != nil {
 		logger.Error(fmt.Sprintf("error connecting db: %v", err))
 		os.Exit(1)
 	}
 
-	if err := store.Ping(); err != nil {
+	if err := db.Ping(); err != nil {
 		logger.Error(fmt.Sprintf("error pinging db: %v", err))
 		os.Exit(1)
 	}
 
 	logger.Info("db connected")
 
-	svr := newServer(logger, store)
+	svr := newServer(logger, db)
 	port := *flag.String("a", ":3000", "server address")
 	httpSvr := &http.Server{
 		Addr:    port,
