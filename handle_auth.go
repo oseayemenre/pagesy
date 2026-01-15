@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"database/sql"
 
@@ -42,26 +45,22 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	s.logger.Debug("checking if user exists...")
-
-	id, err := s.CheckIfUserExists(r.Context(), user.Email, "")
+	id, err := s.checkIfUserExists(r.Context(), user.Email, "")
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		s.logger.Error(err.Error())
-		responseFailure(w, http.StatusInternalServerError, "something went wrong")
+		responseFailure(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
-	s.logger.Debug("creating access and refresh tokens...")
 	if id != "" {
 		if err := createAccessAndRefreshTokens(w, id, os.Getenv("JWT_SECRET")); err != nil {
 			s.logger.Error(err.Error())
-			responseFailure(w, http.StatusInternalServerError, "something went wrong")
+			responseFailure(w, http.StatusInternalServerError, "internal server error")
 			return
 		}
 	}
 
-	s.logger.Debug("setting cookies...")
 	session, _ := gothic.Store.Get(r, "app_session")
 	session.Values["user_email"] = user.Email
 	session.Save(r, w)
@@ -79,15 +78,123 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 //	@Param			about			formData	string	false	"about"
 //	@Param			image			formData	file	false	"profile_picture"
 //	@Param			Cookie			header		string	true	"app_session=12345"
-//	@Failure		400				{object}	models.ErrorResponse
-//	@Failure		404				{object}	models.ErrorResponse
-//	@Failure		413				{object}	models.ErrorResponse
-//	@Failure		500				{object}	models.ErrorResponse
-//	@Success		201				{object}	models.HandleRegisterResponse
+//	@Failure		400				{object}	errorResponse
+//	@Failure		404				{object}	errorResponse
+//	@Failure		413				{object}	errorResponse
+//	@Failure		500				{object}	errorResponse
+//	@Success		201				{object}	main.handleAuthOnboarding.response
 //	@Header			201				{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/onboarding [post]
 
-func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {}
+func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Id string `json:"id"`
+	}
+
+	type request struct {
+		username     string
+		display_name string
+		about        string
+		image        string
+	}
+
+	session, _ := gothic.Store.Get(r, "app_session")
+
+	email, ok := session.Values["user_email"].(string)
+
+	if !ok || email == "" {
+		responseFailure(w, http.StatusNotFound, "no user in session")
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 500<<10)
+
+	if err := r.ParseMultipartForm(500 << 10); err != nil {
+		responseFailure(w, http.StatusBadRequest, err)
+		return
+	}
+
+	params := request{
+		username:     r.FormValue("username"),
+		display_name: r.FormValue("display_name"),
+		about:        r.FormValue("about"),
+	}
+
+	if err := validate.Struct(&params); err != nil {
+		responseFailure(w, http.StatusBadRequest, fmt.Sprintf("validation error: %v", err))
+		return
+	}
+
+	file, header, err := r.FormFile("image")
+
+	if err != nil && err != http.ErrMissingFile {
+		responseFailure(w, http.StatusBadRequest, fmt.Sprintf("error retrieving file: %v", err))
+		return
+	}
+
+	if err == nil {
+		defer file.Close()
+		image, err := io.ReadAll(file)
+
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("error reading bytes: %v", err))
+			responseFailure(w, http.StatusInternalServerError, "internal server error")
+			return
+		}
+
+		if len(image) > 400<<10 {
+			responseFailure(w, http.StatusRequestEntityTooLarge, "image too large")
+			return
+		}
+
+		if contentType := http.DetectContentType(image); !strings.HasPrefix(contentType, "image/") {
+			responseFailure(w, http.StatusBadRequest, "invalid file type")
+			return
+		}
+
+		params.image, err = a.objectStore.UploadFile(r.Context(), bytes.NewReader(image), fmt.Sprintf("%s_%s", email, header.Filename))
+
+		if err != nil {
+			s.logger.Error(err.Error())
+			responseFailure(w, http.StatusInternalServerError, "internal server error")
+			return
+		}
+	}
+
+	id, err := s.createUser(r.Context(), &user{
+		username:     params.username,
+		display_name: params.display_name,
+		email:        email,
+		password:     session.Values["user_password"].(string),
+		about:        params.about,
+		image:        params.image,
+	})
+
+	if err != nil {
+		s.logger.Error(err.Error())
+		responseFailure(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	delete(session.Values, "user_email")
+	delete(session.Values, "user_password")
+
+	session.Options.MaxAge = -1
+
+	if err := session.Save(r, w); err != nil {
+		s.logger.Error(fmt.Sprintf("error deleting session: %v", err))
+		responseFailure(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	if err := createAccessAndRefreshTokens(w, id, os.Getenv("JWT_SECRET")); err != nil {
+		s.logger.Error(err.Error())
+		responseFailure(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	responseSuccess(w, http.StatusCreated, response{Id: id})
+}
 
 func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {}
 
