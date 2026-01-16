@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -9,14 +10,11 @@ type errorResponse struct {
 	Error string `json:"error"`
 }
 
-func responseSuccess(w http.ResponseWriter, status int, data any) {
+func encode(w http.ResponseWriter, status int, data any) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
-func responseFailure(w http.ResponseWriter, status int, data any) {
-	responseSuccess(w, status, errorResponse{
-		Error: data.(string),
-	})
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		return fmt.Errorf("error encoding json, %v", err)
+	}
+	return nil
 }

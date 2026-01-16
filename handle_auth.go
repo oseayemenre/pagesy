@@ -43,7 +43,7 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 	user, err := gothic.CompleteUserAuth(w, r)
 
 	if err != nil {
-		responseFailure(w, http.StatusNotFound, fmt.Errorf("error retrieving user details, %v", err))
+		encode(w, http.StatusNotFound, &errorResponse{Error: fmt.Sprintf("error retrieving user details, %v", err)})
 		return
 	}
 
@@ -51,14 +51,14 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		s.logger.Error(err.Error())
-		responseFailure(w, http.StatusInternalServerError, "internal server error")
+		encode(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
 
 	if id != "" {
 		if err := createAccessAndRefreshTokens(w, id, os.Getenv("JWT_SECRET")); err != nil {
 			s.logger.Error(err.Error())
-			responseFailure(w, http.StatusInternalServerError, "internal server error")
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
 	}
@@ -89,10 +89,6 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 //	@Header			201				{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/onboarding [post]
 func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
-	type response struct {
-		Id string `json:"id"`
-	}
-
 	type request struct {
 		username     string
 		display_name string
@@ -100,19 +96,23 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 		image        string
 	}
 
+	type response struct {
+		Id string `json:"id"`
+	}
+
 	session, _ := gothic.Store.Get(r, "app_session")
 
 	email, ok := session.Values["user_email"].(string)
 
 	if !ok || email == "" {
-		responseFailure(w, http.StatusNotFound, "no user in session")
+		encode(w, http.StatusNotFound, &errorResponse{Error: "no user in session"})
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 500<<10)
 
 	if err := r.ParseMultipartForm(500 << 10); err != nil {
-		responseFailure(w, http.StatusBadRequest, err)
+		encode(w, http.StatusBadRequest, &errorResponse{Error: err.Error()})
 		return
 	}
 
@@ -123,14 +123,14 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.validator.Struct(&params); err != nil {
-		responseFailure(w, http.StatusBadRequest, fmt.Sprintf("validation error: %v", err))
+		encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("validation error: %v", err)})
 		return
 	}
 
 	file, header, err := r.FormFile("image")
 
 	if err != nil && err != http.ErrMissingFile {
-		responseFailure(w, http.StatusBadRequest, fmt.Sprintf("error retrieving file: %v", err))
+		encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("error retrieving file: %v", err)})
 		return
 	}
 
@@ -140,17 +140,17 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("error reading bytes, %v", err))
-			responseFailure(w, http.StatusInternalServerError, "internal server error")
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
 
 		if len(image) > 400<<10 {
-			responseFailure(w, http.StatusRequestEntityTooLarge, "image too large")
+			encode(w, http.StatusRequestEntityTooLarge, &errorResponse{Error: "image too large"})
 			return
 		}
 
 		if contentType := http.DetectContentType(image); !strings.HasPrefix(contentType, "image/") {
-			responseFailure(w, http.StatusBadRequest, "invalid file type")
+			encode(w, http.StatusBadRequest, &errorResponse{Error: "invalid file type"})
 			return
 		}
 
@@ -162,23 +162,31 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("error saving object in s3, %v", err))
-			responseFailure(w, http.StatusInternalServerError, "internal server error")
+			encode(w, http.StatusInternalServerError, errorResponse{Error: "internal server error"})
 			return
 		}
+	}
+
+	var password string
+
+	if session.Values["user_password"] == nil {
+		password = ""
+	} else {
+		password = session.Values["user_password"].(string)
 	}
 
 	id, err := s.createUser(r.Context(), &user{
 		username:     params.username,
 		display_name: params.display_name,
 		email:        email,
-		password:     session.Values["user_password"].(string),
+		password:     password,
 		about:        params.about,
 		image:        params.image,
 	})
 
 	if err != nil {
 		s.logger.Error(err.Error())
-		responseFailure(w, http.StatusInternalServerError, "internal server error")
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}
 
@@ -189,20 +197,39 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 
 	if err := session.Save(r, w); err != nil {
 		s.logger.Error(fmt.Sprintf("error deleting session, %v", err))
-		responseFailure(w, http.StatusInternalServerError, "internal server error")
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}
 
 	if err := createAccessAndRefreshTokens(w, id, os.Getenv("JWT_SECRET")); err != nil {
 		s.logger.Error(err.Error())
-		responseFailure(w, http.StatusInternalServerError, err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: err.Error()})
 		return
 	}
 
-	responseSuccess(w, http.StatusCreated, response{Id: id})
+	encode(w, http.StatusCreated, response{Id: id})
 }
 
-func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {}
+// handleRegister godoc
+//
+//	@Summary		Register user
+//	@Description	Register user using email, username and password
+//	@Tags			auth
+//	@Accept			application/json
+//	@Produce		json
+//	@Param			user	body		main.handleAuthRegister.request	true	"user"
+//	@Failure		400		{object}	errorResponse
+//	@Failure		409		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		302
+//	@Header			302	{string}	Set-Cookie	"app_session"
+//	@Router			/auth/register [post]
+func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		Email    string `json:"email" validate:"email,required"`
+		Password string `json:"password" validate:"required,min=8"`
+	}
+}
 
 func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {}
 

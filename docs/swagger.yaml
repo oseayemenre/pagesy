@@ -10,6 +10,17 @@ definitions:
       id:
         type: string
     type: object
+  main.handleAuthRegister.request:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
 host: localhost:3000
 info:
   contact: {}
@@ -84,6 +95,42 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Onboard users
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register user using email, username and password
+      parameters:
+      - description: user
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/main.handleAuthRegister.request'
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          headers:
+            Set-Cookie:
+              description: app_session
+              type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Register user
       tags:
       - auth
 swagger: "2.0"
