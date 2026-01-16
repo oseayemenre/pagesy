@@ -12,10 +12,12 @@ import (
 
 	"database/sql"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/markbates/goth/gothic"
 )
 
-// HandleAuthGoogle godoc
+// handleAuthGoogle godoc
 //
 //	@Summary		Sign in with google
 //	@Description	Sign in with google
@@ -28,20 +30,20 @@ func (s *server) handleAuthGoogle(w http.ResponseWriter, r *http.Request) {
 	gothic.BeginAuthHandler(w, r)
 }
 
-// HandleAuthGoogleCallback godoc
+// handleAuthGoogleCallback godoc
 //
 //	@Summary		Google auth callback url
 //	@Description	Google auth callback url
 //	@Tags			auth
-//	@Failure		404	{object}	responseFailure
-//	@Failure		404	{object}	responseFailure
+//	@Failure		404	{object}	errorResponse
+//	@Failure		404	{object}	errorResponse
 func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(context.WithValue(r.Context(), "provider", "google"))
 
 	user, err := gothic.CompleteUserAuth(w, r)
 
 	if err != nil {
-		responseFailure(w, http.StatusNotFound, fmt.Errorf("error retrieving user details: %v", err))
+		responseFailure(w, http.StatusNotFound, fmt.Errorf("error retrieving user details, %v", err))
 		return
 	}
 
@@ -67,7 +69,8 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
 }
 
-// HandleAuthOnboarding godoc
+// handleAuthOnboarding godoc
+//
 //	@Summary		Onboard users
 //	@Description	Onboard users with display name, name, about and image
 //	@Tags			auth
@@ -85,7 +88,6 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 //	@Success		201				{object}	main.handleAuthOnboarding.response
 //	@Header			201				{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/onboarding [post]
-
 func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Id string `json:"id"`
@@ -120,7 +122,7 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 		about:        r.FormValue("about"),
 	}
 
-	if err := validate.Struct(&params); err != nil {
+	if err := s.validator.Struct(&params); err != nil {
 		responseFailure(w, http.StatusBadRequest, fmt.Sprintf("validation error: %v", err))
 		return
 	}
@@ -137,7 +139,7 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 		image, err := io.ReadAll(file)
 
 		if err != nil {
-			s.logger.Error(fmt.Sprintf("error reading bytes: %v", err))
+			s.logger.Error(fmt.Sprintf("error reading bytes, %v", err))
 			responseFailure(w, http.StatusInternalServerError, "internal server error")
 			return
 		}
@@ -152,10 +154,14 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		params.image, err = a.objectStore.UploadFile(r.Context(), bytes.NewReader(image), fmt.Sprintf("%s_%s", email, header.Filename))
+		_, err = s.s3.PutObject(r.Context(), &s3.PutObjectInput{
+			Bucket: aws.String("pagesy"),
+			Key:    aws.String(fmt.Sprintf("books/%s_%s", email, header.Filename)),
+			Body:   bytes.NewReader(image),
+		})
 
 		if err != nil {
-			s.logger.Error(err.Error())
+			s.logger.Error(fmt.Sprintf("error saving object in s3, %v", err))
 			responseFailure(w, http.StatusInternalServerError, "internal server error")
 			return
 		}
@@ -182,7 +188,7 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	session.Options.MaxAge = -1
 
 	if err := session.Save(r, w); err != nil {
-		s.logger.Error(fmt.Sprintf("error deleting session: %v", err))
+		s.logger.Error(fmt.Sprintf("error deleting session, %v", err))
 		responseFailure(w, http.StatusInternalServerError, "internal server error")
 		return
 	}

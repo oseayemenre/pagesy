@@ -12,7 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
 	"github.com/markbates/goth"
@@ -24,16 +27,20 @@ import (
 )
 
 type server struct {
-	router chi.Router
-	logger *slog.Logger
-	store  *sql.DB
+	router    chi.Router
+	validator *validator.Validate
+	logger    *slog.Logger
+	store     *sql.DB
+	s3        *s3.Client
 }
 
-func newServer(logger *slog.Logger, store *sql.DB) *server {
+func newServer(logger *slog.Logger, store *sql.DB, s3 *s3.Client) *server {
 	s := &server{
-		router: chi.NewRouter(),
-		logger: logger,
-		store:  store,
+		router:    chi.NewRouter(),
+		validator: validator.New(),
+		logger:    logger,
+		store:     store,
+		s3:        s3,
 	}
 	s.routes()
 	return s
@@ -62,22 +69,32 @@ func main() {
 
 	gothic.Store = store
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
+	if err != nil {
+		logger.Error(fmt.Sprintf("unable to load SDK config, %v", err))
+		os.Exit(1)
+	}
+
+	s3client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
+
 	logger.Info("connecting to db...")
 	db, err := sql.Open("postgres", os.Getenv("DB_CONN"))
 
 	if err != nil {
-		logger.Error(fmt.Sprintf("error connecting db: %v", err))
+		logger.Error(fmt.Sprintf("error connecting db, %v", err))
 		os.Exit(1)
 	}
 
 	if err := db.Ping(); err != nil {
-		logger.Error(fmt.Sprintf("error pinging db: %v", err))
+		logger.Error(fmt.Sprintf("error pinging db, %v", err))
 		os.Exit(1)
 	}
-
 	logger.Info("db connected")
 
-	svr := newServer(logger, db)
+	svr := newServer(logger, db, s3client)
 	port := *flag.String("a", ":3000", "server address")
 	httpSvr := &http.Server{
 		Addr:    port,
@@ -90,7 +107,7 @@ func main() {
 	logger.Info(fmt.Sprintf("server starting on port %v...", strings.Trim(port, ":")))
 	go func() {
 		if err := httpSvr.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error(fmt.Sprintf("server error: %v", err))
+			logger.Error(fmt.Sprintf("server error, %v", err))
 			os.Exit(1)
 		}
 	}()
@@ -101,7 +118,7 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	if err := httpSvr.Shutdown(shutdownCtx); err != nil {
-		logger.Error(fmt.Sprintf("error shutting down server: %v", err))
+		logger.Error(fmt.Sprintf("error shutting down server, %v", err))
 		os.Exit(1)
 	}
 	logger.Info("shutdown complete")

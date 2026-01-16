@@ -1,4 +1,15 @@
 basePath: /api/v1
+definitions:
+  main.errorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  main.handleAuthOnboarding.response:
+    properties:
+      id:
+        type: string
+    type: object
 host: localhost:3000
 info:
   contact: {}
@@ -14,6 +25,65 @@ paths:
         "307":
           description: Temporary Redirect
       summary: Sign in with google
+      tags:
+      - auth
+  /auth/onboarding:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Onboard users with display name, name, about and image
+      parameters:
+      - description: username
+        in: formData
+        name: username
+        required: true
+        type: string
+      - description: display name
+        in: formData
+        name: display_name
+        required: true
+        type: string
+      - description: about
+        in: formData
+        name: about
+        type: string
+      - description: profile_picture
+        in: formData
+        name: image
+        type: file
+      - description: app_session=12345
+        in: header
+        name: Cookie
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          headers:
+            Set-Cookie:
+              description: access_token=12345 refresh_token=12345
+              type: string
+          schema:
+            $ref: '#/definitions/main.handleAuthOnboarding.response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Onboard users
       tags:
       - auth
 swagger: "2.0"

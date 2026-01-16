@@ -12,7 +12,7 @@ func (s *server) checkIfUserExists(ctx context.Context, email string, username s
 			SELECT id FROM users WHERE email = $1 OR username = $2;
 		`
 	if err := s.store.QueryRowContext(ctx, query, email, username).Scan(&id); err != nil {
-		return "", fmt.Errorf("error querying db: %w", err)
+		return "", fmt.Errorf("error querying db, %w", err)
 	}
 	return "", nil
 }
@@ -24,7 +24,7 @@ func (s *server) createUser(ctx context.Context, user *user) (string, error) {
 			INSERT INTO users (username, display_name, email, password, about, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;
 		`
 	if err := s.store.QueryRowContext(ctx, query, user.username, user.display_name, user.email, checkNullString(user.password), checkNullString(user.about), checkNullString(user.image)).Scan(&id); err != nil {
-		return "", fmt.Errorf("error inserting into users table: %w", err)
+		return "", fmt.Errorf("error inserting into users table, %w", err)
 	}
 	return id, nil
 }
