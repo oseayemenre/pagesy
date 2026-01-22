@@ -1,6 +1,6 @@
 module github.com/oseayemenre/pagesy
 
-go 1.25.5
+go 1.25
 
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
