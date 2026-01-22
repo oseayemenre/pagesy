@@ -21,7 +21,7 @@ import (
 	"github.com/markbates/goth/providers/google"
 
 	_ "github.com/lib/pq"
-	_ "github.com/oseayemenre/pagesy/docs"
+	"github.com/oseayemenre/pagesy/docs"
 )
 
 type server struct {
@@ -44,7 +44,6 @@ func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore) *ser
 
 // @title		Pagesy
 // @version	1.0
-// @host		localhost:3000
 // @BasePath	/api/v1
 func main() {
 	godotenv.Load()
@@ -88,6 +87,9 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("db connected")
+
+	docs.SwaggerInfo.Host = os.Getenv("HOST")
+	docs.SwaggerInfo.Schemes = []string{"http", "https"}
 
 	svr := newServer(logger, db, objectStore)
 	port := *flag.String("a", ":3000", "server address")

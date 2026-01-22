@@ -301,7 +301,7 @@ func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := s.checkIfUserExists(r.Context(), user.Email, user.Username)
+	_, err := s.checkIfUserExists(r.Context(), user.Email, user.Username)
 	if err != nil {
 	}
 }
