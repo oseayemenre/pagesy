@@ -45,7 +45,7 @@ func (o *s3Object) upload(ctx context.Context, key string, body io.Reader) (stri
 }
 
 func (o *cloudinaryObject) upload(ctx context.Context, key string, body io.Reader) (string, error) {
-	resp, err := o.client.Upload.Upload(context.Background(), body, uploader.UploadParams{PublicID: key, Folder: "pagesy"})
+	resp, err := o.client.Upload.Upload(ctx, body, uploader.UploadParams{PublicID: key, Folder: "pagesy"})
 
 	if err != nil {
 		return "", fmt.Errorf("error uploading file, %+v", err)
