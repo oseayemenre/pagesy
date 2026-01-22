@@ -12,8 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/sessions"
@@ -27,20 +26,20 @@ import (
 )
 
 type server struct {
-	router    chi.Router
-	validator *validator.Validate
-	logger    *slog.Logger
-	store     *sql.DB
-	s3        *s3.Client
+	router      chi.Router
+	validator   *validator.Validate
+	logger      *slog.Logger
+	store       *sql.DB
+	objectStore objectStore
 }
 
-func newServer(logger *slog.Logger, store *sql.DB, s3 *s3.Client) *server {
+func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore) *server {
 	s := &server{
-		router:    chi.NewRouter(),
-		validator: validator.New(),
-		logger:    logger,
-		store:     store,
-		s3:        s3,
+		router:      chi.NewRouter(),
+		validator:   validator.New(),
+		logger:      logger,
+		store:       store,
+		objectStore: objectStore,
 	}
 	s.routes()
 	return s
@@ -70,15 +69,14 @@ func main() {
 	gothic.Store = store
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-west-2"))
+	cloudinaryCfg, err := cloudinary.NewFromParams(os.Getenv("CLOUDINARY_CLOUD"), os.Getenv("CLOUDINARY_KEY"), os.Getenv("CLOUDINARY_SECRET"))
+
 	if err != nil {
-		logger.Error(fmt.Sprintf("unable to load SDK config, %v", err))
+		logger.Error(fmt.Sprintf("error configuring cloudinary, %v", err))
 		os.Exit(1)
 	}
 
-	s3client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.UsePathStyle = true
-	})
+	objectStore := newcloudinaryObject(cloudinaryCfg)
 
 	logger.Info("connecting to db...")
 	db, err := sql.Open("postgres", os.Getenv("DB_CONN"))
@@ -94,7 +92,7 @@ func main() {
 	}
 	logger.Info("db connected")
 
-	svr := newServer(logger, db, s3client)
+	svr := newServer(logger, db, objectStore)
 	port := *flag.String("a", ":3000", "server address")
 	httpSvr := &http.Server{
 		Addr:    port,

@@ -12,8 +12,6 @@ import (
 
 	"database/sql"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/markbates/goth/gothic"
 )
 
@@ -61,6 +59,7 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
+		return
 	}
 
 	session, _ := gothic.Store.Get(r, "app_session")
@@ -154,17 +153,15 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = s.s3.PutObject(r.Context(), &s3.PutObjectInput{
-			Bucket: aws.String("pagesy"),
-			Key:    aws.String(fmt.Sprintf("books/%s_%s", email, header.Filename)),
-			Body:   bytes.NewReader(image),
-		})
+		img_url, err := s.objectStore.upload(r.Context(), fmt.Sprintf("books/%s_%s", email, header.Filename), bytes.NewReader(image))
 
 		if err != nil {
-			s.logger.Error(fmt.Sprintf("error saving object in s3, %v", err))
+			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, errorResponse{Error: "internal server error"})
 			return
 		}
+
+		params.image = img_url
 	}
 
 	var password string
