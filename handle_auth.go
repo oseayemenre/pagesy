@@ -13,6 +13,7 @@ import (
 	"database/sql"
 
 	"github.com/markbates/goth/gothic"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // handleAuthGoogle godoc
@@ -121,7 +122,7 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 		about:        r.FormValue("about"),
 	}
 
-	if err := s.validator.Struct(&params); err != nil {
+	if err := validate.Struct(&params); err != nil {
 		encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("validation error: %v", err)})
 		return
 	}
@@ -181,6 +182,10 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 		image:        params.image,
 	})
 
+	if errors.Is(err, errUserExists) {
+		encode(w, http.StatusConflict, &errorResponse{Error: err.Error()})
+	}
+
 	if err != nil {
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
@@ -226,9 +231,80 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 		Email    string `json:"email" validate:"email,required"`
 		Password string `json:"password" validate:"required,min=8"`
 	}
+
+	var user request
+
+	if err := decode(r, &user); err != nil {
+		if errors.Is(err, errValidation) {
+			encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("invalid data, %v", err)})
+			return
+		}
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "invalid json"})
+		return
+	}
+
+	id, err := s.checkIfUserExists(r.Context(), user.Email, "")
+	if err != nil {
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	if id != "" {
+		encode(w, http.StatusConflict, &errorResponse{Error: "user already exists"})
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	session, _ := gothic.Store.Get(r, "app_session")
+	session.Values["user_email"] = user.Email
+	session.Values["user_password"] = hash
+	session.Save(r, w)
+	http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
 }
 
-func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {}
+//handleAuthLogin godoc
+
+//	@Summary		Login
+//	@Description	Login using either email, username or both and password
+//	@Tags			auth
+//	@Accept			appplication/json
+//	@Produce		json
+//	@Param			user	body		main.handleAuthLogin.request	true	"user"
+//	@Failure		400		{object}	models.errorResponse
+//	@Failure		401		{object}	models.errorResponse
+//	@Failure		404		{object}	models.errorResponse
+//	@Failure		500		{object}	models.errorResponse
+//	@Success		204
+//	@Header			204	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
+//	@Router			/auth/login [post]
+
+func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		Email    string `json:"email" validate:"required"`
+		Username string `json:"username" validate:"required"`
+		Password string `json:"password" validate:"required"`
+	}
+
+	var user request
+
+	if err := decode(r, &user); err != nil {
+		if errors.Is(err, errValidation) {
+			encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("invalid data, %v", err)})
+			return
+		}
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "invalid json"})
+		return
+	}
+
+	id, err := s.checkIfUserExists(r.Context(), user.Email, user.Username)
+	if err != nil {
+	}
+}
 
 func (s *server) handleAuthLogout(w http.ResponseWriter, r *http.Request) {}
 

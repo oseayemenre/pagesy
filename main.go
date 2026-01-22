@@ -14,7 +14,6 @@ import (
 
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
 	"github.com/markbates/goth"
@@ -27,7 +26,6 @@ import (
 
 type server struct {
 	router      chi.Router
-	validator   *validator.Validate
 	logger      *slog.Logger
 	store       *sql.DB
 	objectStore objectStore
@@ -36,7 +34,6 @@ type server struct {
 func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore) *server {
 	s := &server{
 		router:      chi.NewRouter(),
-		validator:   validator.New(),
 		logger:      logger,
 		store:       store,
 		objectStore: objectStore,

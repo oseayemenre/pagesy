@@ -2,7 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+)
+
+var (
+	errUserExists = errors.New("user exists")
 )
 
 func (s *server) checkIfUserExists(ctx context.Context, email string, username string) (string, error) {
@@ -18,6 +23,15 @@ func (s *server) checkIfUserExists(ctx context.Context, email string, username s
 }
 
 func (s *server) createUser(ctx context.Context, user *user) (string, error) {
+	existingUser, err := s.checkIfUserExists(ctx, user.email, user.username)
+	if err != nil {
+		return "", fmt.Errorf("error retrieving user, %v", err)
+	}
+
+	if existingUser != "" {
+		return "", errUserExists
+	}
+
 	var id string
 	query :=
 		`
