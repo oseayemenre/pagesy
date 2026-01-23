@@ -89,7 +89,7 @@ func main() {
 	logger.Info("db connected")
 
 	docs.SwaggerInfo.Host = os.Getenv("SWAGGER_HOST")
-	docs.SwaggerInfo.Schemes = []string{"http", "https"}
+	docs.SwaggerInfo.Schemes = []string{os.Getenv("SWAGGER_SCHEME")}
 
 	svr := newServer(logger, db, objectStore)
 	port := *flag.String("a", ":3000", "server address")
