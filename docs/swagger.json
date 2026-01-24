@@ -5,7 +5,6 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:3000",
     "basePath": "/api/v1",
     "paths": {
         "/auth/google": {
@@ -25,9 +24,23 @@
                 }
             }
         },
+        "/auth/logout": {
+            "get": {
+                "description": "Logout user",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Logout user",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
         "/auth/onboarding": {
             "post": {
-                "description": "Onboard users with display name, name, about and image",
+                "description": "Onboard users",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -113,6 +126,41 @@
                 }
             }
         },
+        "/auth/refresh-token": {
+            "get": {
+                "description": "Get new access token",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh token",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/main.handleAuthRefreshToken.response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/register": {
             "post": {
                 "description": "Register user using email, username and password",
@@ -182,6 +230,14 @@
             "type": "object",
             "properties": {
                 "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.handleAuthRefreshToken.response": {
+            "type": "object",
+            "properties": {
+                "message": {
                     "type": "string"
                 }
             }

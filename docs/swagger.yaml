@@ -10,6 +10,11 @@ definitions:
       id:
         type: string
     type: object
+  main.handleAuthRefreshToken.response:
+    properties:
+      message:
+        type: string
+    type: object
   main.handleAuthRegister.request:
     properties:
       email:
@@ -21,7 +26,6 @@ definitions:
     - email
     - password
     type: object
-host: localhost:3000
 info:
   contact: {}
   title: Pagesy
@@ -38,11 +42,20 @@ paths:
       summary: Sign in with google
       tags:
       - auth
+  /auth/logout:
+    get:
+      description: Logout user
+      responses:
+        "200":
+          description: OK
+      summary: Logout user
+      tags:
+      - auth
   /auth/onboarding:
     post:
       consumes:
       - multipart/form-data
-      description: Onboard users with display name, name, about and image
+      description: Onboard users
       parameters:
       - description: username
         in: formData
@@ -95,6 +108,29 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Onboard users
+      tags:
+      - auth
+  /auth/refresh-token:
+    get:
+      description: Get new access token
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.handleAuthRefreshToken.response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Refresh token
       tags:
       - auth
   /auth/register:

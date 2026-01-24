@@ -276,10 +276,10 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 //	@Accept			appplication/json
 //	@Produce		json
 //	@Param			user	body		main.handleAuthLogin.request	true	"user"
-//	@Failure		400		{object}	models.errorResponse
-//	@Failure		401		{object}	models.errorResponse
-//	@Failure		404		{object}	models.errorResponse
-//	@Failure		500		{object}	models.errorResponse
+//	@Failure		400		{object}	errorResponse
+//	@Failure		401		{object}	errorResponse
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
 //	@Success		200
 //	@Header			200	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/login [post]
@@ -370,9 +370,9 @@ func (s *server) handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 //	@Summary		Refresh token
 //	@Description	Get new access token
 //	@Tags			auth
-//	@Failure		401	{object}	models.errorResponse
-//	@Failure		404	{object}	models.errorResponse
-//	@Failure		500	{object}	models.errorResponse
+//	@Failure		401	{object}	errorResponse
+//	@Failure		404	{object}	errorResponse
+//	@Failure		500	{object}	errorResponse
 //	@Success		201	{object}	main.handleAuthRefreshToken.response
 //	@Router			/auth/refresh-token [get]
 func (s *server) handleAuthRefreshToken(w http.ResponseWriter, r *http.Request) {
