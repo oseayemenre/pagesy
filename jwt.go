@@ -10,18 +10,18 @@ import (
 )
 
 type userClaims struct {
-	id string
+	Id string
 	jwt.RegisteredClaims
 }
 
 func createJWTToken(id string) (string, error) {
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &userClaims{
-		id: id,
+		Id: id,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "pagesy",
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 		},
-	}).SignedString([]byte("JWT_SECRET"))
+	}).SignedString([]byte(os.Getenv("JWT_SECRET")))
 
 	if err != nil {
 		return "", fmt.Errorf("error creating jwt token, %v", err)
@@ -32,13 +32,13 @@ func createJWTToken(id string) (string, error) {
 
 func decodeJWTToken(token string) (string, error) {
 	var user userClaims
-	if _, err := jwt.ParseWithClaims(token, user, func(t *jwt.Token) (any, error) {
+	if _, err := jwt.ParseWithClaims(token, &user, func(t *jwt.Token) (any, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	}); err != nil {
 		return "", fmt.Errorf("error parsing token, %v", err)
 	}
 
-	return user.id, nil
+	return user.Id, nil
 }
 
 func createAccessAndRefreshTokens(w http.ResponseWriter, id string) error {
