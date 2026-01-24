@@ -42,3 +42,16 @@ func (s *server) createUser(ctx context.Context, user *user) (string, error) {
 	}
 	return id, nil
 }
+
+func (s *server) getUserPassword(ctx context.Context, id string) (string, error) {
+	var password string
+	query :=
+		`
+			SELECT password FROM users WHERE id = $1;
+		`
+	if err := s.store.QueryRowContext(ctx, query, id).Scan(&password); err != nil {
+		return "", fmt.Errorf("error retrieving password, %v", err)
+	}
+
+	return password, nil
+}

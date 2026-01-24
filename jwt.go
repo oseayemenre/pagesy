@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -13,29 +14,40 @@ type userClaims struct {
 	jwt.RegisteredClaims
 }
 
-func createJWTToken(id string, secret string) (string, error) {
+func createJWTToken(id string) (string, error) {
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &userClaims{
 		id: id,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "pagesy",
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 		},
-	}).SignedString([]byte(secret))
+	}).SignedString([]byte("JWT_SECRET"))
 
 	if err != nil {
-		return "", fmt.Errorf("error creating jwt token: %v", err)
+		return "", fmt.Errorf("error creating jwt token, %v", err)
 	}
 
 	return token, nil
 }
 
-func createAccessAndRefreshTokens(w http.ResponseWriter, id string, secret string) error {
-	accessToken, err := createJWTToken(id, secret)
+func decodeJWTToken(token string) (string, error) {
+	var user userClaims
+	if _, err := jwt.ParseWithClaims(token, user, func(t *jwt.Token) (any, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	}); err != nil {
+		return "", fmt.Errorf("error parsing token, %v", err)
+	}
+
+	return user.id, nil
+}
+
+func createAccessAndRefreshTokens(w http.ResponseWriter, id string) error {
+	accessToken, err := createJWTToken(id)
 	if err != nil {
 		return err
 	}
 
-	refreshToken, err := createJWTToken(id, secret)
+	refreshToken, err := createJWTToken(id)
 	if err != nil {
 		return err
 	}

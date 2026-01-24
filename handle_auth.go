@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 
 	"database/sql"
@@ -55,7 +54,7 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 	}
 
 	if id != "" {
-		if err := createAccessAndRefreshTokens(w, id, os.Getenv("JWT_SECRET")); err != nil {
+		if err := createAccessAndRefreshTokens(w, id); err != nil {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
@@ -72,7 +71,7 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 // handleAuthOnboarding godoc
 //
 //	@Summary		Onboard users
-//	@Description	Onboard users with display name, name, about and image
+//	@Description	Onboard users
 //	@Tags			auth
 //	@Accept			multipart/form-data
 //	@Produce		json
@@ -203,7 +202,7 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := createAccessAndRefreshTokens(w, id, os.Getenv("JWT_SECRET")); err != nil {
+	if err := createAccessAndRefreshTokens(w, id); err != nil {
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: err.Error()})
 		return
@@ -245,6 +244,7 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 
 	id, err := s.checkIfUserExists(r.Context(), user.Email, "")
 	if err != nil {
+		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}
@@ -256,6 +256,7 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
+		s.logger.Error(fmt.Sprintf("error hashing password, %v", err))
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}
@@ -279,14 +280,14 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401		{object}	models.errorResponse
 //	@Failure		404		{object}	models.errorResponse
 //	@Failure		500		{object}	models.errorResponse
-//	@Success		204
-//	@Header			204	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
+//	@Success		200
+//	@Header			200	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/login [post]
 
 func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		Email    string `json:"email" validate:"required"`
-		Username string `json:"username" validate:"required"`
+		Email    string `json:"email"`
+		Username string `json:"username"`
 		Password string `json:"password" validate:"required"`
 	}
 
@@ -301,11 +302,112 @@ func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := s.checkIfUserExists(r.Context(), user.Email, user.Username)
-	if err != nil {
+	if user.Email == "" && user.Username == "" {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "email and username cannot be empty"})
+		return
 	}
+
+	id, err := s.checkIfUserExists(r.Context(), user.Email, user.Username)
+	if id != "" {
+		encode(w, http.StatusConflict, &errorResponse{Error: "user exists"})
+		return
+	}
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	password, err := s.getUserPassword(r.Context(), id)
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(password), []byte(user.Password)); err != nil {
+		s.logger.Error(fmt.Sprintf("error comparing password, %v", err))
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	if err := createAccessAndRefreshTokens(w, id); err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	encode(w, http.StatusOK, nil)
 }
 
-func (s *server) handleAuthLogout(w http.ResponseWriter, r *http.Request) {}
+// handleAuthLogout godoc
+//
+//	@Summary		Logout user
+//	@Description	Logout user
+//	@Tags			auth
+//	@Success		200
+//	@Router			/auth/logout [get]
+func (s *server) handleAuthLogout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:   "access_token",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
 
-func (s *server) handleAuthRefreshToken(w http.ResponseWriter, r *http.Request) {}
+	http.SetCookie(w, &http.Cookie{
+		Name:   "refresh_token",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
+
+	encode(w, http.StatusNoContent, nil)
+}
+
+// handleAuthRefreshToken godoc
+//
+//	@Summary		Refresh token
+//	@Description	Get new access token
+//	@Tags			auth
+//	@Failure		401	{object}	models.errorResponse
+//	@Failure		404	{object}	models.errorResponse
+//	@Failure		500	{object}	models.errorResponse
+//	@Success		201	{object}	main.handleAuthRefreshToken.response
+//	@Router			/auth/refresh-token [get]
+func (s *server) handleAuthRefreshToken(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Message string `json:"message"`
+	}
+
+	token, err := r.Cookie("refresh_token")
+	if err != nil {
+		encode(w, http.StatusNotFound, &errorResponse{Error: fmt.Sprintf("error retrieving cookie, %v", err)})
+		return
+	}
+
+	id, err := decodeJWTToken(token.Value)
+	if err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: err.Error()})
+		return
+	}
+
+	access_token, err := createJWTToken(id)
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    access_token,
+		Path:     "/",
+		MaxAge:   24 * 60 * 60,
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	encode(w, http.StatusOK, &response{Message: "new access token created"})
+}
