@@ -86,11 +86,6 @@ func TestHandleAuthLogin(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 		},
 		{
-			name:         "user or email not in body",
-			body:         request{Password: "test-password"},
-			expectedCode: http.StatusBadRequest,
-		},
-		{
 			name:         "user not found",
 			body:         request{Email: "notfound@notfound.com", Password: "123"},
 			expectedCode: http.StatusNotFound,

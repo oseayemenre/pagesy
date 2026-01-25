@@ -57,11 +57,6 @@ paths:
       - multipart/form-data
       description: Onboard users
       parameters:
-      - description: username
-        in: formData
-        name: username
-        required: true
-        type: string
       - description: display name
         in: formData
         name: display_name
@@ -137,7 +132,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Register user using email, username and password
+      description: Register user using email and password
       parameters:
       - description: user
         in: body

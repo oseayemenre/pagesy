@@ -62,13 +62,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "username",
-                        "name": "username",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
                         "description": "display name",
                         "name": "display_name",
                         "in": "formData",
@@ -171,7 +164,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
-                "description": "Register user using email, username and password",
+                "description": "Register user using email and password",
                 "consumes": [
                     "application/json"
                 ],

@@ -75,7 +75,6 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 //	@Tags			auth
 //	@Accept			multipart/form-data
 //	@Produce		json
-//	@Param			username		formData	string	true	"username"
 //	@Param			display_name	formData	string	true	"display name"
 //	@Param			about			formData	string	false	"about"
 //	@Param			image			formData	file	false	"profile_picture"
@@ -211,7 +210,7 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 // handleRegister godoc
 //
 //	@Summary		Register user
-//	@Description	Register user using email, username and password
+//	@Description	Register user using email and password
 //	@Tags			auth
 //	@Accept			application/json
 //	@Produce		json
@@ -269,7 +268,7 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 //handleAuthLogin godoc
 
 //	@Summary		Login
-//	@Description	Login using either email, username or both and password
+//	@Description	Login using either email, or both and password
 //	@Tags			auth
 //	@Accept			appplication/json
 //	@Produce		json
@@ -284,8 +283,7 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		Email    string `json:"email"`
-		Username string `json:"username"`
+		Email    string `json:"email" validate:"required"`
 		Password string `json:"password" validate:"required"`
 	}
 
@@ -297,11 +295,6 @@ func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		encode(w, http.StatusBadRequest, &errorResponse{Error: "invalid json"})
-		return
-	}
-
-	if user.Email == "" && user.Username == "" {
-		encode(w, http.StatusBadRequest, &errorResponse{Error: "email and username cannot be empty"})
 		return
 	}
 
