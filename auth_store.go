@@ -19,7 +19,7 @@ func (s *server) checkIfUserExists(ctx context.Context, email string, username s
 	if err := s.store.QueryRowContext(ctx, query, email, username).Scan(&id); err != nil {
 		return "", fmt.Errorf("error querying db, %w", err)
 	}
-	return "", nil
+	return id, nil
 }
 
 func (s *server) createUser(ctx context.Context, user *user) (string, error) {

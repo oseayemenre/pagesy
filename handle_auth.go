@@ -243,7 +243,8 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := s.checkIfUserExists(r.Context(), user.Email, "")
-	if err != nil {
+
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
@@ -308,9 +309,8 @@ func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := s.checkIfUserExists(r.Context(), user.Email, user.Username)
-	if id != "" {
-		encode(w, http.StatusConflict, &errorResponse{Error: "user exists"})
-		return
+	if errors.Is(err, sql.ErrNoRows) {
+		encode(w, http.StatusNotFound, &errorResponse{Error: "user not found"})
 	}
 	if err != nil {
 		s.logger.Error(err.Error())
@@ -326,8 +326,7 @@ func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(password), []byte(user.Password)); err != nil {
-		s.logger.Error(fmt.Sprintf("error comparing password, %v", err))
-		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		encode(w, http.StatusUnauthorized, &errorResponse{Error: "incorrect password"})
 		return
 	}
 
