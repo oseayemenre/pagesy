@@ -1,9 +1,12 @@
 package main
 
+import "database/sql"
+
 type user struct {
 	display_name string
 	email        string
-	password     string
-	about        string
-	image        string
+	password     sql.NullString
+	about        sql.NullString
+	image        sql.NullString
+	roles        []string
 }

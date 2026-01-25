@@ -161,20 +161,34 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 		params.image = img_url
 	}
 
-	var password string
+	var password sql.NullString
 
 	if session.Values["user_password"] == nil {
-		password = ""
+		password = sql.NullString{}
 	} else {
-		password = session.Values["user_password"].(string)
+		password = sql.NullString{String: session.Values["user_password"].(string), Valid: true}
+	}
+
+	var about sql.NullString
+	if params.about == "" {
+		about = sql.NullString{}
+	} else {
+		about = sql.NullString{String: params.about, Valid: true}
+	}
+
+	var image sql.NullString
+	if params.image == "" {
+		image = sql.NullString{}
+	} else {
+		image = sql.NullString{String: params.image, Valid: true}
 	}
 
 	id, err := s.createUser(r.Context(), &user{
 		display_name: params.display_name,
 		email:        email,
 		password:     password,
-		about:        params.about,
-		image:        params.image,
+		about:        about,
+		image:        image,
 	})
 
 	if errors.Is(err, errUserExists) {

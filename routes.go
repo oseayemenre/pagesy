@@ -48,6 +48,8 @@ func (s *server) routes() {
 
 	s.router.Patch("/api/v1/books/{bookId}/subscriptions", nil)
 
+	s.router.Get("/api/v1/users/me", s.handleGetProfile)
+
 	s.router.Get("/api/v1/library", nil)
 	s.router.Put("/api/v1/library/books/{bookId}", nil)
 	s.router.Delete("/api/v1/library/books/{bookId}", nil)
