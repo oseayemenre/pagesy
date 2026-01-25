@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	_ "github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func connectTestDb(t *testing.T) *sql.DB {
@@ -20,11 +21,12 @@ func connectTestDb(t *testing.T) *sql.DB {
 }
 
 func createAndCleanUpUser(t *testing.T, db *sql.DB) {
+	hash, _ := bcrypt.GenerateFromPassword([]byte("test_password"), bcrypt.DefaultCost)
 	query :=
 		`
-			INSERT INTO users (username, display_name, email, password) VALUES ('test', 'test_display', 'test@test.com', 'test_password');
+			INSERT INTO users (display_name, email, password) VALUES ('test_display', 'test@test.com', $1);
 		`
-	if _, err := db.ExecContext(context.Background(), query); err != nil {
+	if _, err := db.ExecContext(context.Background(), query, hash); err != nil {
 		t.Errorf("error creating new user, %v", err)
 	}
 

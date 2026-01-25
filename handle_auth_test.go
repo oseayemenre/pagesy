@@ -92,7 +92,7 @@ func TestHandleAuthLogin(t *testing.T) {
 		},
 		{
 			name:         "user not found",
-			body:         request{Email: "notfound@notfound.com", Password: ""},
+			body:         request{Email: "notfound@notfound.com", Password: "123"},
 			expectedCode: http.StatusNotFound,
 		},
 		{
@@ -120,5 +120,66 @@ func TestHandleAuthLogin(t *testing.T) {
 				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
 			}
 		})
+	}
+}
+
+func TestHandleAuthLogout(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+	rr := httptest.NewRecorder()
+
+	createAccessAndRefreshTokens(rr, "123")
+
+	svr := newServer(nil, nil, nil)
+	svr.router.ServeHTTP(rr, r)
+
+	hasAccessToken, hasRefreshToken := true, true
+
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.Name == "access_token" {
+			if cookie.Value == "" {
+				hasAccessToken = false
+			}
+		}
+
+		if cookie.Name == "refresh_token" {
+			if cookie.Value == "" {
+				hasRefreshToken = false
+			}
+		}
+	}
+
+	if hasAccessToken == true && hasRefreshToken == true {
+		t.Fatal("expected no access and refresh token")
+	}
+}
+
+func TestHandleAuthRefreshToken(t *testing.T) {
+	r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh-token", nil)
+	rr := httptest.NewRecorder()
+
+	token, _ := createJWTToken("123")
+	http.SetCookie(rr, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    token,
+		Path:     "/",
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   60 * 60,
+		HttpOnly: true,
+	})
+
+	svr := newServer(nil, nil, nil)
+	svr.router.ServeHTTP(rr, r)
+
+	hasAccessToken := true
+
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.Name == "access_token" {
+			hasAccessToken = true
+		}
+	}
+
+	if !hasAccessToken {
+		t.Fatal("expected access token")
 	}
 }

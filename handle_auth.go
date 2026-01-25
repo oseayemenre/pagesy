@@ -45,7 +45,7 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	id, err := s.checkIfUserExists(r.Context(), user.Email, "")
+	id, err := s.checkIfUserExists(r.Context(), user.Email)
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		s.logger.Error(err.Error())
@@ -89,7 +89,6 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 //	@Router			/auth/onboarding [post]
 func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		username     string
 		display_name string
 		about        string
 		image        string
@@ -116,7 +115,6 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := request{
-		username:     r.FormValue("username"),
 		display_name: r.FormValue("display_name"),
 		about:        r.FormValue("about"),
 	}
@@ -173,7 +171,6 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := s.createUser(r.Context(), &user{
-		username:     params.username,
 		display_name: params.display_name,
 		email:        email,
 		password:     password,
@@ -242,7 +239,7 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := s.checkIfUserExists(r.Context(), user.Email, "")
+	id, err := s.checkIfUserExists(r.Context(), user.Email)
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		s.logger.Error(err.Error())
@@ -308,9 +305,10 @@ func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := s.checkIfUserExists(r.Context(), user.Email, user.Username)
+	id, err := s.checkIfUserExists(r.Context(), user.Email)
 	if errors.Is(err, sql.ErrNoRows) {
 		encode(w, http.StatusNotFound, &errorResponse{Error: "user not found"})
+		return
 	}
 	if err != nil {
 		s.logger.Error(err.Error())

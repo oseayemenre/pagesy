@@ -70,7 +70,7 @@ func TestCreateAccessAndRefreshToken(t *testing.T) {
 		}
 	}
 
-	if hasAccessToken && hasRefreshToken == false {
-		t.Fatalf("expected true got false")
+	if hasAccessToken == false && hasRefreshToken == false {
+		t.Fatal("expected accesss and refresh token")
 	}
 }
