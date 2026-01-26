@@ -6,7 +6,10 @@ import (
 )
 
 func TestCreateJWTToken(t *testing.T) {
-	token, _ := createJWTToken("123")
+	token, err := createJWTToken("123")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	id, err := decodeJWTToken(token)
 
@@ -20,7 +23,10 @@ func TestCreateJWTToken(t *testing.T) {
 }
 
 func TestDecodeJWTToken(t *testing.T) {
-	token, _ := createJWTToken("123")
+	token, err := createJWTToken("123")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	tests := []struct {
 		name   string

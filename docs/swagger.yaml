@@ -26,6 +26,21 @@ definitions:
     - email
     - password
     type: object
+  main.handleGetProfile.response:
+    properties:
+      about:
+        type: string
+      display_name:
+        type: string
+      email:
+        type: string
+      image:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+    type: object
 info:
   contact: {}
   title: Pagesy
@@ -164,4 +179,21 @@ paths:
       summary: Register user
       tags:
       - auth
+  /users/me:
+    get:
+      description: Get current user profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.handleGetProfile.response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Get current user profile
+      tags:
+      - users
 swagger: "2.0"

@@ -152,7 +152,10 @@ func TestHandleAuthRefreshToken(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh-token", nil)
 	rr := httptest.NewRecorder()
 
-	token, _ := createJWTToken("123")
+	token, err := createJWTToken("123")
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 	http.SetCookie(rr, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    token,
