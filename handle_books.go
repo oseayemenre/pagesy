@@ -37,7 +37,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		Genres          string `validate:"required"`
 		Language        string `validate:"required"`
 		ReleaseSchedule []releaseSchedule
-		ChapterDraft    chapterDraft
+		DraftChapter    draftChapter
 	}
 
 	type response struct {
@@ -59,7 +59,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		Description: r.FormValue("description"),
 		Genres:      r.FormValue("string"),
 		Language:    r.FormValue("language"),
-		ChapterDraft: chapterDraft{
+		DraftChapter: draftChapter{
 			Title:   r.FormValue("chapter_title"),
 			Content: r.FormValue("chapter_description"),
 		},
@@ -119,5 +119,21 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 			encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("invalid file type")})
 			return
 		}
+	}
+
+	book_id, err := s.uploadBook(r.Context(), &book{
+		name:        params.Name,
+		description: params.Description,
+		author_id:   user_id,
+		genres:      strings.Split(params.Genres, ","),
+		draft_chapter: draftChapter{
+			Title:   params.DraftChapter.Title,
+			Content: params.DraftChapter.Content,
+		},
+		language:         params.Language,
+		release_schedule: params.ReleaseSchedule,
+	})
+
+	if err != nil {
 	}
 }
