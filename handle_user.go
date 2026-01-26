@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -23,17 +22,7 @@ func (s *server) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 		Roles        []string `json:"roles"`
 	}
 
-	cookie, err := r.Cookie("access_token")
-	if err != nil {
-		encode(w, http.StatusNotFound, &errorResponse{Error: fmt.Sprintf("error retrieving access token, %v", err)})
-		return
-	}
-
-	id, err := decodeJWTToken(cookie.Value)
-	if err != nil {
-		encode(w, http.StatusBadRequest, &errorResponse{Error: err.Error()})
-		return
-	}
+	id := r.Context().Value("user").(string)
 
 	user, err := s.getUser(r.Context(), id)
 	if err != nil {

@@ -109,9 +109,10 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 500<<10)
 
 	if err := r.ParseMultipartForm(500 << 10); err != nil {
-		encode(w, http.StatusBadRequest, &errorResponse{Error: err.Error()})
+		encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("error parsing multipart form, %v", err.Error())})
 		return
 	}
+	defer r.MultipartForm.RemoveAll()
 
 	params := request{
 		display_name: r.FormValue("display_name"),

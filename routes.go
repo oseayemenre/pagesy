@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -24,7 +26,7 @@ func (s *server) routes() {
 	s.router.Post("/api/v1/auth/logout", s.handleAuthLogout)
 	s.router.Post("/api/v1/auth/refresh-token", s.handleAuthRefreshToken)
 
-	s.router.Post("/api/v1/books", nil)
+	s.router.Post("/api/v1/books", authenticatedUser(s.handleUploadBook))
 	s.router.Get("/api/v1/books", nil)
 	s.router.Get("/api/v1/books/stats", nil)
 	s.router.Get("/api/v1/books/recents", nil)
@@ -48,7 +50,7 @@ func (s *server) routes() {
 
 	s.router.Patch("/api/v1/books/{bookId}/subscriptions", nil)
 
-	s.router.Get("/api/v1/users/me", s.handleGetProfile)
+	s.router.Get("/api/v1/users/me", authenticatedUser(s.handleGetProfile))
 
 	s.router.Get("/api/v1/library", nil)
 	s.router.Put("/api/v1/library/books/{bookId}", nil)
@@ -58,4 +60,22 @@ func (s *server) routes() {
 
 	s.router.Post("/webhook", nil)
 	s.router.Patch("/users/{userId}/ban", nil)
+}
+
+func authenticatedUser(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("access_token")
+		if err != nil {
+			encode(w, http.StatusNotFound, &errorResponse{Error: fmt.Sprintf("error retrieving access token, %v", err)})
+			return
+		}
+
+		id, err := decodeJWTToken(cookie.Value)
+		if err != nil {
+			encode(w, http.StatusBadRequest, &errorResponse{Error: err.Error()})
+			return
+		}
+
+		next(w, r.WithContext(context.WithValue(r.Context(), "user", id)))
+	}
 }
