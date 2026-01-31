@@ -325,6 +325,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/main.errorResponse"
                         }
                     },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
                     "413": {
                         "description": "Request Entity Too Large",
                         "schema": {

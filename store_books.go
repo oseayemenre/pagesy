@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	errGenresNotFound = errors.New("genres not found")
+	errGenresNotFound       = errors.New("genres not found")
+	errBookNameAlreadyTaken = errors.New("book name already taken")
 )
 
 func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
@@ -29,6 +30,17 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 
 	var id string
 	query :=
+		`
+			SELECT id FROM books WHERE name = $1;
+		`
+	if err := s.store.QueryRowContext(ctx, query, &book.name).Scan(&id); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return "", fmt.Errorf("error checking book existence, %v", err)
+	}
+	if id != "" {
+		return "", errBookNameAlreadyTaken
+	}
+
+	query =
 		`
 			INSERT INTO books (name, description, author_id, language) VALUES ($1, $2, $3, $4) RETURNING id;
 		`

@@ -30,6 +30,7 @@ import (
 //	@Param			release_schedule_chapter	formData	[]int		true	"Chapters per day (e.g. 1, 2)"
 //	@Param			book_cover					formData	file		false	"Book cover image (max 3MB)"
 //	@Failure		400							{object}	errorResponse
+//	@Failure		409							{object}	errorResponse
 //	@Failure		413							{object}	errorResponse
 //	@Failure		404							{object}	errorResponse
 //	@Failure		500							{object}	errorResponse
@@ -112,6 +113,11 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		language:         params.Language,
 		release_schedule: params.ReleaseSchedule,
 	})
+
+	if errors.Is(err, errBookNameAlreadyTaken) {
+		encode(w, http.StatusConflict, &errorResponse{Error: err.Error()})
+		return
+	}
 
 	if errors.Is(err, errGenresNotFound) {
 		encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
