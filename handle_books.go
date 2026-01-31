@@ -20,9 +20,9 @@ import (
 //	@Tags			books
 //	@Accept			multipart/form-data
 //	@Produce		application/json
-//	@Param			nanme						formData	string		true	"Name"
+//	@Param			name						formData	string		true	"Name"
 //	@Param			description					formData	string		true	"Description"
-//	@Param			genre						formData	[]string	true	"Genre"
+//	@Param			genres						formData	[]string	true	"Genre"
 //	@Param			language					formData	string		true	"Language"
 //	@Param			chapter_title				formData	string		true	"Draft chapter title"
 //	@Param			chapter_content				formData	string		true	"Draft chapter content"
@@ -62,11 +62,11 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 	params := request{
 		Name:        r.FormValue("name"),
 		Description: r.FormValue("description"),
-		Genres:      r.FormValue("string"),
+		Genres:      r.FormValue("genres"),
 		Language:    r.FormValue("language"),
 		DraftChapter: draftChapter{
 			Title:   r.FormValue("chapter_title"),
-			Content: r.FormValue("chapter_description"),
+			Content: r.FormValue("chapter_content"),
 		},
 	}
 
@@ -165,7 +165,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	conn, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://%s/ws", os.Getenv("HOST")), nil)
+	conn, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://%s/api/v1/ws", os.Getenv("WS_HOST")), nil)
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("error connection to websocket endpoint, %v", err))
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})

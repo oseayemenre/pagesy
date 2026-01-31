@@ -68,7 +68,7 @@ func createAccessAndRefreshTokens(w http.ResponseWriter, id string) error {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
-		MaxAge:   24 * 60 * 60,
+		MaxAge:   30 * 24 * 60 * 60,
 		SameSite: http.SameSiteLaxMode,
 	})
 

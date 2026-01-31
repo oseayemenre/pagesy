@@ -77,7 +77,6 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go s.run()
 	s.hub.connect <- conn
 	defer func() {
 		s.hub.disconnect <- conn

@@ -60,7 +60,7 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 	var rows *sql.Rows
 
 	query = `
-		SELECT id FROM genres WHERE genres = ANY($1);
+		SELECT id FROM genres WHERE genre = ANY($1);
 	`
 	rows, err = tx.QueryContext(ctx, query, pq.Array(book.genres))
 

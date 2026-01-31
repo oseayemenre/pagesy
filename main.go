@@ -40,6 +40,7 @@ func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore, hub 
 		objectStore: objectStore,
 		hub:         hub,
 	}
+	s.run()
 	s.routes()
 	return s
 }

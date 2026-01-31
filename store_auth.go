@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 )
@@ -24,7 +25,7 @@ func (s *server) checkIfUserExists(ctx context.Context, email string) (string, e
 
 func (s *server) createUser(ctx context.Context, user *user) (string, error) {
 	existingUser, err := s.checkIfUserExists(ctx, user.email)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return "", fmt.Errorf("error retrieving user, %v", err)
 	}
 

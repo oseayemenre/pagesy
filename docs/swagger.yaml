@@ -192,7 +192,7 @@ paths:
       parameters:
       - description: Name
         in: formData
-        name: nanme
+        name: name
         required: true
         type: string
       - description: Description
@@ -205,7 +205,7 @@ paths:
         in: formData
         items:
           type: string
-        name: genre
+        name: genres
         required: true
         type: array
       - description: Language

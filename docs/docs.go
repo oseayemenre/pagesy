@@ -234,7 +234,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Name",
-                        "name": "nanme",
+                        "name": "name",
                         "in": "formData",
                         "required": true
                     },
@@ -252,7 +252,7 @@ const docTemplate = `{
                         },
                         "collectionFormat": "csv",
                         "description": "Genre",
-                        "name": "genre",
+                        "name": "genres",
                         "in": "formData",
                         "required": true
                     },
