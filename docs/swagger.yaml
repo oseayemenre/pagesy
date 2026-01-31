@@ -41,6 +41,11 @@ definitions:
           type: string
         type: array
     type: object
+  main.handleUploadBook.response:
+    properties:
+      id:
+        type: string
+    type: object
 info:
   contact: {}
   title: Pagesy
@@ -179,6 +184,91 @@ paths:
       summary: Register user
       tags:
       - auth
+  /books:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload book
+      parameters:
+      - description: Name
+        in: formData
+        name: nanme
+        required: true
+        type: string
+      - description: Description
+        in: formData
+        name: description
+        required: true
+        type: string
+      - collectionFormat: csv
+        description: Genre
+        in: formData
+        items:
+          type: string
+        name: genre
+        required: true
+        type: array
+      - description: Language
+        in: formData
+        name: language
+        required: true
+        type: string
+      - description: Draft chapter title
+        in: formData
+        name: chapter_title
+        required: true
+        type: string
+      - description: Draft chapter content
+        in: formData
+        name: chapter_content
+        required: true
+        type: string
+      - collectionFormat: csv
+        description: Release days (e.g. Monday, Tuesday)
+        in: formData
+        items:
+          type: string
+        name: release_schedule_day
+        required: true
+        type: array
+      - collectionFormat: csv
+        description: Chapters per day (e.g. 1, 2)
+        in: formData
+        items:
+          type: integer
+        name: release_schedule_chapter
+        required: true
+        type: array
+      - description: Book cover image (max 3MB)
+        in: formData
+        name: book_cover
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.handleUploadBook.response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Upload book
+      tags:
+      - books
   /users/me:
     get:
       description: Get current user profile

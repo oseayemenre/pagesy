@@ -1,20 +1,26 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+
+	"github.com/gorilla/websocket"
 )
 
-// handleUploadBook
+// handleUploadBook godoc
+//
 //	@Summary		Upload book
 //	@Description	Upload book
 //	@Tags			books
 //	@Accept			multipart/form-data
 //	@Produce		application/json
-//	@Param			formData					name		string		true	"Name"
+//	@Param			nanme						formData	string		true	"Name"
 //	@Param			description					formData	string		true	"Description"
 //	@Param			genre						formData	[]string	true	"Genre"
 //	@Param			language					formData	string		true	"Language"
@@ -29,7 +35,6 @@ import (
 //	@Failure		500							{object}	errorResponse
 //	@Success		201							{object}	main.handleUploadBook.response
 //	@Router			/books [post]
-
 func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 	type request struct {
 		Name            string `validate:"required"`
@@ -41,7 +46,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type response struct {
-		id string
+		Id string `json:"id"`
 	}
 
 	user_id := r.Context().Value("user").(string)
@@ -95,32 +100,6 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, header, cover_err := r.FormFile("book_cover")
-
-	var url string
-	var fileData []byte
-
-	if cover_err == nil {
-		defer file.Close()
-
-		fileData, err := io.ReadAll(file)
-		if err != nil {
-			s.logger.Error(fmt.Sprintf("error reading bytes, %v", err))
-			encode(w, http.StatusInternalServerError, &errorResponse{Error: fmt.Sprintf("error reading bytes, %v", err)})
-			return
-		}
-
-		if len(fileData) > 3<<20 {
-			encode(w, http.StatusRequestEntityTooLarge, &errorResponse{Error: fmt.Sprintf("book cover too large")})
-			return
-		}
-
-		if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
-			encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("invalid file type")})
-			return
-		}
-	}
-
 	book_id, err := s.uploadBook(r.Context(), &book{
 		name:        params.Name,
 		description: params.Description,
@@ -134,6 +113,70 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		release_schedule: params.ReleaseSchedule,
 	})
 
-	if err != nil {
+	if errors.Is(err, errGenresNotFound) {
+		encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
+		return
 	}
+
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	file, header, err := r.FormFile("book_cover")
+
+	if err != nil && err != http.ErrMissingFile {
+		encode(w, http.StatusBadRequest, fmt.Errorf("error uploading image, %v", err))
+		return
+	}
+
+	if err == nil {
+		defer file.Close()
+
+		fileData, err := io.ReadAll(file)
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("error reading bytes, %v", err))
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: fmt.Sprintf("error reading bytes, %v", err)})
+			return
+		}
+
+		if len(fileData) > 3<<20 {
+			encode(w, http.StatusRequestEntityTooLarge, &errorResponse{Error: "book cover too large"})
+			return
+		}
+
+		if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
+			encode(w, http.StatusBadRequest, &errorResponse{Error: "invalid file type"})
+			return
+		}
+
+		url, err := s.objectStore.upload(r.Context(), fmt.Sprintf("%s_%s", book_id, header.Filename), bytes.NewReader(fileData))
+		if err != nil {
+			s.logger.Error(err.Error())
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+			return
+		}
+
+		if err := s.updateBookImage(r.Context(), url, book_id); err != nil {
+			s.logger.Error(err.Error())
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+			return
+		}
+	}
+
+	conn, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://%s/ws", os.Getenv("HOST")), nil)
+	if err != nil {
+		s.logger.Error(fmt.Sprintf("error connection to websocket endpoint, %v", err))
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	if err := conn.WriteJSON(&event{Type: NEW_BOOK, Payload: fmt.Sprintf("book %v waiting for approval", book_id)}); err != nil {
+		s.logger.Error(fmt.Sprintf("error writing to websocket endpoint, %v", err))
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	encode(w, http.StatusCreated, &response{Id: book_id})
 }

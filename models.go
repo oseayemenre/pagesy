@@ -27,7 +27,7 @@ type draftChapter struct {
 type book struct {
 	name             string
 	description      string
-	image            string
+	image            sql.NullString
 	release_schedule []releaseSchedule
 	opened_last      time.Time
 	author_id        string

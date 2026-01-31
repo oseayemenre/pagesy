@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS books(
   name TEXT NOT NULL,
   description TEXT NOT NULL,
   image TEXT,
-  views INT DEFAULT 0,
+  views INT NOT NULL DEFAULT 0,
   language language_type NOT NULL DEFAULT 'English'::language_type,
   rating INT NOT NULL DEFAULT 0,
   author_id UUID REFERENCES users(id) ON DELETE CASCADE,

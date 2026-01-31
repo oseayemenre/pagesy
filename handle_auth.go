@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"io"
 	"net/http"
 	"strings"
@@ -164,23 +165,17 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 
 	var password sql.NullString
 
-	if session.Values["user_password"] == nil {
-		password = sql.NullString{}
-	} else {
+	if session.Values["user_password"] != nil {
 		password = sql.NullString{String: session.Values["user_password"].(string), Valid: true}
 	}
 
 	var about sql.NullString
-	if params.about == "" {
-		about = sql.NullString{}
-	} else {
+	if params.about != "" {
 		about = sql.NullString{String: params.about, Valid: true}
 	}
 
 	var image sql.NullString
-	if params.image == "" {
-		image = sql.NullString{}
-	} else {
+	if params.image != "" {
 		image = sql.NullString{String: params.image, Valid: true}
 	}
 

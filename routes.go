@@ -58,6 +58,7 @@ func (s *server) routes() {
 
 	s.router.Post("/api/v1/coins", nil)
 
+	s.router.HandleFunc("/api/v1/ws", s.handleWS)
 	s.router.Post("/webhook", nil)
 	s.router.Patch("/users/{userId}/ban", nil)
 }

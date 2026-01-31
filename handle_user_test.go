@@ -73,7 +73,7 @@ func TestHandleGetProfile(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectCode {
