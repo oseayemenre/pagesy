@@ -31,9 +31,9 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 	var id string
 	query :=
 		`
-			SELECT id FROM books WHERE name = $1;
-		`
-	if err := s.store.QueryRowContext(ctx, query, &book.name).Scan(&id); err != nil && !errors.Is(err, sql.ErrNoRows) {
+				SELECT id FROM books WHERE name = $1;
+			`
+	if err = s.store.QueryRowContext(ctx, query, &book.name).Scan(&id); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return "", fmt.Errorf("error checking book existence, %v", err)
 	}
 	if id != "" {
@@ -42,10 +42,10 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 
 	query =
 		`
-			INSERT INTO books (name, description, author_id, language) VALUES ($1, $2, $3, $4) RETURNING id;
-		`
+				INSERT INTO books (name, description, author_id, language) VALUES ($1, $2, $3, $4) RETURNING id;
+			`
 
-	if err := s.store.QueryRowContext(ctx, query, &book.name, &book.description, &book.author_id, &book.language).Scan(&id); err != nil {
+	if err = s.store.QueryRowContext(ctx, query, &book.name, &book.description, &book.author_id, &book.language).Scan(&id); err != nil {
 		return "", fmt.Errorf("error inserting book, %v", err)
 	}
 
@@ -71,9 +71,10 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 
 	var rows *sql.Rows
 
-	query = `
-		SELECT id FROM genres WHERE genre = ANY($1);
-	`
+	query =
+		`
+			SELECT id FROM genres WHERE genre = ANY($1);
+		`
 	rows, err = tx.QueryContext(ctx, query, pq.Array(book.genres))
 
 	if err != nil {
@@ -113,15 +114,25 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 		return "", fmt.Errorf("error inserting into book_genres, %v", err)
 	}
 
-	query = `
-			INSERT INTO chapters(chapter_no, title, content, book_id)
-			VALUES (0, $1, $2, $3);
-	`
+	query =
+		`
+				INSERT INTO chapters(chapter_no, title, content, book_id)
+				VALUES (0, $1, $2, $3);
+		`
 
 	_, err = tx.ExecContext(ctx, query, book.draft_chapter.Title, book.draft_chapter.Content, id)
 
 	if err != nil {
 		return "", fmt.Errorf("error inserting draft chapter, %v", err)
+	}
+
+	query =
+		`
+			INSERT INTO recently_uploaded_books(book_id) VALUES ($1);
+		`
+
+	if _, err = tx.ExecContext(ctx, query, id); err != nil {
+		return "", fmt.Errorf("error inserting in recently uploaded book, %v", err)
 	}
 
 	err = tx.Commit()
@@ -136,8 +147,8 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 func (s *server) updateBookImage(ctx context.Context, url string, id string) error {
 	query :=
 		`
-			UPDATE books SET image = $1 WHERE id = $2;
-		`
+				UPDATE books SET image = $1 WHERE id = $2;
+			`
 
 	if _, err := s.store.ExecContext(ctx, query, url, id); err != nil {
 		return fmt.Errorf("error setting book image, %v", err)
