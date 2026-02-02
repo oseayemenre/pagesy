@@ -22,18 +22,14 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 		return "", fmt.Errorf("error starting transaction, %v", err)
 	}
 
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
+	defer tx.Rollback()
 
 	var id string
 	query :=
 		`
 				SELECT id FROM books WHERE name = $1;
 			`
-	if err = s.store.QueryRowContext(ctx, query, &book.name).Scan(&id); err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err := tx.QueryRowContext(ctx, query, &book.name).Scan(&id); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return "", fmt.Errorf("error checking book existence, %v", err)
 	}
 	if id != "" {
@@ -45,7 +41,7 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 				INSERT INTO books (name, description, author_id, language) VALUES ($1, $2, $3, $4) RETURNING id;
 			`
 
-	if err = s.store.QueryRowContext(ctx, query, &book.name, &book.description, &book.author_id, &book.language).Scan(&id); err != nil {
+	if err := tx.QueryRowContext(ctx, query, &book.name, &book.description, &book.author_id, &book.language).Scan(&id); err != nil {
 		return "", fmt.Errorf("error inserting book, %v", err)
 	}
 
@@ -78,6 +74,9 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 	rows, err = tx.QueryContext(ctx, query, pq.Array(book.genres))
 
 	if err != nil {
+		if strings.Contains(err.Error(), "invalid input value for enum genre_type") {
+			return "", errGenresNotFound
+		}
 		return "", fmt.Errorf("error retrieving genre ids, %v", err)
 	}
 
@@ -85,15 +84,10 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 
 	for rows.Next() {
 		var id string
-		if err = rows.Scan(&id); err != nil {
+		if err := rows.Scan(&id); err != nil {
 			return "", fmt.Errorf("error scanning genre ids: %v", err)
 		}
 		genre_ids = append(genre_ids, id)
-	}
-
-	if len(genre_ids) != len(book.genres) {
-		err = errGenresNotFound
-		return "", err
 	}
 
 	val_strings = []string{}
@@ -131,14 +125,12 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 			INSERT INTO recently_uploaded_books(book_id) VALUES ($1);
 		`
 
-	if _, err = tx.ExecContext(ctx, query, id); err != nil {
+	if _, err := tx.ExecContext(ctx, query, id); err != nil {
 		return "", fmt.Errorf("error inserting in recently uploaded book, %v", err)
 	}
 
-	err = tx.Commit()
-
-	if err != nil {
-		return "", err
+	if err = tx.Commit(); err != nil {
+		return "", fmt.Errorf("error commititng transaction, %v", err)
 	}
 
 	return id, nil

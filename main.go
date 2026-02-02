@@ -32,15 +32,15 @@ type server struct {
 	hub         *hub
 }
 
-func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore, hub *hub) *server {
+func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore) *server {
 	s := &server{
 		router:      chi.NewRouter(),
 		logger:      logger,
 		store:       store,
 		objectStore: objectStore,
-		hub:         hub,
+		hub:         newHub(),
 	}
-	s.run()
+	go s.run()
 	s.routes()
 	return s
 }
@@ -94,9 +94,9 @@ func main() {
 	docs.SwaggerInfo.Host = os.Getenv("SWAGGER_HOST")
 	docs.SwaggerInfo.Schemes = []string{os.Getenv("SWAGGER_SCHEME")}
 
-	hub := newHub()
-	svr := newServer(logger, db, objectStore, hub)
+	svr := newServer(logger, db, objectStore)
 	port := *flag.String("a", ":3000", "server address")
+	flag.Parse()
 	httpSvr := &http.Server{
 		Addr:    port,
 		Handler: svr.router,

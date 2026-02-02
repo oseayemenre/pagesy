@@ -50,7 +50,7 @@ func TestHandleAuthRegister(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", bytes.NewReader(payload))
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil, nil)
+			svr := newServer(nil, db, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
@@ -108,7 +108,7 @@ func TestHandleAuthLogin(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(payload))
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil, nil)
+			svr := newServer(nil, db, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
@@ -124,7 +124,7 @@ func TestHandleAuthLogout(t *testing.T) {
 
 	createAccessAndRefreshTokens(rr, "123")
 
-	svr := newServer(nil, nil, nil, nil)
+	svr := newServer(nil, nil, nil)
 	svr.router.ServeHTTP(rr, r)
 
 	hasAccessToken, hasRefreshToken := true, true
@@ -166,7 +166,7 @@ func TestHandleAuthRefreshToken(t *testing.T) {
 		HttpOnly: true,
 	})
 
-	svr := newServer(nil, nil, nil, nil)
+	svr := newServer(nil, nil, nil)
 	svr.router.ServeHTTP(rr, r)
 
 	hasAccessToken := true
