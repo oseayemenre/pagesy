@@ -38,7 +38,7 @@ func (s *server) createUser(ctx context.Context, user *user) (string, error) {
 		`
 			INSERT INTO users (display_name, email, password, about, image) VALUES ($1, $2, $3, $4, $5) RETURNING id;
 		`
-	if err := s.store.QueryRowContext(ctx, query, user.display_name, user.email, user.password, user.about, user.image).Scan(&id); err != nil {
+	if err := s.store.QueryRowContext(ctx, query, user.displayName, user.email, user.password, user.about, user.image).Scan(&id); err != nil {
 		return "", fmt.Errorf("error inserting into users table, %w", err)
 	}
 	return id, nil

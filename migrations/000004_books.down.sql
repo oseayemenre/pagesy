@@ -1,3 +1,5 @@
+DROP INDEX IF EXISTS idx_release_schedule_book_id;
+DROP INDEX IF EXISTS idx_chapters_book_id;
 DROP TABLE IF EXISTS books_genres;
 DROP TABLE IF EXISTS genres;
 DROP TABLE IF EXISTS chapters;

@@ -6,12 +6,12 @@ import (
 )
 
 type user struct {
-	display_name string
-	email        string
-	password     sql.NullString
-	about        sql.NullString
-	image        sql.NullString
-	roles        []string
+	displayName string
+	email       string
+	password    sql.NullString
+	about       sql.NullString
+	image       sql.NullString
+	roles       []string
 }
 
 type releaseSchedule struct {
@@ -25,19 +25,20 @@ type draftChapter struct {
 }
 
 type book struct {
-	name             string
-	description      string
-	image            sql.NullString
-	release_schedule []releaseSchedule
-	opened_last      time.Time
-	author_id        string
-	views            int
-	language         string
-	genres           []string
-	draft_chapter    draftChapter
-	rating           int
-	completed        bool
-	approved         bool
-	created_at       time.Time
-	updated_at       time.Time
+	name            string
+	description     string
+	image           sql.NullString
+	releaseSchedule []releaseSchedule
+	chapterCount    int
+	openedLast      time.Time
+	authorID        string
+	views           int
+	language        string
+	genres          []string
+	draftChapter    draftChapter
+	rating          float32
+	completed       bool
+	approved        bool
+	createdAt       time.Time
+	updatedAt       time.Time
 }

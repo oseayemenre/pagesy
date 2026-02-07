@@ -30,6 +30,7 @@ import (
 //	@Param			release_schedule_chapter	formData	[]int		true	"Chapters per day (e.g. 1, 2)"
 //	@Param			book_cover					formData	file		false	"Book cover image (max 3MB)"
 //	@Failure		400							{object}	errorResponse
+//	@Failure		401							{object}	errorResponse
 //	@Failure		409							{object}	errorResponse
 //	@Failure		413							{object}	errorResponse
 //	@Failure		404							{object}	errorResponse
@@ -50,7 +51,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		Id string `json:"id"`
 	}
 
-	user_id := r.Context().Value("user").(string)
+	userID := r.Context().Value("user").(string)
 
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 
@@ -101,17 +102,17 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	book_id, err := s.uploadBook(r.Context(), &book{
+	bookID, err := s.uploadBook(r.Context(), &book{
 		name:        params.Name,
 		description: params.Description,
-		author_id:   user_id,
+		authorID:    userID,
 		genres:      strings.Split(params.Genres, ","),
-		draft_chapter: draftChapter{
+		draftChapter: draftChapter{
 			Title:   params.DraftChapter.Title,
 			Content: params.DraftChapter.Content,
 		},
-		language:         params.Language,
-		release_schedule: params.ReleaseSchedule,
+		language:        params.Language,
+		releaseSchedule: params.ReleaseSchedule,
 	})
 
 	if errors.Is(err, errBookNameAlreadyTaken) {
@@ -157,14 +158,14 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		url, err := s.objectStore.upload(r.Context(), fmt.Sprintf("%s_%s", book_id, header.Filename), bytes.NewReader(fileData))
+		url, err := s.objectStore.upload(r.Context(), fmt.Sprintf("%s_%s", bookID, header.Filename), bytes.NewReader(fileData))
 		if err != nil {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
 
-		if err := s.updateBookImage(r.Context(), url, book_id); err != nil {
+		if err := s.updateBookImage(r.Context(), url, bookID); err != nil {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
@@ -178,11 +179,138 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := conn.WriteJSON(&event{Type: NEW_BOOK, Payload: fmt.Sprintf("book %v waiting for approval", book_id)}); err != nil {
+	if err := conn.WriteJSON(&event{Type: NEW_BOOK, Payload: fmt.Sprintf("book %v waiting for approval", bookID)}); err != nil {
 		s.logger.Error(fmt.Sprintf("error writing to websocket endpoint, %v", err))
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}
 
-	encode(w, http.StatusCreated, &response{Id: book_id})
+	encode(w, http.StatusCreated, &response{Id: bookID})
+}
+
+// handleGetbooks godoc
+//
+//	@Summary		Get all books
+//	@Description	Get all books
+//	@Produce		json
+//	@Param			genre		query		string	true	"genre"
+//	@Param			language	query		string	true	"language"
+//	@Param			sort		query		string	true	"sort"
+//	@Param			order		query		string	true	"order"
+//	@Param			offset		query		string	true	"offset"
+//	@Param			limit		query		string	true	"limit"
+//	@Failure		400			{object}	errorResponse
+//	@Failure		500			{object}	errorResponse
+//	@Success		200			{object}	main.handleGetBooks.response
+//	@Router			/books [get]
+func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
+	type response_book struct {
+		Name          string  `json:"name"`
+		Description   string  `json:"description"`
+		Image         *string `json:"image"`
+		Views         int     `jsosn:"views"`
+		Rating        float32 `json:"rating"`
+		Chapter_count int     `json:"chapter_count"`
+	}
+
+	type response struct {
+		Books []response_book `json:"books"`
+	}
+
+	genre := r.URL.Query()["genre"]
+	language := r.URL.Query()["language"]
+	sort := strings.ToLower(r.URL.Query().Get("sort"))
+	order := strings.ToLower(r.URL.Query().Get("order"))
+
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+
+	if err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "offset should be a valid number"})
+		return
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	if err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "limit should be a valid number"})
+		return
+	}
+
+	if sort != "updated" && sort != "views" {
+		sort = "views"
+	}
+
+	if order != "asc" && order != "desc" {
+		order = "desc"
+	}
+
+	if len(genre) > 0 && len(language) < 1 {
+		books, err := s.getBooksByGenre(r.Context(), genre, offset, limit, sort, order)
+
+		if err != nil {
+			if err == errNoBooksUnderGenre {
+				encode(w, http.StatusOK, &response{})
+				return
+			}
+			s.logger.Error(err.Error())
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+			return
+		}
+
+		var response_books []response_book
+		var image *string
+
+		for _, book := range books {
+			if book.image.Valid != false {
+				image = &book.image.String
+			}
+			response_books = append(response_books, response_book{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapter_count})
+		}
+
+		encode(w, http.StatusOK, &response{Books: response_books})
+		return
+	}
+
+	if len(genre) < 1 && len(language) > 0 {
+		books, err := a.store.GetBooksByLanguage(r.Context(), language, offset, limit, sort, order)
+
+		if err != nil {
+			if err == store.ErrNoBooksUnderThisLanguage {
+				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
+				return
+			}
+			a.logger.Error(err.Error(), "service", "HandleGetBooks")
+			respondWithError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		handleGetBooksHelper(w, books)
+		return
+	}
+
+	if len(genre) > 0 && len(language) > 0 {
+		books, err := a.store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
+
+		if err != nil {
+			if err == store.ErrNoBooksUnderThisGenreAndLanguage {
+				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
+				return
+			}
+			a.logger.Error(err.Error(), "service", "HandleGetBooks")
+			respondWithError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		handleGetBooksHelper(w, books)
+		return
+	}
+
+	books, err := a.store.GetAllBooks(r.Context(), offset, limit, sort, order)
+	if err != nil {
+		a.logger.Error(err.Error(), "service", "HandleGetBooks")
+		respondWithError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	handleGetBooksHelper(w, books)
 }

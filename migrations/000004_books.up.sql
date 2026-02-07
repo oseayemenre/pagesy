@@ -95,3 +95,6 @@ CREATE TABLE IF NOT EXISTS books_genres(
   genre_id UUID NOT NULL REFERENCES genres(id) ON DELETE CASCADE,
   PRIMARY KEY(book_id, genre_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_release_schedule_book_id ON release_schedule(book_id);
+CREATE INDEX IF NOT EXISTS idx_chapters_book_id ON chapters(book_id);

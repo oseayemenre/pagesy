@@ -89,9 +89,9 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 //	@Router			/auth/onboarding [post]
 func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	type request struct {
-		display_name string
-		about        string
-		image        string
+		displayName string
+		about       string
+		image       string
 	}
 
 	type response struct {
@@ -116,8 +116,8 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	defer r.MultipartForm.RemoveAll()
 
 	params := request{
-		display_name: r.FormValue("display_name"),
-		about:        r.FormValue("about"),
+		displayName: r.FormValue("display_name"),
+		about:       r.FormValue("about"),
 	}
 
 	if err := validate.Struct(&params); err != nil {
@@ -180,11 +180,11 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := s.createUser(r.Context(), &user{
-		display_name: params.display_name,
-		email:        email,
-		password:     password,
-		about:        about,
-		image:        image,
+		displayName: params.displayName,
+		email:       email,
+		password:    password,
+		about:       about,
+		image:       image,
 	})
 
 	if errors.Is(err, errUserExists) {

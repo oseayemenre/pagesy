@@ -8,8 +8,6 @@ CREATE TABLE IF NOT EXISTS users(
     display_name TEXT NOT NULL,
     image TEXT,
     about TEXT,
-    followers UUID REFERENCES users(id),
-    following UUID REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

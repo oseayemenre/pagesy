@@ -26,6 +26,8 @@ definitions:
     - email
     - password
     type: object
+  main.handleGetBooks.response:
+    type: object
   main.handleGetProfile.response:
     properties:
       about:
@@ -185,6 +187,55 @@ paths:
       tags:
       - auth
   /books:
+    get:
+      description: Get all books
+      parameters:
+      - description: genre
+        in: query
+        name: genre
+        required: true
+        type: string
+      - description: language
+        in: query
+        name: language
+        required: true
+        type: string
+      - description: sort
+        in: query
+        name: sort
+        required: true
+        type: string
+      - description: order
+        in: query
+        name: order
+        required: true
+        type: string
+      - description: offset
+        in: query
+        name: offset
+        required: true
+        type: string
+      - description: limit
+        in: query
+        name: limit
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.handleGetBooks.response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Get all books
     post:
       consumes:
       - multipart/form-data
@@ -252,6 +303,10 @@ paths:
             $ref: '#/definitions/main.handleUploadBook.response'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/main.errorResponse'
         "404":

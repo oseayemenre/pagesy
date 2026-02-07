@@ -27,7 +27,7 @@ func (s *server) routes() {
 	s.router.Post("/api/v1/auth/refresh-token", s.handleAuthRefreshToken)
 
 	s.router.Post("/api/v1/books", authenticatedUser(s.handleUploadBook))
-	s.router.Get("/api/v1/books", nil)
+	s.router.Get("/api/v1/books", s.handleGetBooks)
 	s.router.Get("/api/v1/books/stats", nil)
 	s.router.Get("/api/v1/books/recents", nil)
 
@@ -58,7 +58,7 @@ func (s *server) routes() {
 
 	s.router.Post("/api/v1/coins", nil)
 
-	s.router.HandleFunc("/api/v1/ws", s.handleWS)
+	s.router.HandleFunc("/api/v1/ws", authenticatedUser(s.handleWS))
 	s.router.Post("/webhook", nil)
 	s.router.Patch("/users/{userId}/ban", nil)
 }

@@ -13,6 +13,7 @@ import (
 var (
 	errGenresNotFound       = errors.New("genres not found")
 	errBookNameAlreadyTaken = errors.New("book name already taken")
+	errNoBooksUnderGenre    = errors.New("no books under genre")
 )
 
 func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
@@ -41,29 +42,29 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 				INSERT INTO books (name, description, author_id, language) VALUES ($1, $2, $3, $4) RETURNING id;
 			`
 
-	if err := tx.QueryRowContext(ctx, query, &book.name, &book.description, &book.author_id, &book.language).Scan(&id); err != nil {
+	if err := tx.QueryRowContext(ctx, query, &book.name, &book.description, &book.authorID, &book.language).Scan(&id); err != nil {
 		return "", fmt.Errorf("error inserting book, %v", err)
 	}
 
-	val_strings := []string{}
-	val_args := []interface{}{}
+	valStrings := []string{}
+	valArgs := []interface{}{}
 	position := 1
 
-	for _, sched := range book.release_schedule {
-		val_strings = append(val_strings, fmt.Sprintf("($%d, $%d, $%d)", position, position+1, position+2))
-		val_args = append(val_args, id, sched.Day, sched.Chapters)
+	for _, sched := range book.releaseSchedule {
+		valStrings = append(valStrings, fmt.Sprintf("($%d, $%d, $%d)", position, position+1, position+2))
+		valArgs = append(valArgs, id, sched.Day, sched.Chapters)
 		position += 3
 	}
 
-	query = fmt.Sprintf("INSERT INTO release_schedule(book_id, day, no_of_chapters) VALUES %s;", strings.Join(val_strings, ","))
+	query = fmt.Sprintf("INSERT INTO release_schedule(book_id, day, no_of_chapters) VALUES %s;", strings.Join(valStrings, ","))
 
-	_, err = tx.ExecContext(ctx, query, val_args...)
+	_, err = tx.ExecContext(ctx, query, valArgs...)
 
 	if err != nil {
 		return "", fmt.Errorf("error inserting release_schedule, %v", err)
 	}
 
-	var genre_ids []string
+	var genreIDs []string
 
 	var rows *sql.Rows
 
@@ -87,22 +88,22 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 		if err := rows.Scan(&id); err != nil {
 			return "", fmt.Errorf("error scanning genre ids: %v", err)
 		}
-		genre_ids = append(genre_ids, id)
+		genreIDs = append(genreIDs, id)
 	}
 
-	val_strings = []string{}
-	val_args = []interface{}{}
+	valStrings = []string{}
+	valArgs = []interface{}{}
 	position = 1
 
-	for _, genreId := range genre_ids {
-		val_strings = append(val_strings, fmt.Sprintf("($%d, $%d)", position, position+1))
-		val_args = append(val_args, id, genreId)
+	for _, genreId := range genreIDs {
+		valStrings = append(valStrings, fmt.Sprintf("($%d, $%d)", position, position+1))
+		valArgs = append(valArgs, id, genreId)
 		position += 2
 	}
 
-	query = fmt.Sprintf("INSERT INTO books_genres(book_id, genre_id) VALUES %s ON CONFLICT DO NOTHING;", strings.Join(val_strings, ","))
+	query = fmt.Sprintf("INSERT INTO books_genres(book_id, genre_id) VALUES %s ON CONFLICT DO NOTHING;", strings.Join(valStrings, ","))
 
-	_, err = tx.ExecContext(ctx, query, val_args...)
+	_, err = tx.ExecContext(ctx, query, valArgs...)
 
 	if err != nil {
 		return "", fmt.Errorf("error inserting into book_genres, %v", err)
@@ -114,7 +115,7 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 				VALUES (0, $1, $2, $3);
 		`
 
-	_, err = tx.ExecContext(ctx, query, book.draft_chapter.Title, book.draft_chapter.Content, id)
+	_, err = tx.ExecContext(ctx, query, book.draftChapter.Title, book.draftChapter.Content, id)
 
 	if err != nil {
 		return "", fmt.Errorf("error inserting draft chapter, %v", err)
@@ -146,4 +147,52 @@ func (s *server) updateBookImage(ctx context.Context, url string, id string) err
 		return fmt.Errorf("error setting book image, %v", err)
 	}
 	return nil
+}
+
+func helperSortField(sort string) string {
+	if sort == "updated" {
+		sort = "b.updated_at"
+	} else {
+		sort = "b.views"
+	}
+
+	return sort
+}
+
+func (s *server) getGenresAndReleaseSchedule(ctx context.Context, id string) {}
+
+func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]book, error) {
+	var books []book
+	var booksMap map[string]book
+	query :=
+		fmt.Sprintf(`
+			SELECT b.name, b.description, b.image, b.views, b.rating, COUNT(c.id)
+			FROM books b
+			JOIN chapters c ON (b.id = c.book_id)
+			JOIN books_genres bg ON (bg.book_id = b.id)
+			JOIN genres g ON (g.id = bg.genre_id)
+			WHERE g.genres = ANY($1) AND b.approved = true
+			GROUP BY b.id
+			ORDER BY %s %s
+			OFFSET $2 LIMIT $3;
+		`, helperSortField(sort), order)
+
+	rows, err := s.store.QueryContext(ctx, query, pq.Array(genre), offset, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error getting all books, %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var book book
+		if err := rows.Scan(&book.name, &book.description, &book.image, &book.views, &book.rating, book.chapterCount); err != nil {
+			return nil, fmt.Errorf("error scaaning rows, %v", err)
+		}
+		books = append(books, book)
+	}
+
+	if len(books) < 1 {
+		return nil, errNoBooksUnderGenre
+	}
+	return nil, nil
 }

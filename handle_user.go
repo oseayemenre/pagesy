@@ -41,5 +41,5 @@ func (s *server) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 		image = &user.image.String
 	}
 
-	encode(w, http.StatusOK, &response{Email: user.email, Display_name: user.display_name, Image: image, About: about, Roles: user.roles})
+	encode(w, http.StatusOK, &response{Email: user.email, Display_name: user.displayName, Image: image, About: about, Roles: user.roles})
 }
