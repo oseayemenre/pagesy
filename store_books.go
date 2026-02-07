@@ -188,7 +188,9 @@ func (s *server) helperGetBooks(ctx context.Context, query string, argErr error,
 
 	query =
 		`
-			SELECT bg.book_id, g.genres 
+			SELECT 
+				bg.book_id, 
+				g.genres 
 			FROM genres g
 			JOIN books_genres bg ON (bg.genre_id = g.id)
 			WHERE bg.book_id = ANY($1);
@@ -219,7 +221,11 @@ func (s *server) helperGetBooks(ctx context.Context, query string, argErr error,
 
 	query =
 		`
-			SELECT book_id, day, no_of_chapters FROM release_schedule WHERE book_id = ANY($1)
+			SELECT 
+				book_id, 
+				day, no_of_chapters 
+			FROM release_schedule 
+			WHERE book_id = ANY($1)
 		`
 
 	releaseScheduleRows, err := s.store.QueryContext(ctx, query, pq.Array(bookIDs))
@@ -252,12 +258,20 @@ func (s *server) helperGetBooks(ctx context.Context, query string, argErr error,
 func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]book, error) {
 	query :=
 		fmt.Sprintf(`
-			SELECT b.name, b.description, b.image, b.views, b.rating, COUNT(c.id)
+			SELECT 
+				b.name, 
+				b.description, 
+				b.image, 
+				b.views, 
+				b.rating, 
+				COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
 			JOIN books_genres bg ON (bg.book_id = b.id)
 			JOIN genres g ON (g.id = bg.genre_id)
-			WHERE g.genres = ANY($1) AND b.approved = true
+			WHERE 
+				g.genres = ANY($1) 
+				AND b.approved = true
 			GROUP BY b.id
 			ORDER BY %s %s
 			OFFSET $2 LIMIT $3;
@@ -274,11 +288,19 @@ func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int
 func (s *server) getBooksByLanguage(ctx context.Context, language []string, offset int, limit int, sort string, order string) ([]book, error) {
 	query :=
 		fmt.Sprintf(`
-			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
-			COUNT(c.id)
+			SELECT 
+				b.id, 
+				b.name, 
+				b.description, 
+				b.image, 
+				b.views, 
+				b.rating,
+				COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
-			WHERE b.language = ANY($1::languages[]) AND b.approved = true
+			WHERE 
+				b.language = ANY($1::languages[]) 
+				AND b.approved = true
 			GROUP BY b.id
 			ORDER BY %s %s 
 			OFFSET $2 LIMIT $3;
@@ -295,13 +317,22 @@ func (s *server) getBooksByLanguage(ctx context.Context, language []string, offs
 func (s *server) getBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string, order string) ([]book, error) {
 	query :=
 		fmt.Sprintf(`
-			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
-			COUNT(c.id)
+			SELECT 
+				b.id, 
+				b.name, 
+				b.description, 
+				b.image, 
+				b.views, 
+				b.rating,
+				COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
 			JOIN books_genres bg ON (bg.book_id = b.id)
 			JOIN genres g ON (g.id = bg.genre_id)
-			WHERE b.language = ANY($1::languages[]) AND g.genres = ANY($2) AND b.approved = true
+			WHERE 
+				b.language = ANY($1::languages[]) 
+				AND g.genres = ANY($2) 
+				AND b.approved = true
 			GROUP BY b.id
 			ORDER BY %s %s
 			OFFSET $3 LIMIT $4;
@@ -318,7 +349,13 @@ func (s *server) getBooksByGenreAndLanguage(ctx context.Context, genre []string,
 func (s *server) getAllBooks(ctx context.Context, offset int, limit int, sort string, order string) ([]book, error) {
 	query :=
 		fmt.Sprintf(`
-			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
+			SELECT 
+				b.id, 
+				b.name, 
+				b.description, 
+				b.image, 
+				b.views, 
+				b.rating,
 			COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)

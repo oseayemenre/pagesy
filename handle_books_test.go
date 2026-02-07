@@ -190,3 +190,15 @@ func TestHandleUploadBook(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleGetBooks(t *testing.T) {
+	// tests := []struct {
+	// 	name         string
+	// 	path         string
+	// 	expectedCode int
+	// }{
+	// 	{
+	// 		name: "offset isn't a valid number",
+	// 	},
+	// }
+}
