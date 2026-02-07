@@ -1,9 +1,65 @@
 basePath: /api/v1
 definitions:
+  main.bookStats:
+    properties:
+      approved:
+        type: boolean
+      chapter_count:
+        type: integer
+      completed:
+        type: boolean
+      created_at:
+        type: string
+      description:
+        type: string
+      genres:
+        items:
+          type: string
+        type: array
+      image:
+        type: string
+      language:
+        type: string
+      name:
+        type: string
+      rating:
+        type: number
+      release_schedule:
+        items:
+          $ref: '#/definitions/main.responseReleaseSchedule'
+        type: array
+      updated_at:
+        type: string
+      views:
+        type: integer
+    type: object
   main.errorResponse:
     properties:
       error:
         type: string
+    type: object
+  main.getResponseBook:
+    properties:
+      chapter_count:
+        type: integer
+      description:
+        type: string
+      genres:
+        items:
+          type: string
+        type: array
+      image:
+        type: string
+      name:
+        type: string
+      rating:
+        type: number
+      release_schedule:
+        items:
+          $ref: '#/definitions/main.responseReleaseSchedule'
+        type: array
+      views:
+        type: integer
     type: object
   main.handleAuthOnboarding.response:
     properties:
@@ -26,42 +82,19 @@ definitions:
     - email
     - password
     type: object
-  main.handleGetBooksSuccessEncoding.response:
+  main.handleGetBooks.response:
     properties:
       books:
         items:
-          $ref: '#/definitions/main.handleGetBooksSuccessEncoding.responseBook'
+          $ref: '#/definitions/main.getResponseBook'
         type: array
     type: object
-  main.handleGetBooksSuccessEncoding.responseBook:
+  main.handleGetBooksStats.response:
     properties:
-      chapter_count:
-        type: integer
-      description:
-        type: string
-      genres:
+      books:
         items:
-          type: string
+          $ref: '#/definitions/main.bookStats'
         type: array
-      image:
-        type: string
-      name:
-        type: string
-      rating:
-        type: number
-      release_schedule:
-        items:
-          $ref: '#/definitions/main.handleGetBooksSuccessEncoding.responseReleaseSchedule'
-        type: array
-      views:
-        type: integer
-    type: object
-  main.handleGetBooksSuccessEncoding.responseReleaseSchedule:
-    properties:
-      chapters:
-        type: integer
-      day:
-        type: string
     type: object
   main.handleGetProfile.response:
     properties:
@@ -81,6 +114,13 @@ definitions:
   main.handleUploadBook.response:
     properties:
       id:
+        type: string
+    type: object
+  main.responseReleaseSchedule:
+    properties:
+      chapters:
+        type: integer
+      day:
         type: string
     type: object
 info:
@@ -261,7 +301,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.handleGetBooksSuccessEncoding.response'
+            $ref: '#/definitions/main.handleGetBooks.response'
         "400":
           description: Bad Request
           schema:
@@ -271,6 +311,8 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Get all books
+      tags:
+      - books
     post:
       consumes:
       - multipart/form-data
@@ -372,7 +414,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.handleGetBooksSuccessEncoding.response'
+            $ref: '#/definitions/main.handleGetBooksStats.response'
         "400":
           description: Bad Request
           schema:
@@ -382,6 +424,8 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Get books stats
+      tags:
+      - books
   /users/me:
     get:
       description: Get current user profile

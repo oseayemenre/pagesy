@@ -223,6 +223,9 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "books"
+                ],
                 "summary": "Get all books",
                 "parameters": [
                     {
@@ -272,7 +275,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.handleGetBooksSuccessEncoding.response"
+                            "$ref": "#/definitions/main.handleGetBooks.response"
                         }
                     },
                     "400": {
@@ -429,12 +432,15 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "books"
+                ],
                 "summary": "Get books stats",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.handleGetBooksSuccessEncoding.response"
+                            "$ref": "#/definitions/main.handleGetBooksStats.response"
                         }
                     },
                     "400": {
@@ -480,11 +486,96 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "main.bookStats": {
+            "type": "object",
+            "properties": {
+                "approved": {
+                    "type": "boolean"
+                },
+                "chapter_count": {
+                    "type": "integer"
+                },
+                "completed": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "genres": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "image": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "number"
+                },
+                "release_schedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.responseReleaseSchedule"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "views": {
+                    "type": "integer"
+                }
+            }
+        },
         "main.errorResponse": {
             "type": "object",
             "properties": {
                 "error": {
                     "type": "string"
+                }
+            }
+        },
+        "main.getResponseBook": {
+            "type": "object",
+            "properties": {
+                "chapter_count": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "genres": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "number"
+                },
+                "release_schedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.responseReleaseSchedule"
+                    }
+                },
+                "views": {
+                    "type": "integer"
                 }
             }
         },
@@ -520,60 +611,25 @@ const docTemplate = `{
                 }
             }
         },
-        "main.handleGetBooksSuccessEncoding.response": {
+        "main.handleGetBooks.response": {
             "type": "object",
             "properties": {
                 "books": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/main.handleGetBooksSuccessEncoding.responseBook"
+                        "$ref": "#/definitions/main.getResponseBook"
                     }
                 }
             }
         },
-        "main.handleGetBooksSuccessEncoding.responseBook": {
+        "main.handleGetBooksStats.response": {
             "type": "object",
             "properties": {
-                "chapter_count": {
-                    "type": "integer"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "genres": {
+                "books": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/main.bookStats"
                     }
-                },
-                "image": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "rating": {
-                    "type": "number"
-                },
-                "release_schedule": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/main.handleGetBooksSuccessEncoding.responseReleaseSchedule"
-                    }
-                },
-                "views": {
-                    "type": "integer"
-                }
-            }
-        },
-        "main.handleGetBooksSuccessEncoding.responseReleaseSchedule": {
-            "type": "object",
-            "properties": {
-                "chapters": {
-                    "type": "integer"
-                },
-                "day": {
-                    "type": "string"
                 }
             }
         },
@@ -604,6 +660,17 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.responseReleaseSchedule": {
+            "type": "object",
+            "properties": {
+                "chapters": {
+                    "type": "integer"
+                },
+                "day": {
                     "type": "string"
                 }
             }

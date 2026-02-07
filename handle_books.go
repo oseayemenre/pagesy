@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -199,39 +200,32 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 	encode(w, http.StatusCreated, &response{Id: bookID})
 }
 
-func handleGetBooksSuccessEncoding(w http.ResponseWriter, books []book) {
-	type responseReleaseSchedule struct {
-		Day      string `json:"day"`
-		Chapters int    `json:"chapters"`
-	}
+type responseReleaseSchedule struct {
+	Day      string `json:"day"`
+	Chapters int    `json:"chapters"`
+}
 
-	type responseBook struct {
-		Name            string                    `json:"name"`
-		Description     string                    `json:"description"`
-		Image           *string                   `json:"image"`
-		Views           int                       `jsosn:"views"`
-		Rating          float32                   `json:"rating"`
-		Chapter_count   int                       `json:"chapter_count"`
-		Genres          []string                  `json:"genres"`
-		ReleaseSchedule []responseReleaseSchedule `json:"release_schedule"`
-	}
+type getResponseBook struct {
+	Name            string                    `json:"name"`
+	Description     string                    `json:"description"`
+	Image           *string                   `json:"image"`
+	Views           int                       `jsosn:"views"`
+	Rating          float32                   `json:"rating"`
+	ChapterCount    int                       `json:"chapter_count"`
+	Genres          []string                  `json:"genres"`
+	ReleaseSchedule []responseReleaseSchedule `json:"release_schedule"`
+}
 
-	type response struct {
-		Books []responseBook `json:"books"`
-	}
-
-	var responseBooks []responseBook
-	var image *string
+func mapToGetBooks(books []book) []getResponseBook {
+	var responseBooks []getResponseBook
 
 	for _, book := range books {
-		newBook := responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount}
+		var image *string
 		if book.image.Valid != false {
 			image = &book.image.String
 		}
 
-		for _, g := range book.genres {
-			newBook.Genres = append(newBook.Genres, g)
-		}
+		newBook := getResponseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, ChapterCount: book.chapterCount, Genres: append([]string{}, book.genres...)}
 
 		for _, rs := range book.releaseSchedule {
 			newBook.ReleaseSchedule = append(newBook.ReleaseSchedule, responseReleaseSchedule{Day: rs.Day, Chapters: rs.Chapters})
@@ -240,13 +234,14 @@ func handleGetBooksSuccessEncoding(w http.ResponseWriter, books []book) {
 		responseBooks = append(responseBooks, newBook)
 	}
 
-	encode(w, http.StatusOK, &response{Books: responseBooks})
+	return responseBooks
 }
 
 // handleGetbooks godoc
 //
 //	@Summary		Get all books
 //	@Description	Get all books
+//	@Tags			books
 //	@Produce		json
 //	@Param			genre		query		string	true	"genre"
 //	@Param			language	query		string	true	"language"
@@ -256,9 +251,13 @@ func handleGetBooksSuccessEncoding(w http.ResponseWriter, books []book) {
 //	@Param			limit		query		string	true	"limit"
 //	@Failure		400			{object}	errorResponse
 //	@Failure		500			{object}	errorResponse
-//	@Success		200			{object}	main.handleGetBooksSuccessEncoding.response
+//	@Success		200			{object}	main.handleGetBooks.response
 //	@Router			/books [get]
 func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Books []getResponseBook `json:"books"`
+	}
+
 	genre := r.URL.Query()["genre"]
 	language := r.URL.Query()["language"]
 	sort := strings.ToLower(r.URL.Query().Get("sort"))
@@ -292,7 +291,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		handleGetBooksSuccessEncoding(w, books)
+		encode(w, http.StatusOK, &response{Books: mapToGetBooks(books)})
 		return
 	}
 
@@ -303,7 +302,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		handleGetBooksSuccessEncoding(w, books)
+		encode(w, http.StatusOK, &response{Books: mapToGetBooks(books)})
 		return
 	}
 
@@ -315,7 +314,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		handleGetBooksSuccessEncoding(w, books)
+		encode(w, http.StatusOK, &response{Books: mapToGetBooks(books)})
 		return
 	}
 
@@ -326,19 +325,61 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handleGetBooksSuccessEncoding(w, books)
+	encode(w, http.StatusOK, &response{Books: mapToGetBooks(books)})
+}
+
+type bookStats struct {
+	Name            string                    `json:"name"`
+	Description     string                    `json:"description"`
+	Image           *string                   `json:"image"`
+	Views           int                       `json:"views"`
+	Rating          float32                   `json:"rating"`
+	ChapterCount    int                       `json:"chapter_count"`
+	Completed       bool                      `json:"completed"`
+	Approved        bool                      `json:"approved"`
+	Genres          []string                  `json:"genres"`
+	Language        string                    `json:"language"`
+	ReleaseSchedule []responseReleaseSchedule `json:"release_schedule"`
+	CreatedAt       time.Time                 `json:"created_at"`
+	UpdatedAt       time.Time                 `json:"updated_at"`
+}
+
+func mapToBooksStats(books []book) []bookStats {
+	var responseBooks []bookStats
+
+	for _, book := range books {
+		var image *string
+		if book.image.Valid != false {
+			image = &book.image.String
+		}
+
+		newBook := bookStats{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, ChapterCount: book.chapterCount, Completed: book.completed, Approved: book.approved, Genres: append([]string{}, book.genres...), Language: book.language, CreatedAt: book.createdAt, UpdatedAt: book.updatedAt}
+
+		for _, rs := range book.releaseSchedule {
+			newBook.ReleaseSchedule = append(newBook.ReleaseSchedule, responseReleaseSchedule{Day: rs.Day, Chapters: rs.Chapters})
+		}
+
+		responseBooks = append(responseBooks, newBook)
+	}
+
+	return responseBooks
 }
 
 // handleGetBooksStats godoc
 //
 //	@Summary		Get books stats
 //	@Description	Get books stats
+//	@Tags			books
 //	@Produce		json
 //	@Failure		400	{object}	errorResponse
 //	@Failure		500	{object}	errorResponse
-//	@Success		200	{object}	main.handleGetBooksSuccessEncoding.response
+//	@Success		200	{object}	main.handleGetBooksStats.response
 //	@Router			/books/stats [get]
 func (s *server) handleGetBooksStats(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Books []bookStats `json:"books"`
+	}
+
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
 	if err != nil {
 		encode(w, http.StatusBadRequest, &errorResponse{Error: "offset should be a valid number"})
@@ -357,5 +398,6 @@ func (s *server) handleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}
-	handleGetBooksSuccessEncoding(w, books)
+
+	encode(w, http.StatusOK, &response{Books: mapToBooksStats(books)})
 }
