@@ -204,7 +204,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 //	@Success		200			{object}	main.handleGetBooks.response
 //	@Router			/books [get]
 func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
-	type response_book struct {
+	type responseBook struct {
 		Name          string  `json:"name"`
 		Description   string  `json:"description"`
 		Image         *string `json:"image"`
@@ -214,7 +214,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type response struct {
-		Books []response_book `json:"books"`
+		Books []responseBook `json:"books"`
 	}
 
 	genre := r.URL.Query()["genre"]
@@ -244,6 +244,9 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 		order = "desc"
 	}
 
+	var responseBooks []responseBook
+	var image *string
+
 	if len(genre) > 0 && len(language) < 1 {
 		books, err := s.getBooksByGenre(r.Context(), genre, offset, limit, sort, order)
 
@@ -257,60 +260,79 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var response_books []response_book
-		var image *string
+		for _, book := range books {
+			if book.image.Valid != false {
+				image = &book.image.String
+			}
+			responseBooks = append(responseBooks, responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount})
+		}
+
+		encode(w, http.StatusOK, &response{Books: responseBooks})
+		return
+	}
+
+	if len(genre) < 1 && len(language) > 0 {
+		books, err := s.getBooksByLanguage(r.Context(), language, offset, limit, sort, order)
+
+		if err != nil {
+			if err == errNoBooksUnderLanguage {
+				encode(w, http.StatusOK, &response{})
+				return
+			}
+			s.logger.Error(err.Error())
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+			return
+		}
 
 		for _, book := range books {
 			if book.image.Valid != false {
 				image = &book.image.String
 			}
-			response_books = append(response_books, response_book{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapter_count})
+			responseBooks = append(responseBooks, responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount})
 		}
 
-		encode(w, http.StatusOK, &response{Books: response_books})
-		return
-	}
-
-	if len(genre) < 1 && len(language) > 0 {
-		books, err := a.store.GetBooksByLanguage(r.Context(), language, offset, limit, sort, order)
-
-		if err != nil {
-			if err == store.ErrNoBooksUnderThisLanguage {
-				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
-				return
-			}
-			a.logger.Error(err.Error(), "service", "HandleGetBooks")
-			respondWithError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		handleGetBooksHelper(w, books)
+		encode(w, http.StatusOK, &response{Books: responseBooks})
 		return
 	}
 
 	if len(genre) > 0 && len(language) > 0 {
-		books, err := a.store.GetBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
+		books, err := s.getBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
 
 		if err != nil {
-			if err == store.ErrNoBooksUnderThisGenreAndLanguage {
-				respondWithSuccess(w, http.StatusOK, &models.HandleGetBooksResponse{Books: []models.HandleGetBooksBooks{}})
+			if err == errNoBooksUnderGenreAndLanguage {
+				encode(w, http.StatusOK, &response{})
 				return
 			}
-			a.logger.Error(err.Error(), "service", "HandleGetBooks")
-			respondWithError(w, http.StatusInternalServerError, err)
+			s.logger.Error(err.Error())
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
 
-		handleGetBooksHelper(w, books)
+		for _, book := range books {
+			if book.image.Valid != false {
+				image = &book.image.String
+			}
+			responseBooks = append(responseBooks, responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount})
+		}
+
+		encode(w, http.StatusOK, &response{Books: responseBooks})
 		return
 	}
 
-	books, err := a.store.GetAllBooks(r.Context(), offset, limit, sort, order)
+	books, err := s.getAllBooks(r.Context(), offset, limit, sort, order)
 	if err != nil {
-		a.logger.Error(err.Error(), "service", "HandleGetBooks")
-		respondWithError(w, http.StatusInternalServerError, err)
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}
 
-	handleGetBooksHelper(w, books)
+	for _, book := range books {
+		if book.image.Valid != false {
+			image = &book.image.String
+		}
+		responseBooks = append(responseBooks, responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount})
+	}
+
+	encode(w, http.StatusOK, &response{Books: responseBooks})
+	return
 }

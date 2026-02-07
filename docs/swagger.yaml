@@ -27,6 +27,26 @@ definitions:
     - password
     type: object
   main.handleGetBooks.response:
+    properties:
+      books:
+        items:
+          $ref: '#/definitions/main.handleGetBooks.responseBook'
+        type: array
+    type: object
+  main.handleGetBooks.responseBook:
+    properties:
+      chapter_count:
+        type: integer
+      description:
+        type: string
+      image:
+        type: string
+      name:
+        type: string
+      rating:
+        type: number
+      views:
+        type: integer
     type: object
   main.handleGetProfile.response:
     properties:

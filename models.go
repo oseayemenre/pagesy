@@ -15,6 +15,7 @@ type user struct {
 }
 
 type releaseSchedule struct {
+	BookID   string
 	Day      string `validate:"required"`
 	Chapters int    `validate:"required"`
 }
@@ -25,6 +26,7 @@ type draftChapter struct {
 }
 
 type book struct {
+	id              string
 	name            string
 	description     string
 	image           sql.NullString

@@ -11,9 +11,11 @@ import (
 )
 
 var (
-	errGenresNotFound       = errors.New("genres not found")
-	errBookNameAlreadyTaken = errors.New("book name already taken")
-	errNoBooksUnderGenre    = errors.New("no books under genre")
+	errGenresNotFound               = errors.New("genres not found")
+	errBookNameAlreadyTaken         = errors.New("book name already taken")
+	errNoBooksUnderGenre            = errors.New("no books under genre")
+	errNoBooksUnderLanguage         = errors.New("no books under language")
+	errNoBooksUnderGenreAndLanguage = errors.New("no books under genre andn language")
 )
 
 func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
@@ -159,11 +161,95 @@ func helperSortField(sort string) string {
 	return sort
 }
 
-func (s *server) getGenresAndReleaseSchedule(ctx context.Context, id string) {}
+func (s *server) helperGetBooks(ctx context.Context, query string, argErr error, items ...interface{}) ([]book, error) {
+	var bookIDs []string
+	booksMap := make(map[string]book)
+
+	rows, err := s.store.QueryContext(ctx, query, items...)
+	if err != nil {
+		return nil, fmt.Errorf("error getting all books, %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var book book
+		if err := rows.Scan(&book.name, &book.description, &book.image, &book.views, &book.rating, book.chapterCount); err != nil {
+			return nil, fmt.Errorf("error scanning rows, %v", err)
+		}
+		bookIDs = append(bookIDs, book.id)
+		booksMap[book.id] = book
+	}
+
+	if len(booksMap) < 1 {
+		return nil, argErr
+	}
+
+	var books []book
+
+	query =
+		`
+			SELECT bg.book_id, g.genres 
+			FROM genres g
+			JOIN books_genres bg ON (bg.genre_id = g.id)
+			WHERE bg.book_id = ANY($1);
+		`
+
+	genreRows, err := s.store.QueryContext(ctx, query, pq.Array(bookIDs))
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting genres, %v", err)
+	}
+
+	defer genreRows.Close()
+
+	for genreRows.Next() {
+		row := struct {
+			bookID string
+			genre  string
+		}{}
+
+		if err := genreRows.Scan(&row.bookID, &row.genre); err != nil {
+			return nil, fmt.Errorf("error scanning book genres, %v", err)
+		}
+
+		if b, ok := booksMap[row.bookID]; ok {
+			b.genres = append(b.genres, row.genre)
+		}
+	}
+
+	query =
+		`
+			SELECT book_id, day, no_of_chapters FROM release_schedule WHERE book_id = ANY($1)
+		`
+
+	releaseScheduleRows, err := s.store.QueryContext(ctx, query, pq.Array(bookIDs))
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting release schedule, %v", err)
+	}
+
+	defer releaseScheduleRows.Close()
+
+	for releaseScheduleRows.Next() {
+		releaseSchedule := releaseSchedule{}
+
+		if err := releaseScheduleRows.Scan(&releaseSchedule.BookID, &releaseSchedule.Day, &releaseSchedule.Chapters); err != nil {
+			return nil, fmt.Errorf("error scanning release schedule, %v", err)
+		}
+
+		if b, ok := booksMap[releaseSchedule.BookID]; ok {
+			b.releaseSchedule = append(b.releaseSchedule, releaseSchedule)
+		}
+	}
+
+	for _, b := range booksMap {
+		books = append(books, b)
+	}
+
+	return books, nil
+}
 
 func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]book, error) {
-	var books []book
-	var booksMap map[string]book
 	query :=
 		fmt.Sprintf(`
 			SELECT b.name, b.description, b.image, b.views, b.rating, COUNT(c.id)
@@ -177,22 +263,75 @@ func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int
 			OFFSET $2 LIMIT $3;
 		`, helperSortField(sort), order)
 
-	rows, err := s.store.QueryContext(ctx, query, pq.Array(genre), offset, limit)
+	books, err := s.helperGetBooks(ctx, query, errGenresNotFound, pq.Array(genre), offset, limit)
 	if err != nil {
-		return nil, fmt.Errorf("error getting all books, %v", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var book book
-		if err := rows.Scan(&book.name, &book.description, &book.image, &book.views, &book.rating, book.chapterCount); err != nil {
-			return nil, fmt.Errorf("error scaaning rows, %v", err)
-		}
-		books = append(books, book)
+		return nil, err
 	}
 
-	if len(books) < 1 {
-		return nil, errNoBooksUnderGenre
+	return books, nil
+}
+
+func (s *server) getBooksByLanguage(ctx context.Context, language []string, offset int, limit int, sort string, order string) ([]book, error) {
+	query :=
+		fmt.Sprintf(`
+			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
+			COUNT(c.id)
+			FROM books b
+			JOIN chapters c ON (b.id = c.book_id)
+			WHERE b.language = ANY($1::languages[]) AND b.approved = true
+			GROUP BY b.id
+			ORDER BY %s %s 
+			OFFSET $2 LIMIT $3;
+		`, helperSortField(sort), order)
+
+	books, err := s.helperGetBooks(ctx, query, errNoBooksUnderLanguage, pq.Array(language), offset, limit)
+	if err != nil {
+		return nil, err
 	}
-	return nil, nil
+
+	return books, nil
+}
+
+func (s *server) getBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string, order string) ([]book, error) {
+	query :=
+		fmt.Sprintf(`
+			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
+			COUNT(c.id)
+			FROM books b
+			JOIN chapters c ON (b.id = c.book_id)
+			JOIN books_genres bg ON (bg.book_id = b.id)
+			JOIN genres g ON (g.id = bg.genre_id)
+			WHERE b.language = ANY($1::languages[]) AND g.genres = ANY($2) AND b.approved = true
+			GROUP BY b.id
+			ORDER BY %s %s
+			OFFSET $3 LIMIT $4;
+		`, helperSortField(sort), order)
+
+	books, err := s.helperGetBooks(ctx, query, errNoBooksUnderGenreAndLanguage, pq.Array(language), pq.Array(genre), offset, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return books, nil
+}
+
+func (s *server) getAllBooks(ctx context.Context, offset int, limit int, sort string, order string) ([]book, error) {
+	query :=
+		fmt.Sprintf(`
+			SELECT b.id, b.name, b.description, b.image, b.views, b.rating,
+			COUNT(c.id)
+			FROM books b
+			JOIN chapters c ON (b.id = c.book_id)
+			WHERE b.approved = true
+			GROUP BY b.id
+			ORDER BY %s %s
+			OFFSET $1 LIMIT $2;
+		`, helperSortField(sort), order)
+
+	books, err := s.helperGetBooks(ctx, query, nil, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return books, nil
 }

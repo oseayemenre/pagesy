@@ -5,3 +5,4 @@ CREATE TABLE IF NOT EXISTS recently_uploaded_books(
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS idx_recently_uploaded_books_book_id ON recently_uploaded_books(book_id);

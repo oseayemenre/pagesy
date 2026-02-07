@@ -484,7 +484,38 @@
             }
         },
         "main.handleGetBooks.response": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "books": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.handleGetBooks.responseBook"
+                    }
+                }
+            }
+        },
+        "main.handleGetBooks.responseBook": {
+            "type": "object",
+            "properties": {
+                "chapter_count": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "number"
+                },
+                "views": {
+                    "type": "integer"
+                }
+            }
         },
         "main.handleGetProfile.response": {
             "type": "object",
