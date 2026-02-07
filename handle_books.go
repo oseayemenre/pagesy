@@ -250,11 +250,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 	if len(genre) > 0 && len(language) < 1 {
 		books, err := s.getBooksByGenre(r.Context(), genre, offset, limit, sort, order)
 
-		if err != nil {
-			if err == errNoBooksUnderGenre {
-				encode(w, http.StatusOK, &response{})
-				return
-			}
+		if err != nil && err != errNoBooksUnderGenre {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
@@ -274,12 +270,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 	if len(genre) < 1 && len(language) > 0 {
 		books, err := s.getBooksByLanguage(r.Context(), language, offset, limit, sort, order)
 
-		if err != nil {
-			if err == errNoBooksUnderLanguage {
-				encode(w, http.StatusOK, &response{})
-				return
-			}
-			s.logger.Error(err.Error())
+		if err != nil && err != errNoBooksUnderLanguage {
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
@@ -298,11 +289,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 	if len(genre) > 0 && len(language) > 0 {
 		books, err := s.getBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
 
-		if err != nil {
-			if err == errNoBooksUnderGenreAndLanguage {
-				encode(w, http.StatusOK, &response{})
-				return
-			}
+		if err != nil && err != errNoBooksUnderGenreAndLanguage {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
@@ -334,5 +321,4 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encode(w, http.StatusOK, &response{Books: responseBooks})
-	return
 }

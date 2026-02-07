@@ -190,7 +190,7 @@ func (s *server) helperGetBooks(ctx context.Context, query string, argErr error,
 		`
 			SELECT 
 				bg.book_id, 
-				g.genres 
+				g.genre 
 			FROM genres g
 			JOIN books_genres bg ON (bg.genre_id = g.id)
 			WHERE bg.book_id = ANY($1);
@@ -270,14 +270,14 @@ func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int
 			JOIN books_genres bg ON (bg.book_id = b.id)
 			JOIN genres g ON (g.id = bg.genre_id)
 			WHERE 
-				g.genres = ANY($1) 
+				g.genre = ANY($1) 
 				AND b.approved = true
 			GROUP BY b.id
 			ORDER BY %s %s
 			OFFSET $2 LIMIT $3;
 		`, helperSortField(sort), order)
 
-	books, err := s.helperGetBooks(ctx, query, errGenresNotFound, pq.Array(genre), offset, limit)
+	books, err := s.helperGetBooks(ctx, query, errNoBooksUnderGenre, pq.Array(genre), offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +299,7 @@ func (s *server) getBooksByLanguage(ctx context.Context, language []string, offs
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
 			WHERE 
-				b.language = ANY($1::languages[]) 
+				b.language = ANY($1::language_type[]) 
 				AND b.approved = true
 			GROUP BY b.id
 			ORDER BY %s %s 
@@ -330,8 +330,8 @@ func (s *server) getBooksByGenreAndLanguage(ctx context.Context, genre []string,
 			JOIN books_genres bg ON (bg.book_id = b.id)
 			JOIN genres g ON (g.id = bg.genre_id)
 			WHERE 
-				b.language = ANY($1::languages[]) 
-				AND g.genres = ANY($2) 
+				b.language = ANY($1::language_type[]) 
+				AND g.genre = ANY($2) 
 				AND b.approved = true
 			GROUP BY b.id
 			ORDER BY %s %s

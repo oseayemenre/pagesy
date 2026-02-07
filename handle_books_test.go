@@ -192,13 +192,58 @@ func TestHandleUploadBook(t *testing.T) {
 }
 
 func TestHandleGetBooks(t *testing.T) {
-	// tests := []struct {
-	// 	name         string
-	// 	path         string
-	// 	expectedCode int
-	// }{
-	// 	{
-	// 		name: "offset isn't a valid number",
-	// 	},
-	// }
+	db := connectTestDb(t)
+	id := createAndCleanUpUser(t, db)
+	createAndCleanUpBook(t, id, db)
+
+	tests := []struct {
+		name         string
+		path         string
+		expectedCode int
+	}{
+		{
+			name:         "offset isn't a valid number",
+			path:         "/api/v1/books?offset=invalid",
+			expectedCode: 400,
+		},
+		{
+			name:         "limit isn't a valid number",
+			path:         "/api/v1/books?offset=1&limit=invalid",
+			expectedCode: 400,
+		},
+		{
+			name:         "books under genre",
+			path:         "/api/v1/books?genre=Action&offset=1&limit=1",
+			expectedCode: 200,
+		},
+		{
+			name:         "books under language",
+			path:         "/api/v1/books?language=English&offset=1&limit=1",
+			expectedCode: 200,
+		},
+		{
+			name:         "books under genre and language",
+			path:         "/api/v1/books?genre=Action&language=English&offset=1&limit=1",
+			expectedCode: 200,
+		},
+		{
+			name:         "all books",
+			path:         "/api/v1/books?offset=1&limit=1",
+			expectedCode: 200,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			rr := httptest.NewRecorder()
+
+			svr := newServer(nil, db, nil)
+			svr.router.ServeHTTP(rr, r)
+
+			if rr.Code != tc.expectedCode {
+				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
+			}
+		})
+	}
 }
