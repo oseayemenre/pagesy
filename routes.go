@@ -28,7 +28,7 @@ func (s *server) routes() {
 
 	s.router.Post("/api/v1/books", authenticatedUser(s.handleUploadBook))
 	s.router.Get("/api/v1/books", s.handleGetBooks)
-	s.router.Get("/api/v1/books/stats", nil)
+	s.router.Get("/api/v1/books/stats", authenticatedUser(s.handleGetBooksStats))
 	s.router.Get("/api/v1/books/recents", nil)
 
 	s.router.Get("/api/v1/books/{bookId}", nil)

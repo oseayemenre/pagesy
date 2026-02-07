@@ -272,7 +272,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.handleGetBooks.response"
+                            "$ref": "#/definitions/main.handleGetBooksSuccessEncoding.response"
                         }
                     },
                     "400": {
@@ -423,6 +423,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/books/stats": {
+            "get": {
+                "description": "Get books stats",
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get books stats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.handleGetBooksSuccessEncoding.response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/me": {
             "get": {
                 "description": "Get current user profile",
@@ -491,18 +520,18 @@ const docTemplate = `{
                 }
             }
         },
-        "main.handleGetBooks.response": {
+        "main.handleGetBooksSuccessEncoding.response": {
             "type": "object",
             "properties": {
                 "books": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/main.handleGetBooks.responseBook"
+                        "$ref": "#/definitions/main.handleGetBooksSuccessEncoding.responseBook"
                     }
                 }
             }
         },
-        "main.handleGetBooks.responseBook": {
+        "main.handleGetBooksSuccessEncoding.responseBook": {
             "type": "object",
             "properties": {
                 "chapter_count": {
@@ -510,6 +539,12 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "genres": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "image": {
                     "type": "string"
@@ -520,8 +555,25 @@ const docTemplate = `{
                 "rating": {
                     "type": "number"
                 },
+                "release_schedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.handleGetBooksSuccessEncoding.responseReleaseSchedule"
+                    }
+                },
                 "views": {
                     "type": "integer"
+                }
+            }
+        },
+        "main.handleGetBooksSuccessEncoding.responseReleaseSchedule": {
+            "type": "object",
+            "properties": {
+                "chapters": {
+                    "type": "integer"
+                },
+                "day": {
+                    "type": "string"
                 }
             }
         },

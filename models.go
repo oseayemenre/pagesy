@@ -16,8 +16,8 @@ type user struct {
 
 type releaseSchedule struct {
 	BookID   string
-	Day      string `validate:"required"`
-	Chapters int    `validate:"required"`
+	Day      string
+	Chapters int
 }
 
 type draftChapter struct {

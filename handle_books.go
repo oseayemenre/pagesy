@@ -38,12 +38,17 @@ import (
 //	@Success		201							{object}	main.handleUploadBook.response
 //	@Router			/books [post]
 func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
+	type requestReleaseSchedule struct {
+		Day      string `validate:"required"`
+		Chapters int    `validate:"required"`
+	}
+
 	type request struct {
 		Name            string `validate:"required"`
 		Description     string `validate:"required"`
 		Genres          string `validate:"required"`
 		Language        string `validate:"required"`
-		ReleaseSchedule []releaseSchedule
+		ReleaseSchedule []requestReleaseSchedule
 		DraftChapter    draftChapter
 	}
 
@@ -88,7 +93,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		schedule := releaseSchedule{
+		schedule := requestReleaseSchedule{
 			Day:      days[i],
 			Chapters: ch,
 		}
@@ -102,6 +107,12 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var schedule []releaseSchedule
+
+	for _, rs := range params.ReleaseSchedule {
+		schedule = append(schedule, releaseSchedule{Day: rs.Day, Chapters: rs.Chapters})
+	}
+
 	bookID, err := s.uploadBook(r.Context(), &book{
 		name:        params.Name,
 		description: params.Description,
@@ -112,7 +123,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 			Content: params.DraftChapter.Content,
 		},
 		language:        params.Language,
-		releaseSchedule: params.ReleaseSchedule,
+		releaseSchedule: schedule,
 	})
 
 	if errors.Is(err, errBookNameAlreadyTaken) {
@@ -188,6 +199,50 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 	encode(w, http.StatusCreated, &response{Id: bookID})
 }
 
+func handleGetBooksSuccessEncoding(w http.ResponseWriter, books []book) {
+	type responseReleaseSchedule struct {
+		Day      string `json:"day"`
+		Chapters int    `json:"chapters"`
+	}
+
+	type responseBook struct {
+		Name            string                    `json:"name"`
+		Description     string                    `json:"description"`
+		Image           *string                   `json:"image"`
+		Views           int                       `jsosn:"views"`
+		Rating          float32                   `json:"rating"`
+		Chapter_count   int                       `json:"chapter_count"`
+		Genres          []string                  `json:"genres"`
+		ReleaseSchedule []responseReleaseSchedule `json:"release_schedule"`
+	}
+
+	type response struct {
+		Books []responseBook `json:"books"`
+	}
+
+	var responseBooks []responseBook
+	var image *string
+
+	for _, book := range books {
+		newBook := responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount}
+		if book.image.Valid != false {
+			image = &book.image.String
+		}
+
+		for _, g := range book.genres {
+			newBook.Genres = append(newBook.Genres, g)
+		}
+
+		for _, rs := range book.releaseSchedule {
+			newBook.ReleaseSchedule = append(newBook.ReleaseSchedule, responseReleaseSchedule{Day: rs.Day, Chapters: rs.Chapters})
+		}
+
+		responseBooks = append(responseBooks, newBook)
+	}
+
+	encode(w, http.StatusOK, &response{Books: responseBooks})
+}
+
 // handleGetbooks godoc
 //
 //	@Summary		Get all books
@@ -201,36 +256,21 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 //	@Param			limit		query		string	true	"limit"
 //	@Failure		400			{object}	errorResponse
 //	@Failure		500			{object}	errorResponse
-//	@Success		200			{object}	main.handleGetBooks.response
+//	@Success		200			{object}	main.handleGetBooksSuccessEncoding.response
 //	@Router			/books [get]
 func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
-	type responseBook struct {
-		Name          string  `json:"name"`
-		Description   string  `json:"description"`
-		Image         *string `json:"image"`
-		Views         int     `jsosn:"views"`
-		Rating        float32 `json:"rating"`
-		Chapter_count int     `json:"chapter_count"`
-	}
-
-	type response struct {
-		Books []responseBook `json:"books"`
-	}
-
 	genre := r.URL.Query()["genre"]
 	language := r.URL.Query()["language"]
 	sort := strings.ToLower(r.URL.Query().Get("sort"))
 	order := strings.ToLower(r.URL.Query().Get("order"))
 
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
-
 	if err != nil {
 		encode(w, http.StatusBadRequest, &errorResponse{Error: "offset should be a valid number"})
 		return
 	}
 
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
-
 	if err != nil {
 		encode(w, http.StatusBadRequest, &errorResponse{Error: "limit should be a valid number"})
 		return
@@ -244,65 +284,38 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 		order = "desc"
 	}
 
-	var responseBooks []responseBook
-	var image *string
-
 	if len(genre) > 0 && len(language) < 1 {
 		books, err := s.getBooksByGenre(r.Context(), genre, offset, limit, sort, order)
-
 		if err != nil && err != errNoBooksUnderGenre {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
 
-		for _, book := range books {
-			if book.image.Valid != false {
-				image = &book.image.String
-			}
-			responseBooks = append(responseBooks, responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount})
-		}
-
-		encode(w, http.StatusOK, &response{Books: responseBooks})
+		handleGetBooksSuccessEncoding(w, books)
 		return
 	}
 
 	if len(genre) < 1 && len(language) > 0 {
 		books, err := s.getBooksByLanguage(r.Context(), language, offset, limit, sort, order)
-
 		if err != nil && err != errNoBooksUnderLanguage {
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
 
-		for _, book := range books {
-			if book.image.Valid != false {
-				image = &book.image.String
-			}
-			responseBooks = append(responseBooks, responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount})
-		}
-
-		encode(w, http.StatusOK, &response{Books: responseBooks})
+		handleGetBooksSuccessEncoding(w, books)
 		return
 	}
 
 	if len(genre) > 0 && len(language) > 0 {
 		books, err := s.getBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
-
 		if err != nil && err != errNoBooksUnderGenreAndLanguage {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
 
-		for _, book := range books {
-			if book.image.Valid != false {
-				image = &book.image.String
-			}
-			responseBooks = append(responseBooks, responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount})
-		}
-
-		encode(w, http.StatusOK, &response{Books: responseBooks})
+		handleGetBooksSuccessEncoding(w, books)
 		return
 	}
 
@@ -313,12 +326,36 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, book := range books {
-		if book.image.Valid != false {
-			image = &book.image.String
-		}
-		responseBooks = append(responseBooks, responseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Chapter_count: book.chapterCount})
+	handleGetBooksSuccessEncoding(w, books)
+}
+
+// handleGetBooksStats godoc
+//
+//	@Summary		Get books stats
+//	@Description	Get books stats
+//	@Produce		json
+//	@Failure		400	{object}	errorResponse
+//	@Failure		500	{object}	errorResponse
+//	@Success		200	{object}	main.handleGetBooksSuccessEncoding.response
+//	@Router			/books/stats [get]
+func (s *server) handleGetBooksStats(w http.ResponseWriter, r *http.Request) {
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "offset should be a valid number"})
+		return
 	}
 
-	encode(w, http.StatusOK, &response{Books: responseBooks})
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "limit should be a valid number"})
+		return
+	}
+
+	books, err := s.getBooksStats(r.Context(), r.Context().Value("user").(string), offset, limit)
+	if err != nil && err != errUserHasNoBooks {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+	handleGetBooksSuccessEncoding(w, books)
 }

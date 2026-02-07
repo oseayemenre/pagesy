@@ -26,27 +26,42 @@ definitions:
     - email
     - password
     type: object
-  main.handleGetBooks.response:
+  main.handleGetBooksSuccessEncoding.response:
     properties:
       books:
         items:
-          $ref: '#/definitions/main.handleGetBooks.responseBook'
+          $ref: '#/definitions/main.handleGetBooksSuccessEncoding.responseBook'
         type: array
     type: object
-  main.handleGetBooks.responseBook:
+  main.handleGetBooksSuccessEncoding.responseBook:
     properties:
       chapter_count:
         type: integer
       description:
         type: string
+      genres:
+        items:
+          type: string
+        type: array
       image:
         type: string
       name:
         type: string
       rating:
         type: number
+      release_schedule:
+        items:
+          $ref: '#/definitions/main.handleGetBooksSuccessEncoding.responseReleaseSchedule'
+        type: array
       views:
         type: integer
+    type: object
+  main.handleGetBooksSuccessEncoding.responseReleaseSchedule:
+    properties:
+      chapters:
+        type: integer
+      day:
+        type: string
     type: object
   main.handleGetProfile.response:
     properties:
@@ -246,7 +261,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.handleGetBooks.response'
+            $ref: '#/definitions/main.handleGetBooksSuccessEncoding.response'
         "400":
           description: Bad Request
           schema:
@@ -348,6 +363,25 @@ paths:
       summary: Upload book
       tags:
       - books
+  /books/stats:
+    get:
+      description: Get books stats
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.handleGetBooksSuccessEncoding.response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Get books stats
   /users/me:
     get:
       description: Get current user profile

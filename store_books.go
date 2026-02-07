@@ -16,6 +16,7 @@ var (
 	errNoBooksUnderGenre            = errors.New("no books under genre")
 	errNoBooksUnderLanguage         = errors.New("no books under language")
 	errNoBooksUnderGenreAndLanguage = errors.New("no books under genre andn language")
+	errUserHasNoBooks               = errors.New("user has no books")
 )
 
 func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
@@ -366,6 +367,37 @@ func (s *server) getAllBooks(ctx context.Context, offset int, limit int, sort st
 		`, helperSortField(sort), order)
 
 	books, err := s.helperGetBooks(ctx, query, nil, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return books, nil
+}
+
+func (s *server) getBooksStats(ctx context.Context, id string, offset int, limit int) ([]book, error) {
+	query :=
+		`
+			SELECT 
+				b.id, 
+				b.name, 
+				b.description, 
+				b.image, 
+				b.views, 
+				b.language, 
+				b.completed, 
+				b.approved, 
+				b.created_at, 
+				b.updated_at, 
+				COUNT(c.id) AS chapter_count
+			FROM books b 
+			JOIN chapters c ON (c.book_id = b.id)
+			WHERE b.author_id = $1
+			GROUP BY b.id
+			ORDER BY b.created_at DESC
+			OFFSET $2 LIMIT $3;
+		`
+
+	books, err := s.helperGetBooks(ctx, query, errUserHasNoBooks, offset, limit)
 	if err != nil {
 		return nil, err
 	}
