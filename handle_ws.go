@@ -155,7 +155,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 			s.hub.broadcast <- &evt
 		default:
 			if err := conn.WriteMessage(websocket.TextMessage, []byte("event not found")); err != nil {
-				break
+				return
 			}
 		}
 	}

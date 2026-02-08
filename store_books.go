@@ -162,7 +162,9 @@ func helperSortField(sort string) string {
 	return sort
 }
 
-func (s *server) helperGetBooks(ctx context.Context, query string, argErr error, items ...interface{}) ([]book, error) {
+type rowsFuncType func(rows *sql.Rows, bookIDs *[]string, booksMap map[string]book) error
+
+func (s *server) helperGetBooks(ctx context.Context, query string, argErr error, rowsFunc rowsFuncType, items ...interface{}) ([]book, error) {
 	var bookIDs []string
 	booksMap := make(map[string]book)
 
@@ -172,13 +174,8 @@ func (s *server) helperGetBooks(ctx context.Context, query string, argErr error,
 	}
 	defer rows.Close()
 
-	for rows.Next() {
-		var book book
-		if err := rows.Scan(&book.name, &book.description, &book.image, &book.views, &book.rating, book.chapterCount); err != nil {
-			return nil, fmt.Errorf("error scanning rows, %v", err)
-		}
-		bookIDs = append(bookIDs, book.id)
-		booksMap[book.id] = book
+	if err := rowsFunc(rows, &bookIDs, booksMap); err != nil {
+		return nil, err
 	}
 
 	if len(booksMap) < 1 {
@@ -198,7 +195,6 @@ func (s *server) helperGetBooks(ctx context.Context, query string, argErr error,
 		`
 
 	genreRows, err := s.store.QueryContext(ctx, query, pq.Array(bookIDs))
-
 	if err != nil {
 		return nil, fmt.Errorf("error getting genres, %v", err)
 	}
@@ -217,6 +213,7 @@ func (s *server) helperGetBooks(ctx context.Context, query string, argErr error,
 
 		if b, ok := booksMap[row.bookID]; ok {
 			b.genres = append(b.genres, row.genre)
+			booksMap[row.bookID] = b
 		}
 	}
 
@@ -246,6 +243,7 @@ func (s *server) helperGetBooks(ctx context.Context, query string, argErr error,
 
 		if b, ok := booksMap[releaseSchedule.BookID]; ok {
 			b.releaseSchedule = append(b.releaseSchedule, releaseSchedule)
+			booksMap[releaseSchedule.BookID] = b
 		}
 	}
 
@@ -256,6 +254,17 @@ func (s *server) helperGetBooks(ctx context.Context, query string, argErr error,
 	return books, nil
 }
 
+func helpersGetBooksRows(rows *sql.Rows, bookIDs *[]string, booksMap map[string]book) error {
+	for rows.Next() {
+		var book book
+		if err := rows.Scan(&book.id, &book.name, &book.description, &book.image, &book.views, &book.rating, &book.chapterCount); err != nil {
+			return fmt.Errorf("error scanning rows, %v", err)
+		}
+		*bookIDs = append(*bookIDs, book.id)
+		booksMap[book.id] = book
+	}
+	return nil
+}
 func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]book, error) {
 	query :=
 		fmt.Sprintf(`
@@ -278,7 +287,7 @@ func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int
 			OFFSET $2 LIMIT $3;
 		`, helperSortField(sort), order)
 
-	books, err := s.helperGetBooks(ctx, query, errNoBooksUnderGenre, pq.Array(genre), offset, limit)
+	books, err := s.helperGetBooks(ctx, query, errNoBooksUnderGenre, helpersGetBooksRows, pq.Array(genre), offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +316,7 @@ func (s *server) getBooksByLanguage(ctx context.Context, language []string, offs
 			OFFSET $2 LIMIT $3;
 		`, helperSortField(sort), order)
 
-	books, err := s.helperGetBooks(ctx, query, errNoBooksUnderLanguage, pq.Array(language), offset, limit)
+	books, err := s.helperGetBooks(ctx, query, errNoBooksUnderLanguage, helpersGetBooksRows, pq.Array(language), offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +348,7 @@ func (s *server) getBooksByGenreAndLanguage(ctx context.Context, genre []string,
 			OFFSET $3 LIMIT $4;
 		`, helperSortField(sort), order)
 
-	books, err := s.helperGetBooks(ctx, query, errNoBooksUnderGenreAndLanguage, pq.Array(language), pq.Array(genre), offset, limit)
+	books, err := s.helperGetBooks(ctx, query, errNoBooksUnderGenreAndLanguage, helpersGetBooksRows, pq.Array(language), pq.Array(genre), offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +366,7 @@ func (s *server) getAllBooks(ctx context.Context, offset int, limit int, sort st
 				b.image, 
 				b.views, 
 				b.rating,
-			COUNT(c.id)
+				COUNT(c.id)
 			FROM books b
 			JOIN chapters c ON (b.id = c.book_id)
 			WHERE b.approved = true
@@ -366,7 +375,7 @@ func (s *server) getAllBooks(ctx context.Context, offset int, limit int, sort st
 			OFFSET $1 LIMIT $2;
 		`, helperSortField(sort), order)
 
-	books, err := s.helperGetBooks(ctx, query, nil, offset, limit)
+	books, err := s.helperGetBooks(ctx, query, nil, helpersGetBooksRows, offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -374,6 +383,17 @@ func (s *server) getAllBooks(ctx context.Context, offset int, limit int, sort st
 	return books, nil
 }
 
+func helperGetBooksStatsRows(rows *sql.Rows, bookIDs *[]string, booksMap map[string]book) error {
+	for rows.Next() {
+		var book book
+		if err := rows.Scan(&book.id, &book.name, &book.description, &book.image, &book.views, &book.rating, &book.language, &book.completed, &book.approved, &book.createdAt, &book.updatedAt, &book.chapterCount); err != nil {
+			return fmt.Errorf("error scanning rows, %v", err)
+		}
+		*bookIDs = append(*bookIDs, book.id)
+		booksMap[book.id] = book
+	}
+	return nil
+}
 func (s *server) getBooksStats(ctx context.Context, id string, offset int, limit int) ([]book, error) {
 	query :=
 		`
@@ -382,8 +402,9 @@ func (s *server) getBooksStats(ctx context.Context, id string, offset int, limit
 				b.name, 
 				b.description, 
 				b.image, 
-				b.views, 
-				b.language, 
+				b.views,
+				b.rating, 
+				b.language,
 				b.completed, 
 				b.approved, 
 				b.created_at, 
@@ -397,7 +418,7 @@ func (s *server) getBooksStats(ctx context.Context, id string, offset int, limit
 			OFFSET $2 LIMIT $3;
 		`
 
-	books, err := s.helperGetBooks(ctx, query, errUserHasNoBooks, offset, limit)
+	books, err := s.helperGetBooks(ctx, query, errUserHasNoBooks, helperGetBooksStatsRows, id, offset, limit)
 	if err != nil {
 		return nil, err
 	}

@@ -268,22 +268,18 @@ paths:
       - description: genre
         in: query
         name: genre
-        required: true
         type: string
       - description: language
         in: query
         name: language
-        required: true
         type: string
       - description: sort
         in: query
         name: sort
-        required: true
         type: string
       - description: order
         in: query
         name: order
-        required: true
         type: string
       - description: offset
         in: query
@@ -408,6 +404,17 @@ paths:
   /books/stats:
     get:
       description: Get books stats
+      parameters:
+      - description: offset
+        in: query
+        name: offset
+        required: true
+        type: string
+      - description: limit
+        in: query
+        name: limit
+        required: true
+        type: string
       produces:
       - application/json
       responses:

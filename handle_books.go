@@ -209,7 +209,7 @@ type getResponseBook struct {
 	Name            string                    `json:"name"`
 	Description     string                    `json:"description"`
 	Image           *string                   `json:"image"`
-	Views           int                       `jsosn:"views"`
+	Views           int                       `json:"views"`
 	Rating          float32                   `json:"rating"`
 	ChapterCount    int                       `json:"chapter_count"`
 	Genres          []string                  `json:"genres"`
@@ -243,10 +243,10 @@ func mapToGetBooks(books []book) []getResponseBook {
 //	@Description	Get all books
 //	@Tags			books
 //	@Produce		json
-//	@Param			genre		query		string	true	"genre"
-//	@Param			language	query		string	true	"language"
-//	@Param			sort		query		string	true	"sort"
-//	@Param			order		query		string	true	"order"
+//	@Param			genre		query		string	false	"genre"
+//	@Param			language	query		string	false	"language"
+//	@Param			sort		query		string	false	"sort"
+//	@Param			order		query		string	false	"order"
 //	@Param			offset		query		string	true	"offset"
 //	@Param			limit		query		string	true	"limit"
 //	@Failure		400			{object}	errorResponse
@@ -371,9 +371,11 @@ func mapToBooksStats(books []book) []bookStats {
 //	@Description	Get books stats
 //	@Tags			books
 //	@Produce		json
-//	@Failure		400	{object}	errorResponse
-//	@Failure		500	{object}	errorResponse
-//	@Success		200	{object}	main.handleGetBooksStats.response
+//	@Param			offset	query		string	true	"offset"
+//	@Param			limit	query		string	true	"limit"
+//	@Failure		400		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		200		{object}	main.handleGetBooksStats.response
 //	@Router			/books/stats [get]
 func (s *server) handleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	type response struct {
