@@ -374,7 +374,7 @@ func (s *server) handleAuthLogout(w http.ResponseWriter, r *http.Request) {
 //	@Failure		404	{object}	errorResponse
 //	@Failure		500	{object}	errorResponse
 //	@Success		201	{object}	main.handleAuthRefreshToken.response
-//	@Router			/auth/refresh-token [get]
+//	@Router			/auth/refresh-token [post]
 func (s *server) handleAuthRefreshToken(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Message string `json:"message"`

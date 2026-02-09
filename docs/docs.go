@@ -128,7 +128,7 @@ const docTemplate = `{
             }
         },
         "/auth/refresh-token": {
-            "get": {
+            "post": {
                 "description": "Get new access token",
                 "tags": [
                     "auth"

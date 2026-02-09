@@ -5,11 +5,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"strings"
 	"testing"
-
-	"github.com/gorilla/websocket"
 )
 
 func TestHandleUploadBook(t *testing.T) {
@@ -159,28 +155,6 @@ func TestHandleUploadBook(t *testing.T) {
 			r.AddCookie(&http.Cookie{Name: tc.cookie_name, Value: tc.cookie_value})
 			rr := httptest.NewRecorder()
 
-			test_svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				upgrader := websocket.Upgrader{
-					ReadBufferSize:  1024,
-					WriteBufferSize: 1024,
-					CheckOrigin: func(r *http.Request) bool {
-						return true
-					},
-				}
-
-				conn, err := upgrader.Upgrade(w, r, nil)
-				if err != nil {
-					t.Fatal("error upgrading websocket connection")
-				}
-
-				for {
-					if _, _, err := conn.ReadMessage(); err != nil {
-						t.Fatal("error reading from client")
-					}
-				}
-			}))
-
-			os.Setenv("WS_HOST", strings.TrimPrefix(test_svr.URL, "http://"))
 			svr := newServer(nil, db, nil)
 			svr.router.ServeHTTP(rr, r)
 

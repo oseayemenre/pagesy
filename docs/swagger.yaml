@@ -203,7 +203,7 @@ paths:
       tags:
       - auth
   /auth/refresh-token:
-    get:
+    post:
       description: Get new access token
       responses:
         "201":

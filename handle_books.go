@@ -6,12 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/gorilla/websocket"
 )
 
 // handleUploadBook godoc
@@ -184,18 +181,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	conn, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://%s/api/v1/ws", os.Getenv("WS_HOST")), nil)
-	if err != nil {
-		s.logger.Error(fmt.Sprintf("error connection to websocket endpoint, %v", err))
-		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
-		return
-	}
-
-	if err := conn.WriteJSON(&event{Type: NEW_BOOK, Payload: fmt.Sprintf("book %v waiting for approval", bookID)}); err != nil {
-		s.logger.Error(fmt.Sprintf("error writing to websocket endpoint, %v", err))
-		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
-		return
-	}
+	s.hub.broadcast <- &event{Type: NEW_BOOK, Payload: fmt.Sprintf("%v waiting for approval", params.Name)}
 
 	encode(w, http.StatusCreated, &response{Id: bookID})
 }
