@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,7 +29,6 @@ import (
 //	@Param			release_schedule_chapter	formData	[]int		true	"Chapters per day (e.g. 1, 2)"
 //	@Param			book_cover					formData	file		false	"Book cover image (max 3MB)"
 //	@Failure		400							{object}	errorResponse
-//	@Failure		401							{object}	errorResponse
 //	@Failure		409							{object}	errorResponse
 //	@Failure		413							{object}	errorResponse
 //	@Failure		404							{object}	errorResponse
@@ -197,9 +197,9 @@ type getResponseBook struct {
 	Image           *string                   `json:"image"`
 	Views           int                       `json:"views"`
 	Rating          float32                   `json:"rating"`
-	ChapterCount    int                       `json:"chapter_count"`
+	ChapterCount    int                       `json:"chapterCount"`
 	Genres          []string                  `json:"genres"`
-	ReleaseSchedule []responseReleaseSchedule `json:"release_schedule"`
+	ReleaseSchedule []responseReleaseSchedule `json:"releaseSchedule"`
 }
 
 func mapToGetBooks(books []book) []getResponseBook {
@@ -320,14 +320,14 @@ type bookStats struct {
 	Image           *string                   `json:"image"`
 	Views           int                       `json:"views"`
 	Rating          float32                   `json:"rating"`
-	ChapterCount    int                       `json:"chapter_count"`
+	ChapterCount    int                       `json:"chapterCount"`
 	Completed       bool                      `json:"completed"`
 	Approved        bool                      `json:"approved"`
 	Genres          []string                  `json:"genres"`
 	Language        string                    `json:"language"`
-	ReleaseSchedule []responseReleaseSchedule `json:"release_schedule"`
-	CreatedAt       time.Time                 `json:"created_at"`
-	UpdatedAt       time.Time                 `json:"updated_at"`
+	ReleaseSchedule []responseReleaseSchedule `json:"releaseSchedule"`
+	CreatedAt       time.Time                 `json:"createdAt"`
+	UpdatedAt       time.Time                 `json:"updatedAt"`
 }
 
 func mapToBooksStats(books []book) []bookStats {
@@ -388,4 +388,74 @@ func (s *server) handleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encode(w, http.StatusOK, &response{Books: mapToBooksStats(books)})
+}
+
+// handleGetRecentBooks
+//
+//	@Summary		Get recent books
+//	@Description	Get recent books
+//	@Tags			books
+//	@Produce		json
+//	@Param			offset	query		string	true	"offset"
+//	@Param			limit	query		string	true	"limit"
+//	@Failure		400		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		200		{object}	main.handleGetRecentBooks.response
+//	@Router			/books/recents [get]
+func (s *server) handleGetRecentBooks(w http.ResponseWriter, r *http.Request) {
+	type responseBooks struct {
+		Name            string  `json:"name"`
+		Image           *string `json:"image"`
+		LastReadChapter int     `json:"lastReadChapter"`
+		LastReadTime    string  `json:"lastReadTime"`
+	}
+
+	type response struct {
+		Books []responseBooks `json:"books"`
+	}
+
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "offset should be a valid number"})
+		return
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "limit should be a valid number"})
+		return
+	}
+
+	books, err := s.getRecentBooks(r.Context(), r.Context().Value("user").(string), offset, limit)
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	var bksResponse []responseBooks
+
+	for _, book := range books {
+		var img *string
+		if book.image.Valid != false {
+			img = &book.image.String
+		}
+
+		var lastReadTime string
+
+		dur := time.Since(book.updatedAt)
+
+		switch {
+		case dur <= 24*time.Hour:
+			lastReadTime = "Today"
+		case dur > 24*time.Hour && dur <= 7*24*time.Hour:
+			lastReadTime = fmt.Sprintf("%v days ago", math.Floor(dur.Hours()/24))
+		default:
+			lastReadTime = fmt.Sprint(book.updatedAt.Format("2 Jan, 2006"))
+		}
+
+		bksResponse = append(bksResponse, responseBooks{Name: book.name, Image: img, LastReadChapter: book.lastReadChapter, LastReadTime: lastReadTime})
+	}
+
+	encode(w, http.StatusOK, &response{Books: bksResponse})
 }

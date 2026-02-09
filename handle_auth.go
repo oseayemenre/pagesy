@@ -275,8 +275,8 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
 }
 
-//handleAuthLogin godoc
-
+// handleAuthLogin godoc
+//
 //	@Summary		Login
 //	@Description	Login using either email, or both and password
 //	@Tags			auth
@@ -290,7 +290,6 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 //	@Success		200
 //	@Header			200	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/login [post]
-
 func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	type request struct {
 		Email    string `json:"email" validate:"required"`

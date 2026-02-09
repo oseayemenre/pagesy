@@ -44,3 +44,10 @@ type book struct {
 	createdAt       time.Time
 	updatedAt       time.Time
 }
+
+type recentBook struct {
+	name            string
+	image           sql.NullString
+	lastReadChapter int
+	updatedAt       time.Time
+}

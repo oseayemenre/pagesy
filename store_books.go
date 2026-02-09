@@ -265,7 +265,7 @@ func helpersGetBooksRows(rows *sql.Rows, bookIDs *[]string, booksMap map[string]
 	}
 	return nil
 }
-func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int, limit int, sort string, order string) ([]book, error) {
+func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset, limit int, sort, order string) ([]book, error) {
 	query :=
 		fmt.Sprintf(`
 			SELECT 
@@ -295,7 +295,7 @@ func (s *server) getBooksByGenre(ctx context.Context, genre []string, offset int
 	return books, nil
 }
 
-func (s *server) getBooksByLanguage(ctx context.Context, language []string, offset int, limit int, sort string, order string) ([]book, error) {
+func (s *server) getBooksByLanguage(ctx context.Context, language []string, offset, limit int, sort, order string) ([]book, error) {
 	query :=
 		fmt.Sprintf(`
 			SELECT 
@@ -324,7 +324,7 @@ func (s *server) getBooksByLanguage(ctx context.Context, language []string, offs
 	return books, nil
 }
 
-func (s *server) getBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset int, limit int, sort string, order string) ([]book, error) {
+func (s *server) getBooksByGenreAndLanguage(ctx context.Context, genre []string, language []string, offset, limit int, sort, order string) ([]book, error) {
 	query :=
 		fmt.Sprintf(`
 			SELECT 
@@ -356,7 +356,7 @@ func (s *server) getBooksByGenreAndLanguage(ctx context.Context, genre []string,
 	return books, nil
 }
 
-func (s *server) getAllBooks(ctx context.Context, offset int, limit int, sort string, order string) ([]book, error) {
+func (s *server) getAllBooks(ctx context.Context, offset, limit int, sort, order string) ([]book, error) {
 	query :=
 		fmt.Sprintf(`
 			SELECT 
@@ -394,7 +394,7 @@ func helperGetBooksStatsRows(rows *sql.Rows, bookIDs *[]string, booksMap map[str
 	}
 	return nil
 }
-func (s *server) getBooksStats(ctx context.Context, id string, offset int, limit int) ([]book, error) {
+func (s *server) getBooksStats(ctx context.Context, id string, offset, limit int) ([]book, error) {
 	query :=
 		`
 			SELECT 
@@ -421,6 +421,40 @@ func (s *server) getBooksStats(ctx context.Context, id string, offset int, limit
 	books, err := s.helperGetBooks(ctx, query, errUserHasNoBooks, helperGetBooksStatsRows, id, offset, limit)
 	if err != nil {
 		return nil, err
+	}
+
+	return books, nil
+}
+
+func (s *server) getRecentBooks(ctx context.Context, userID string, offset, limit int) ([]recentBook, error) {
+	var books []recentBook
+
+	query :=
+		`
+			SELECT
+				b.name,
+				b.image,
+				rb.chapter,
+				rb.updated_at
+			FROM recent_books rb
+			JOIN books b ON (b.id = rb.book_id)
+			JOIN users u ON (u.id = rb.user_id)
+			WHERE u.id = $1
+			ORDER BY rb.updated_at DESC
+			OFFSET $2 LIMIT $3;
+		`
+
+	rows, err := s.store.QueryContext(ctx, query, userID, offset, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error getting recently read books, %v", err)
+	}
+
+	for rows.Next() {
+		var book recentBook
+		if err := rows.Scan(&book.name, &book.image, &book.lastReadChapter, &book.updatedAt); err != nil {
+			return nil, fmt.Errorf("error scanning recently read books, %v", err)
+		}
+		books = append(books, book)
 	}
 
 	return books, nil

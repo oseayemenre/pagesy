@@ -4,11 +4,11 @@ definitions:
     properties:
       approved:
         type: boolean
-      chapter_count:
+      chapterCount:
         type: integer
       completed:
         type: boolean
-      created_at:
+      createdAt:
         type: string
       description:
         type: string
@@ -24,11 +24,11 @@ definitions:
         type: string
       rating:
         type: number
-      release_schedule:
+      releaseSchedule:
         items:
           $ref: '#/definitions/main.responseReleaseSchedule'
         type: array
-      updated_at:
+      updatedAt:
         type: string
       views:
         type: integer
@@ -40,7 +40,7 @@ definitions:
     type: object
   main.getResponseBook:
     properties:
-      chapter_count:
+      chapterCount:
         type: integer
       description:
         type: string
@@ -54,12 +54,22 @@ definitions:
         type: string
       rating:
         type: number
-      release_schedule:
+      releaseSchedule:
         items:
           $ref: '#/definitions/main.responseReleaseSchedule'
         type: array
       views:
         type: integer
+    type: object
+  main.handleAuthLogin.request:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
     type: object
   main.handleAuthOnboarding.response:
     properties:
@@ -111,6 +121,24 @@ definitions:
           type: string
         type: array
     type: object
+  main.handleGetRecentBooks.response:
+    properties:
+      books:
+        items:
+          $ref: '#/definitions/main.handleGetRecentBooks.responseBooks'
+        type: array
+    type: object
+  main.handleGetRecentBooks.responseBooks:
+    properties:
+      image:
+        type: string
+      lastReadChapter:
+        type: integer
+      lastReadTime:
+        type: string
+      name:
+        type: string
+    type: object
   main.handleUploadBook.response:
     properties:
       id:
@@ -137,6 +165,46 @@ paths:
         "307":
           description: Temporary Redirect
       summary: Sign in with google
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - appplication/json
+      description: Login using either email, or both and password
+      parameters:
+      - description: user
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/main.handleAuthLogin.request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Set-Cookie:
+              description: access_token=12345 refresh_token=12345
+              type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Login
       tags:
       - auth
   /auth/logout:
@@ -378,10 +446,6 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/main.errorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/main.errorResponse'
         "404":
           description: Not Found
           schema:
@@ -399,6 +463,38 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Upload book
+      tags:
+      - books
+  /books/recents:
+    get:
+      description: Get recent books
+      parameters:
+      - description: offset
+        in: query
+        name: offset
+        required: true
+        type: string
+      - description: limit
+        in: query
+        name: limit
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.handleGetRecentBooks.response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Get recent books
       tags:
       - books
   /books/stats:

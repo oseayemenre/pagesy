@@ -32,6 +32,67 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/login": {
+            "post": {
+                "description": "Login using either email, or both and password",
+                "consumes": [
+                    "appplication/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login",
+                "parameters": [
+                    {
+                        "description": "user",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.handleAuthLogin.request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "string",
+                                "description": "access_token=12345 refresh_token=12345"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/logout": {
             "get": {
                 "description": "Logout user",
@@ -389,12 +450,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/main.errorResponse"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/main.errorResponse"
-                        }
-                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -409,6 +464,54 @@ const docTemplate = `{
                     },
                     "413": {
                         "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/books/recents": {
+            "get": {
+                "description": "Get recent books",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "books"
+                ],
+                "summary": "Get recent books",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "offset",
+                        "name": "offset",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "limit",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.handleGetRecentBooks.response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/main.errorResponse"
                         }
@@ -504,13 +607,13 @@ const docTemplate = `{
                 "approved": {
                     "type": "boolean"
                 },
-                "chapter_count": {
+                "chapterCount": {
                     "type": "integer"
                 },
                 "completed": {
                     "type": "boolean"
                 },
-                "created_at": {
+                "createdAt": {
                     "type": "string"
                 },
                 "description": {
@@ -534,13 +637,13 @@ const docTemplate = `{
                 "rating": {
                     "type": "number"
                 },
-                "release_schedule": {
+                "releaseSchedule": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/main.responseReleaseSchedule"
                     }
                 },
-                "updated_at": {
+                "updatedAt": {
                     "type": "string"
                 },
                 "views": {
@@ -559,7 +662,7 @@ const docTemplate = `{
         "main.getResponseBook": {
             "type": "object",
             "properties": {
-                "chapter_count": {
+                "chapterCount": {
                     "type": "integer"
                 },
                 "description": {
@@ -580,7 +683,7 @@ const docTemplate = `{
                 "rating": {
                     "type": "number"
                 },
-                "release_schedule": {
+                "releaseSchedule": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/main.responseReleaseSchedule"
@@ -588,6 +691,21 @@ const docTemplate = `{
                 },
                 "views": {
                     "type": "integer"
+                }
+            }
+        },
+        "main.handleAuthLogin.request": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
                 }
             }
         },
@@ -665,6 +783,34 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "main.handleGetRecentBooks.response": {
+            "type": "object",
+            "properties": {
+                "books": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.handleGetRecentBooks.responseBooks"
+                    }
+                }
+            }
+        },
+        "main.handleGetRecentBooks.responseBooks": {
+            "type": "object",
+            "properties": {
+                "image": {
+                    "type": "string"
+                },
+                "lastReadChapter": {
+                    "type": "integer"
+                },
+                "lastReadTime": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
