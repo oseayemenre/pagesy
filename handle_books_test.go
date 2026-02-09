@@ -178,38 +178,106 @@ func TestHandleGetBooks(t *testing.T) {
 		{
 			name:         "offset isn't a valid number",
 			path:         "/api/v1/books?offset=invalid",
-			expectedCode: 400,
+			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "limit isn't a valid number",
 			path:         "/api/v1/books?offset=1&limit=invalid",
-			expectedCode: 400,
+			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "books under genre",
 			path:         "/api/v1/books?genre=Action&offset=1&limit=1",
-			expectedCode: 200,
+			expectedCode: http.StatusOK,
 		},
 		{
 			name:         "books under language",
 			path:         "/api/v1/books?language=English&offset=1&limit=1",
-			expectedCode: 200,
+			expectedCode: http.StatusOK,
 		},
 		{
 			name:         "books under genre and language",
 			path:         "/api/v1/books?genre=Action&language=English&offset=1&limit=1",
-			expectedCode: 200,
+			expectedCode: http.StatusOK,
 		},
 		{
 			name:         "all books",
 			path:         "/api/v1/books?offset=1&limit=1",
-			expectedCode: 200,
+			expectedCode: http.StatusOK,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			rr := httptest.NewRecorder()
+
+			svr := newServer(nil, db, nil)
+			svr.router.ServeHTTP(rr, r)
+
+			if rr.Code != tc.expectedCode {
+				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
+			}
+		})
+	}
+}
+
+func TestHandleGetBooksStats(t *testing.T) {
+	db := connectTestDb(t)
+	id := createAndCleanUpUser(t, db)
+	token, err := createJWTToken(id)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	createAndCleanUpBook(t, id, db)
+
+	tests := []struct {
+		name         string
+		cookie_name  string
+		cookie_value string
+		path         string
+		expectedCode int
+	}{
+		{
+			name:         "no access token cookie",
+			path:         "/api/v1/books/stats",
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "invalid/malformed token",
+			cookie_name:  "access_token",
+			cookie_value: "invalid token",
+			path:         "/api/v1/books/stats",
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "offset isn't a valid number",
+			cookie_name:  "access_token",
+			cookie_value: token,
+			path:         "/api/v1/books/stats?offset=invalid",
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "limit isn't a valid number",
+			cookie_name:  "access_token",
+			cookie_value: token,
+			path:         "/api/v1/books/stats?offset=1&limit=invalid",
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "get books",
+			cookie_name:  "access_token",
+			cookie_value: token,
+			path:         "/api/v1/books/stats?offset=1&limit=1",
+			expectedCode: http.StatusOK,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			r.AddCookie(&http.Cookie{Name: tc.cookie_name, Value: tc.cookie_value})
 			rr := httptest.NewRecorder()
 
 			svr := newServer(nil, db, nil)
