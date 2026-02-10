@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -290,7 +291,7 @@ func TestHandleGetBooksStats(t *testing.T) {
 	}
 }
 
-func TestHandleGetRecentBooks(t *testing.T) {
+func TestHandleGetRecentlyReadBooks(t *testing.T) {
 	db := connectTestDb(t)
 	id := createAndCleanUpUser(t, db)
 	token, err := createJWTToken(id)
@@ -344,6 +345,94 @@ func TestHandleGetRecentBooks(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			r.AddCookie(&http.Cookie{Name: tc.cookie_name, Value: tc.cookie_value})
+			rr := httptest.NewRecorder()
+
+			svr := newServer(nil, db, nil)
+			svr.router.ServeHTTP(rr, r)
+
+			if rr.Code != tc.expectedCode {
+				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
+			}
+		})
+	}
+}
+
+func TestHandleGetRecentlyUploadedBooks(t *testing.T) {
+	db := connectTestDb(t)
+	id := createAndCleanUpUser(t, db)
+	token, err := createJWTToken(id)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	createAndCleanUpBook(t, id, db)
+
+	tests := []struct {
+		name         string
+		cookie_name  string
+		cookie_value string
+		admin        bool
+		path         string
+		expectedCode int
+	}{
+		{
+			name:         "no access token cookie",
+			path:         "/api/v1/books/recently-uploaded",
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "invalid/malformed token",
+			cookie_name:  "access_token",
+			cookie_value: "invalid token",
+			path:         "/api/v1/books/recently-uploaded",
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "role is not admin",
+			cookie_name:  "access_token",
+			cookie_value: token,
+			path:         "/api/v1/books/recently-uploaded",
+			expectedCode: http.StatusUnauthorized,
+		},
+		{
+			name:         "offset isn't a valid number",
+			cookie_name:  "access_token",
+			cookie_value: token,
+			admin:        true,
+			path:         "/api/v1/books/recently-uploaded?offset=invalid",
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "limit isn't a valid number",
+			cookie_name:  "access_token",
+			cookie_value: token,
+			admin:        true,
+			path:         "/api/v1/books/recently-uploaded?offset=1&limit=invalid",
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "get recently read books",
+			cookie_name:  "access_token",
+			cookie_value: token,
+			admin:        true,
+			path:         "/api/v1/books/recently-uploaded?offset=1&limit=1",
+			expectedCode: http.StatusOK,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.admin == true {
+				query :=
+					`
+						UPDATE users SET roles = ARRAY['ADMIN']::role_type[] WHERE display_name = 'test_display';
+					`
+				if _, err := db.ExecContext(context.Background(), query); err != nil {
+					t.Fatalf("error updating users, %v", err)
+				}
+			}
 			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
 			r.AddCookie(&http.Cookie{Name: tc.cookie_name, Value: tc.cookie_value})
 			rr := httptest.NewRecorder()

@@ -30,7 +30,7 @@ func (s *server) routes() {
 	s.router.Get("/api/v1/books", s.handleGetBooks)
 	s.router.Get("/api/v1/books/stats", authenticatedUser(s.handleGetBooksStats))
 	s.router.Get("/api/v1/books/recently-read", authenticatedUser(s.handleGetRecentlyReadBooks))
-	s.router.Get("/api/v1/books/recently-uploaded", nil)
+	s.router.Get("/api/v1/books/recently-uploaded", authenticatedUser(s.handleGetRecentlyUploadedBooks))
 
 	s.router.Get("/api/v1/books/{bookId}", nil)
 	s.router.Delete("/api/v1/books/{bookId}", nil)

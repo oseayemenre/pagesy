@@ -426,8 +426,8 @@ func (s *server) getBooksStats(ctx context.Context, id string, offset, limit int
 	return books, nil
 }
 
-func (s *server) getRecentlyReadBooks(ctx context.Context, userID string, offset, limit int) ([]recentBook, error) {
-	var books []recentBook
+func (s *server) getRecentlyReadBooks(ctx context.Context, userID string, offset, limit int) ([]recentlyReadBook, error) {
+	var books []recentlyReadBook
 
 	query :=
 		`
@@ -450,9 +450,41 @@ func (s *server) getRecentlyReadBooks(ctx context.Context, userID string, offset
 	}
 
 	for rows.Next() {
-		var book recentBook
+		var book recentlyReadBook
 		if err := rows.Scan(&book.name, &book.image, &book.lastReadChapter, &book.updatedAt); err != nil {
 			return nil, fmt.Errorf("error scanning recently read books, %v", err)
+		}
+		books = append(books, book)
+	}
+
+	return books, nil
+}
+
+func (s *server) getRecentlyUploadBooks(ctx context.Context, offset, limit int) ([]recentlyUploadedBook, error) {
+	var books []recentlyUploadedBook
+
+	query :=
+		`
+			SELECT
+				b.name,
+				b.image,
+				u.display_name
+			FROM recently_uploaded_books rub
+			JOIN books b ON (b.id = rub.book_id)
+			JOIN users u ON (u.id = b.author_id)
+			ORDER BY rub DESC
+			OFFSET $1 LIMIT $2;
+		`
+
+	rows, err := s.store.QueryContext(ctx, query, offset, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error getting recently uploaded books, %v", err)
+	}
+
+	for rows.Next() {
+		var book recentlyUploadedBook
+		if err := rows.Scan(&book.name, &book.image, &book.displayName); err != nil {
+			return nil, fmt.Errorf("error scanning recently uploaded books, %v", err)
 		}
 		books = append(books, book)
 	}

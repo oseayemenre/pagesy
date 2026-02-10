@@ -113,7 +113,6 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var isAdmin bool
-
 	for _, role := range user.roles {
 		if role == "ADMIN" {
 			isAdmin = true

@@ -525,6 +525,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/books/recently-uploaded": {
+            "get": {
+                "description": "Get recently uploaded books",
+                "tags": [
+                    "books"
+                ],
+                "summary": "Get recently uploaded books",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "offset",
+                        "name": "offset",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "limit",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.handleGetRecentlyUploadedBooks.response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/books/stats": {
             "get": {
                 "description": "Get books stats",
@@ -807,6 +852,31 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "lastReadTime": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.handleGetRecentlyUploadedBooks.response": {
+            "type": "object",
+            "properties": {
+                "books": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.handleGetRecentlyUploadedBooks.responseBooks"
+                    }
+                }
+            }
+        },
+        "main.handleGetRecentlyUploadedBooks.responseBooks": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "image": {
                     "type": "string"
                 },
                 "name": {

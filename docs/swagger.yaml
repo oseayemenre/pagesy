@@ -139,6 +139,22 @@ definitions:
       name:
         type: string
     type: object
+  main.handleGetRecentlyUploadedBooks.response:
+    properties:
+      books:
+        items:
+          $ref: '#/definitions/main.handleGetRecentlyUploadedBooks.responseBooks'
+        type: array
+    type: object
+  main.handleGetRecentlyUploadedBooks.responseBooks:
+    properties:
+      author:
+        type: string
+      image:
+        type: string
+      name:
+        type: string
+    type: object
   main.handleUploadBook.response:
     properties:
       id:
@@ -495,6 +511,36 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Get recently read books
+      tags:
+      - books
+  /books/recently-uploaded:
+    get:
+      description: Get recently uploaded books
+      parameters:
+      - description: offset
+        in: query
+        name: offset
+        required: true
+        type: string
+      - description: limit
+        in: query
+        name: limit
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.handleGetRecentlyUploadedBooks.response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Get recently uploaded books
       tags:
       - books
   /books/stats:

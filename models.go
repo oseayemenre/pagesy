@@ -45,9 +45,15 @@ type book struct {
 	updatedAt       time.Time
 }
 
-type recentBook struct {
+type recentlyReadBook struct {
 	name            string
 	image           sql.NullString
 	lastReadChapter int
 	updatedAt       time.Time
+}
+
+type recentlyUploadedBook struct {
+	name        string
+	image       sql.NullString
+	displayName string
 }

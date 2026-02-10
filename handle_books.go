@@ -459,3 +459,77 @@ func (s *server) handleGetRecentlyReadBooks(w http.ResponseWriter, r *http.Reque
 
 	encode(w, http.StatusOK, &response{Books: bksResponse})
 }
+
+// handleGetRecentlyUploadedBooks
+//
+//	@Summary		Get recently uploaded books
+//	@Description	Get recently uploaded books
+//	@Tags			books
+//	@Param			offset	query		string	true	"offset"
+//	@Param			limit	query		string	true	"limit"
+//	@Failure		400		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		200		{object}	main.handleGetRecentlyUploadedBooks.response
+//	@Router			/books/recently-uploaded [get]
+func (s *server) handleGetRecentlyUploadedBooks(w http.ResponseWriter, r *http.Request) {
+	type responseBooks struct {
+		Name   string  `json:"name"`
+		Image  *string `json:"image"`
+		Author string  `json:"author"`
+	}
+
+	type response struct {
+		Books []responseBooks `json:"books"`
+	}
+
+	user, err := s.getUser(r.Context(), r.Context().Value("user").(string))
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	var isAdmin bool
+	for _, role := range user.roles {
+		if role == "ADMIN" {
+			isAdmin = true
+			break
+		}
+	}
+
+	if !isAdmin {
+		encode(w, http.StatusUnauthorized, &errorResponse{Error: "role is not admin"})
+		return
+	}
+
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "offset should be a valid number"})
+		return
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "limit should be a valid number"})
+		return
+	}
+
+	books, err := s.getRecentlyUploadBooks(r.Context(), offset, limit)
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	var bksResponse []responseBooks
+	for _, book := range books {
+		var img *string
+		if book.image.Valid != false {
+			img = &book.image.String
+		}
+
+		bksResponse = append(bksResponse, responseBooks{Name: book.name, Image: img, Author: book.displayName})
+	}
+
+	encode(w, http.StatusOK, &response{Books: bksResponse})
+}
