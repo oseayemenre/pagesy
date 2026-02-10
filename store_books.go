@@ -426,7 +426,7 @@ func (s *server) getBooksStats(ctx context.Context, id string, offset, limit int
 	return books, nil
 }
 
-func (s *server) getRecentBooks(ctx context.Context, userID string, offset, limit int) ([]recentBook, error) {
+func (s *server) getRecentlyReadBooks(ctx context.Context, userID string, offset, limit int) ([]recentBook, error) {
 	var books []recentBook
 
 	query :=

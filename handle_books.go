@@ -390,19 +390,19 @@ func (s *server) handleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	encode(w, http.StatusOK, &response{Books: mapToBooksStats(books)})
 }
 
-// handleGetRecentBooks
+// handleGetRecentlyReadBooks
 //
-//	@Summary		Get recent books
-//	@Description	Get recent books
+//	@Summary		Get recently read books
+//	@Description	Get recently read books
 //	@Tags			books
 //	@Produce		json
 //	@Param			offset	query		string	true	"offset"
 //	@Param			limit	query		string	true	"limit"
 //	@Failure		400		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
-//	@Success		200		{object}	main.handleGetRecentBooks.response
-//	@Router			/books/recents [get]
-func (s *server) handleGetRecentBooks(w http.ResponseWriter, r *http.Request) {
+//	@Success		200		{object}	main.handleGetRecentlyReadBooks.response
+//	@Router			/books/recently-read [get]
+func (s *server) handleGetRecentlyReadBooks(w http.ResponseWriter, r *http.Request) {
 	type responseBooks struct {
 		Name            string  `json:"name"`
 		Image           *string `json:"image"`
@@ -426,7 +426,7 @@ func (s *server) handleGetRecentBooks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	books, err := s.getRecentBooks(r.Context(), r.Context().Value("user").(string), offset, limit)
+	books, err := s.getRecentlyReadBooks(r.Context(), r.Context().Value("user").(string), offset, limit)
 	if err != nil {
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})

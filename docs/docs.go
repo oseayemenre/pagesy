@@ -477,16 +477,16 @@ const docTemplate = `{
                 }
             }
         },
-        "/books/recents": {
+        "/books/recently-read": {
             "get": {
-                "description": "Get recent books",
+                "description": "Get recently read books",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "books"
                 ],
-                "summary": "Get recent books",
+                "summary": "Get recently read books",
                 "parameters": [
                     {
                         "type": "string",
@@ -507,7 +507,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.handleGetRecentBooks.response"
+                            "$ref": "#/definitions/main.handleGetRecentlyReadBooks.response"
                         }
                     },
                     "400": {
@@ -786,18 +786,18 @@ const docTemplate = `{
                 }
             }
         },
-        "main.handleGetRecentBooks.response": {
+        "main.handleGetRecentlyReadBooks.response": {
             "type": "object",
             "properties": {
                 "books": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/main.handleGetRecentBooks.responseBooks"
+                        "$ref": "#/definitions/main.handleGetRecentlyReadBooks.responseBooks"
                     }
                 }
             }
         },
-        "main.handleGetRecentBooks.responseBooks": {
+        "main.handleGetRecentlyReadBooks.responseBooks": {
             "type": "object",
             "properties": {
                 "image": {

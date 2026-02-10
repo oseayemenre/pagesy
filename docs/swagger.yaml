@@ -121,14 +121,14 @@ definitions:
           type: string
         type: array
     type: object
-  main.handleGetRecentBooks.response:
+  main.handleGetRecentlyReadBooks.response:
     properties:
       books:
         items:
-          $ref: '#/definitions/main.handleGetRecentBooks.responseBooks'
+          $ref: '#/definitions/main.handleGetRecentlyReadBooks.responseBooks'
         type: array
     type: object
-  main.handleGetRecentBooks.responseBooks:
+  main.handleGetRecentlyReadBooks.responseBooks:
     properties:
       image:
         type: string
@@ -465,9 +465,9 @@ paths:
       summary: Upload book
       tags:
       - books
-  /books/recents:
+  /books/recently-read:
     get:
-      description: Get recent books
+      description: Get recently read books
       parameters:
       - description: offset
         in: query
@@ -485,7 +485,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/main.handleGetRecentBooks.response'
+            $ref: '#/definitions/main.handleGetRecentlyReadBooks.response'
         "400":
           description: Bad Request
           schema:
@@ -494,7 +494,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/main.errorResponse'
-      summary: Get recent books
+      summary: Get recently read books
       tags:
       - books
   /books/stats:
