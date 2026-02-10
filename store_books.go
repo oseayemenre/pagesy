@@ -15,8 +15,9 @@ var (
 	errBookNameAlreadyTaken         = errors.New("book name already taken")
 	errNoBooksUnderGenre            = errors.New("no books under genre")
 	errNoBooksUnderLanguage         = errors.New("no books under language")
-	errNoBooksUnderGenreAndLanguage = errors.New("no books under genre andn language")
+	errNoBooksUnderGenreAndLanguage = errors.New("no books under genre and language")
 	errUserHasNoBooks               = errors.New("user has no books")
+	errBookNotFound                 = errors.New("book not found")
 )
 
 func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
@@ -460,8 +461,8 @@ func (s *server) getRecentlyReadBooks(ctx context.Context, userID string, offset
 	return books, nil
 }
 
-func (s *server) getRecentlyUploadBooks(ctx context.Context, offset, limit int) ([]recentlyUploadedBook, error) {
-	var books []recentlyUploadedBook
+func (s *server) getRecentlyUploadBooks(ctx context.Context, offset, limit int) ([]book, error) {
+	var books []book
 
 	query :=
 		`
@@ -482,12 +483,116 @@ func (s *server) getRecentlyUploadBooks(ctx context.Context, offset, limit int) 
 	}
 
 	for rows.Next() {
-		var book recentlyUploadedBook
-		if err := rows.Scan(&book.name, &book.image, &book.displayName); err != nil {
+		var book book
+		if err := rows.Scan(&book.name, &book.image, &book.authorName); err != nil {
 			return nil, fmt.Errorf("error scanning recently uploaded books, %v", err)
 		}
 		books = append(books, book)
 	}
 
 	return books, nil
+}
+
+func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
+	var book book
+	query :=
+		`
+			SELECT 
+				b.id, 
+				b.name, 
+				b.description, 
+				b.image, 
+				b.views, 
+				b.rating, 
+				b.language, 
+				b.completed, 
+				b.created_at,
+				u.display_name,
+				COUNT (c.id)
+			FROM books b
+			JOIN users u ON (u.id = b.author_id)
+			JOIN chapters c ON (c.book_id = b.id)
+			WHERE b.id = $1 
+			AND b.approved = true
+			GROUP BY b.id, u.display_name; 
+		`
+	if err := s.store.QueryRowContext(ctx, query, bookID).Scan(&book.id, &book.name, &book.description, &book.image, &book.views, &book.rating, &book.language, &book.completed, &book.createdAt, &book.authorName, &book.chapterCount); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errBookNotFound
+		}
+
+		return nil, fmt.Errorf("error scanning book, %v", err)
+	}
+
+	query =
+		`
+			SELECT g.genre
+			FROM genres g
+			JOIN books_genres bg ON (bg.genre_id = g.id)
+			WHERE bg.book_id = $1;
+		`
+
+	genreRows, err := s.store.QueryContext(ctx, query, bookID)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting genres, %v", err)
+	}
+
+	defer genreRows.Close()
+
+	for genreRows.Next() {
+		var genre string
+
+		if err := genreRows.Scan(&genre); err != nil {
+			return nil, fmt.Errorf("error scanning genre: %v", err)
+		}
+
+		book.genres = append(book.genres, genre)
+	}
+
+	query = `
+			SELECT day, no_of_chapters FROM release_schedule WHERE book_id = $1;
+	`
+
+	releaseScheduleRows, err := s.store.QueryContext(ctx, query, bookID)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting release schedule, %v", err)
+	}
+
+	defer releaseScheduleRows.Close()
+
+	for releaseScheduleRows.Next() {
+		var schedule releaseSchedule
+
+		if err := releaseScheduleRows.Scan(&schedule.Day, &schedule.Chapters); err != nil {
+			return nil, fmt.Errorf("error scanning release schedule: %v", err)
+		}
+
+		book.releaseSchedule = append(book.releaseSchedule, schedule)
+	}
+
+	query = `
+			SELECT title, chapter_no, created_at FROM chapters WHERE book_id = $1;
+	`
+
+	chaptersRows, err := s.store.QueryContext(ctx, query, bookID)
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting chapters: %v", err)
+	}
+
+	defer chaptersRows.Close()
+
+	for chaptersRows.Next() {
+		var chapter chapter
+
+		if err := chaptersRows.Scan(&chapter.title, &chapter.chapterNo, &chapter.createdAt); err != nil {
+			return nil, fmt.Errorf("error scanning chapters: %v", err)
+		}
+
+		book.chapters = append(book.chapters, chapter)
+	}
+
+	return &book, nil
 }

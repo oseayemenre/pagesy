@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // handleUploadBook godoc
@@ -211,7 +213,7 @@ func mapToGetBooks(books []book) []getResponseBook {
 			image = &book.image.String
 		}
 
-		newBook := getResponseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, ChapterCount: book.chapterCount, Genres: append([]string{}, book.genres...)}
+		newBook := getResponseBook{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, ChapterCount: book.chapterCount, Genres: book.genres}
 
 		for _, rs := range book.releaseSchedule {
 			newBook.ReleaseSchedule = append(newBook.ReleaseSchedule, responseReleaseSchedule{Day: rs.Day, Chapters: rs.Chapters})
@@ -271,7 +273,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 
 	if len(genre) > 0 && len(language) < 1 {
 		books, err := s.getBooksByGenre(r.Context(), genre, offset, limit, sort, order)
-		if err != nil && err != errNoBooksUnderGenre {
+		if err != nil && errors.Is(err, errNoBooksUnderGenre) {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
@@ -283,7 +285,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 
 	if len(genre) < 1 && len(language) > 0 {
 		books, err := s.getBooksByLanguage(r.Context(), language, offset, limit, sort, order)
-		if err != nil && err != errNoBooksUnderLanguage {
+		if err != nil && errors.Is(err, errNoBooksUnderLanguage) {
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
@@ -294,7 +296,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 
 	if len(genre) > 0 && len(language) > 0 {
 		books, err := s.getBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
-		if err != nil && err != errNoBooksUnderGenreAndLanguage {
+		if err != nil && errors.Is(err, errNoBooksUnderGenreAndLanguage) {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
@@ -381,7 +383,7 @@ func (s *server) handleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	books, err := s.getBooksStats(r.Context(), r.Context().Value("user").(string), offset, limit)
-	if err != nil && err != errUserHasNoBooks {
+	if err != nil && !errors.Is(err, errUserHasNoBooks) {
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
@@ -390,7 +392,7 @@ func (s *server) handleGetBooksStats(w http.ResponseWriter, r *http.Request) {
 	encode(w, http.StatusOK, &response{Books: mapToBooksStats(books)})
 }
 
-// handleGetRecentlyReadBooks
+// handleGetRecentlyReadBooks godoc
 //
 //	@Summary		Get recently read books
 //	@Description	Get recently read books
@@ -451,7 +453,7 @@ func (s *server) handleGetRecentlyReadBooks(w http.ResponseWriter, r *http.Reque
 		case dur > 24*time.Hour && dur <= 7*24*time.Hour:
 			lastReadTime = fmt.Sprintf("%v days ago", math.Floor(dur.Hours()/24))
 		default:
-			lastReadTime = fmt.Sprint(book.updatedAt.Format("2 Jan, 2006"))
+			lastReadTime = fmt.Sprint(book.updatedAt.Format("Jan 2, 2006"))
 		}
 
 		bksResponse = append(bksResponse, responseBooks{Name: book.name, Image: img, LastReadChapter: book.lastReadChapter, LastReadTime: lastReadTime})
@@ -460,7 +462,7 @@ func (s *server) handleGetRecentlyReadBooks(w http.ResponseWriter, r *http.Reque
 	encode(w, http.StatusOK, &response{Books: bksResponse})
 }
 
-// handleGetRecentlyUploadedBooks
+// handleGetRecentlyUploadedBooks godoc
 //
 //	@Summary		Get recently uploaded books
 //	@Description	Get recently uploaded books
@@ -528,8 +530,72 @@ func (s *server) handleGetRecentlyUploadedBooks(w http.ResponseWriter, r *http.R
 			img = &book.image.String
 		}
 
-		bksResponse = append(bksResponse, responseBooks{Name: book.name, Image: img, Author: book.displayName})
+		bksResponse = append(bksResponse, responseBooks{Name: book.name, Image: img, Author: book.authorName})
 	}
 
 	encode(w, http.StatusOK, &response{Books: bksResponse})
+}
+
+// handleGetBook godoc
+//
+//	@Summary		Get a single book
+//	@Description	Get a single book
+//	@Tags			books
+//	@Param			bookID	path		string	true	"book id"
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		200		{object}	main.handleGetBook.response
+//	@Router			/books/{bookID} [get]
+func (s *server) handleGetBook(w http.ResponseWriter, r *http.Request) {
+	type chaptersBookPreview struct {
+		ChapterNo  int    `json:"chapterNo"`
+		Title      string `json:"title"`
+		Created_at string `json:"createdAt"`
+	}
+
+	type releaseSchedule struct {
+		Day      string `validate:"required"`
+		Chapters int    `validate:"required"`
+	}
+
+	type response struct {
+		Name             string                `json:"name"`
+		Description      string                `json:"description"`
+		Image            *string               `json:"image"`
+		Views            int                   `json:"views"`
+		Rating           float32               `json:"rating"`
+		Genres           []string              `json:"genres"`
+		Completed        bool                  `json:"completed"`
+		ChapterCount     int                   `json:"chapterCount"`
+		Chapters         []chaptersBookPreview `json:"chapters"`
+		Release_schedule []releaseSchedule     `json:"release_schedule"`
+	}
+
+	book, err := s.getBook(r.Context(), chi.URLParam(r, "bookID"))
+	if errors.Is(err, errBookNotFound) {
+		encode(w, http.StatusNotFound, &errorResponse{Error: errBookNotFound.Error()})
+		return
+	}
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	var image *string
+	if book.image.Valid != false {
+		image = &book.image.String
+	}
+
+	var chaptersPreviews []chaptersBookPreview
+	for _, ch := range book.chapters {
+		chaptersPreviews = append(chaptersPreviews, chaptersBookPreview{ChapterNo: ch.chapterNo, Title: ch.title, Created_at: ch.createdAt.Format("Jan 2, 2006")})
+	}
+
+	var schedule []releaseSchedule
+	for _, rs := range book.releaseSchedule {
+		schedule = append(schedule, releaseSchedule{Day: rs.Day, Chapters: rs.Chapters})
+	}
+
+	encode(w, http.StatusOK, &response{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Genres: book.genres, Completed: book.completed, ChapterCount: book.chapterCount, Chapters: chaptersPreviews, Release_schedule: schedule})
 }

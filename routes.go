@@ -32,36 +32,36 @@ func (s *server) routes() {
 	s.router.Get("/api/v1/books/recently-read", authenticatedUser(s.handleGetRecentlyReadBooks))
 	s.router.Get("/api/v1/books/recently-uploaded", authenticatedUser(s.handleGetRecentlyUploadedBooks))
 
-	s.router.Get("/api/v1/books/{bookId}", nil)
-	s.router.Delete("/api/v1/books/{bookId}", nil)
-	s.router.Patch("/api/v1/books/{bookId}", nil)
-	s.router.Patch("/api/v1/books/{bookId}/approval", nil)
-	s.router.Patch("/api/v1/books/{bookId}/complete", nil)
+	s.router.Get("/api/v1/books/{bookID}", s.handleGetBook)
+	s.router.Delete("/api/v1/books/{bookID}", nil)
+	s.router.Patch("/api/v1/books/{bookID}", nil)
+	s.router.Patch("/api/v1/books/{bookID}/approval", nil)
+	s.router.Patch("/api/v1/books/{bookID}/complete", nil)
 
-	s.router.Post("/api/v1/books/{bookId}/chapters", nil)
-	s.router.Get("/api/v1/books/{bookId}/chapters/{chapterId}", nil)
-	s.router.Delete("/api/v1/books/{bookId}/chapters/{chapterId}", nil)
-	s.router.Get("/api/v1/books/{bookId}/chapters/{chapterId}/pages/{pageNumber}", nil)
+	s.router.Post("/api/v1/books/{bookID}/chapters", nil)
+	s.router.Get("/api/v1/books/{bookID}/chapters/{chapterID}", nil)
+	s.router.Delete("/api/v1/books/{bookID}/chapters/{chapterID}", nil)
+	s.router.Get("/api/v1/books/{bookID}/chapters/{chapterID}/pages/{pageNumber}", nil)
 
-	s.router.Post("/api/v1/books/{bookId}/comments", nil)
-	s.router.Get("/api/v1/books/{bookId}/comments", nil)
-	s.router.Get("/api/v1/books/{bookId}/comments/{commentId}", nil)
-	s.router.Delete("/api/v1/books/{bookId}/comments/{commentId}", nil)
-	s.router.Patch("/api/v1/books/{bookId}/comments/{commentId}", nil)
+	s.router.Post("/api/v1/books/{bookID}/comments", nil)
+	s.router.Get("/api/v1/books/{bookID}/comments", nil)
+	s.router.Get("/api/v1/books/{bookID}/comments/{commentID}", nil)
+	s.router.Delete("/api/v1/books/{bookID}/comments/{commentID}", nil)
+	s.router.Patch("/api/v1/books/{bookID}/comments/{commentID}", nil)
 
-	s.router.Patch("/api/v1/books/{bookId}/subscriptions", nil)
+	s.router.Patch("/api/v1/books/{bookID}/subscriptions", nil)
 
 	s.router.Get("/api/v1/users/me", authenticatedUser(s.handleGetProfile))
 
 	s.router.Get("/api/v1/library", nil)
-	s.router.Put("/api/v1/library/books/{bookId}", nil)
-	s.router.Delete("/api/v1/library/books/{bookId}", nil)
+	s.router.Put("/api/v1/library/books/{bookID}", nil)
+	s.router.Delete("/api/v1/library/books/{bookID}", nil)
 
 	s.router.Post("/api/v1/coins", nil)
 
 	s.router.HandleFunc("/api/v1/ws", authenticatedUser(s.handleWS))
 	s.router.Post("/webhook", nil)
-	s.router.Patch("/users/{userId}/ban", nil)
+	s.router.Patch("/users/{userID}/ban", nil)
 }
 
 func authenticatedUser(next http.HandlerFunc) http.HandlerFunc {

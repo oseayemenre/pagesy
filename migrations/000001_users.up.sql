@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users(
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
     password TEXT,
-    display_name TEXT NOT NULL,
+    display_name TEXT NOT NULL UNIQUE,
     image TEXT,
     about TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

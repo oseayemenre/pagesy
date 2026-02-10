@@ -610,6 +610,44 @@
                 }
             }
         },
+        "/books/{bookID}": {
+            "get": {
+                "description": "Get a single book",
+                "tags": [
+                    "books"
+                ],
+                "summary": "Get a single book",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book id",
+                        "name": "bookID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.handleGetBook.response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/me": {
             "get": {
                 "description": "Get current user profile",
@@ -775,6 +813,79 @@
                 "password": {
                     "type": "string",
                     "minLength": 8
+                }
+            }
+        },
+        "main.handleGetBook.chaptersBookPreview": {
+            "type": "object",
+            "properties": {
+                "chapterNo": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.handleGetBook.releaseSchedule": {
+            "type": "object",
+            "required": [
+                "chapters",
+                "day"
+            ],
+            "properties": {
+                "chapters": {
+                    "type": "integer"
+                },
+                "day": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.handleGetBook.response": {
+            "type": "object",
+            "properties": {
+                "chapterCount": {
+                    "type": "integer"
+                },
+                "chapters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.handleGetBook.chaptersBookPreview"
+                    }
+                },
+                "completed": {
+                    "type": "boolean"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "genres": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "image": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "number"
+                },
+                "release_schedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.handleGetBook.releaseSchedule"
+                    }
+                },
+                "views": {
+                    "type": "integer"
                 }
             }
         },

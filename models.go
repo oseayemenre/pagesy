@@ -25,6 +25,14 @@ type draftChapter struct {
 	Content string `validate:"required"`
 }
 
+type chapter struct {
+	title     string
+	chapterNo int
+	content   string
+	bookID    string
+	createdAt time.Time
+}
+
 type book struct {
 	id              string
 	name            string
@@ -34,9 +42,11 @@ type book struct {
 	chapterCount    int
 	openedLast      time.Time
 	authorID        string
+	authorName      string
 	views           int
 	language        string
 	genres          []string
+	chapters        []chapter
 	draftChapter    draftChapter
 	rating          float32
 	completed       bool
@@ -50,10 +60,4 @@ type recentlyReadBook struct {
 	image           sql.NullString
 	lastReadChapter int
 	updatedAt       time.Time
-}
-
-type recentlyUploadedBook struct {
-	name        string
-	image       sql.NullString
-	displayName string
 }

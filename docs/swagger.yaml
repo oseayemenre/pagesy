@@ -92,6 +92,54 @@ definitions:
     - email
     - password
     type: object
+  main.handleGetBook.chaptersBookPreview:
+    properties:
+      chapterNo:
+        type: integer
+      createdAt:
+        type: string
+      title:
+        type: string
+    type: object
+  main.handleGetBook.releaseSchedule:
+    properties:
+      chapters:
+        type: integer
+      day:
+        type: string
+    required:
+    - chapters
+    - day
+    type: object
+  main.handleGetBook.response:
+    properties:
+      chapterCount:
+        type: integer
+      chapters:
+        items:
+          $ref: '#/definitions/main.handleGetBook.chaptersBookPreview'
+        type: array
+      completed:
+        type: boolean
+      description:
+        type: string
+      genres:
+        items:
+          type: string
+        type: array
+      image:
+        type: string
+      name:
+        type: string
+      rating:
+        type: number
+      release_schedule:
+        items:
+          $ref: '#/definitions/main.handleGetBook.releaseSchedule'
+        type: array
+      views:
+        type: integer
+    type: object
   main.handleGetBooks.response:
     properties:
       books:
@@ -479,6 +527,31 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Upload book
+      tags:
+      - books
+  /books/{bookID}:
+    get:
+      description: Get a single book
+      parameters:
+      - description: book id
+        in: path
+        name: bookID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.handleGetBook.response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Get a single book
       tags:
       - books
   /books/recently-read:
