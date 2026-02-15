@@ -820,7 +820,7 @@ func (s *server) handleApproveBook(w http.ResponseWriter, r *http.Request) {
 //	@Success		204
 //	@Router			/books/{bookID}/complete [patch]
 func (s *server) handleCompleteBook(w http.ResponseWriter, r *http.Request) {
-	if err := s.completeBook(r.Context(), r.Context().Value("user").(string)); err != nil {
+	if err := s.completeBook(r.Context(), r.Context().Value("user").(string), chi.URLParam(r, "bookID")); err != nil {
 		if errors.Is(err, errBookNotFound) {
 			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
 			return

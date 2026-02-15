@@ -807,6 +807,24 @@ func (s *server) approveBook(ctx context.Context, bookID string) error {
 	return nil
 }
 
-func (s *server) completeBook(ctx context.Context, bookID string) error {
+func (s *server) completeBook(ctx context.Context, userID, bookID string) error {
+	query :=
+		`
+			UPDATE books SET completed = 'true' WHERE id = $1 AND author_id = $2;
+		`
+
+	results, err := s.store.ExecContext(ctx, query, bookID, userID)
+	if err != nil {
+		return fmt.Errorf("error marking book as complete, %v", err)
+	}
+
+	rows, err := results.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking number of rows affected, %v", err)
+	}
+	if rows == 0 {
+		return errBookNotFound
+	}
+
 	return nil
 }
