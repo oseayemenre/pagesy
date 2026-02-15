@@ -34,7 +34,7 @@ func (s *server) routes() {
 
 	s.router.Get("/api/v1/books/{bookID}", s.handleGetBook)
 	s.router.Delete("/api/v1/books/{bookID}", authenticatedUser(s.handleDeleteBook))
-	s.router.Patch("/api/v1/books/{bookID}", nil)
+	s.router.Patch("/api/v1/books/{bookID}", authenticatedUser(s.handleEditBook))
 	s.router.Patch("/api/v1/books/{bookID}/approval", nil)
 	s.router.Patch("/api/v1/books/{bookID}/complete", nil)
 

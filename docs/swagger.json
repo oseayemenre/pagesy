@@ -356,14 +356,14 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Name",
+                        "description": "name",
                         "name": "name",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Description",
+                        "description": "description",
                         "name": "description",
                         "in": "formData",
                         "required": true
@@ -374,28 +374,28 @@
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "Genre",
+                        "description": "genre",
                         "name": "genres",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Language",
+                        "description": "language",
                         "name": "language",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Draft chapter title",
+                        "description": "draft chapter title",
                         "name": "chapter_title",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Draft chapter content",
+                        "description": "draft chapter content",
                         "name": "chapter_content",
                         "in": "formData",
                         "required": true
@@ -406,7 +406,7 @@
                             "type": "string"
                         },
                         "collectionFormat": "csv",
-                        "description": "Release days (e.g. Monday, Tuesday)",
+                        "description": "release days (e.g. Monday, Tuesday)",
                         "name": "release_schedule_day",
                         "in": "formData",
                         "required": true
@@ -417,14 +417,14 @@
                             "type": "integer"
                         },
                         "collectionFormat": "csv",
-                        "description": "Chapters per day (e.g. 1, 2)",
+                        "description": "chapters per day (e.g. 1, 2)",
                         "name": "release_schedule_chapter",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "file",
-                        "description": "Book cover image (max 3MB)",
+                        "description": "book cover image (max 3MB)",
                         "name": "book_cover",
                         "in": "formData"
                     }
@@ -670,6 +670,102 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Edit book",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Edit book",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book id",
+                        "name": "bookID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "name",
+                        "name": "name",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "description",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Release days (e.g. Monday, Tuesday)",
+                        "name": "release_schedule_day",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Chapters per day (e.g. 1, 2)",
+                        "name": "release_schedule_chapter",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "genres",
+                        "name": "genres",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "book cover",
+                        "name": "book_cover",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
                         "schema": {
                             "$ref": "#/definitions/main.errorResponse"
                         }
@@ -952,7 +1048,7 @@
                 "about": {
                     "type": "string"
                 },
-                "display_name": {
+                "displayName": {
                     "type": "string"
                 },
                 "email": {

@@ -158,7 +158,7 @@ definitions:
     properties:
       about:
         type: string
-      display_name:
+      displayName:
         type: string
       email:
         type: string
@@ -446,41 +446,41 @@ paths:
       - multipart/form-data
       description: Upload book
       parameters:
-      - description: Name
+      - description: name
         in: formData
         name: name
         required: true
         type: string
-      - description: Description
+      - description: description
         in: formData
         name: description
         required: true
         type: string
       - collectionFormat: csv
-        description: Genre
+        description: genre
         in: formData
         items:
           type: string
         name: genres
         required: true
         type: array
-      - description: Language
+      - description: language
         in: formData
         name: language
         required: true
         type: string
-      - description: Draft chapter title
+      - description: draft chapter title
         in: formData
         name: chapter_title
         required: true
         type: string
-      - description: Draft chapter content
+      - description: draft chapter content
         in: formData
         name: chapter_content
         required: true
         type: string
       - collectionFormat: csv
-        description: Release days (e.g. Monday, Tuesday)
+        description: release days (e.g. Monday, Tuesday)
         in: formData
         items:
           type: string
@@ -488,14 +488,14 @@ paths:
         required: true
         type: array
       - collectionFormat: csv
-        description: Chapters per day (e.g. 1, 2)
+        description: chapters per day (e.g. 1, 2)
         in: formData
         items:
           type: integer
         name: release_schedule_chapter
         required: true
         type: array
-      - description: Book cover image (max 3MB)
+      - description: book cover image (max 3MB)
         in: formData
         name: book_cover
         type: file
@@ -554,6 +554,71 @@ paths:
       summary: Get a single book
       tags:
       - books
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Edit book
+      parameters:
+      - description: book id
+        in: path
+        name: bookID
+        required: true
+        type: string
+      - description: name
+        in: formData
+        name: name
+        type: string
+      - description: description
+        in: formData
+        name: description
+        type: string
+      - collectionFormat: csv
+        description: Release days (e.g. Monday, Tuesday)
+        in: formData
+        items:
+          type: string
+        name: release_schedule_day
+        type: array
+      - collectionFormat: csv
+        description: Chapters per day (e.g. 1, 2)
+        in: formData
+        items:
+          type: integer
+        name: release_schedule_chapter
+        type: array
+      - collectionFormat: csv
+        description: genres
+        in: formData
+        items:
+          type: string
+        name: genres
+        type: array
+      - description: book cover
+        in: formData
+        name: book_cover
+        type: file
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Edit book
   /books/bookID:
     delete:
       description: Delete book

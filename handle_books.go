@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -21,15 +22,15 @@ import (
 //	@Tags			books
 //	@Accept			multipart/form-data
 //	@Produce		application/json
-//	@Param			name						formData	string		true	"Name"
-//	@Param			description					formData	string		true	"Description"
-//	@Param			genres						formData	[]string	true	"Genre"
-//	@Param			language					formData	string		true	"Language"
-//	@Param			chapter_title				formData	string		true	"Draft chapter title"
-//	@Param			chapter_content				formData	string		true	"Draft chapter content"
-//	@Param			release_schedule_day		formData	[]string	true	"Release days (e.g. Monday, Tuesday)"
-//	@Param			release_schedule_chapter	formData	[]int		true	"Chapters per day (e.g. 1, 2)"
-//	@Param			book_cover					formData	file		false	"Book cover image (max 3MB)"
+//	@Param			name						formData	string		true	"name"
+//	@Param			description					formData	string		true	"description"
+//	@Param			genres						formData	[]string	true	"genre"
+//	@Param			language					formData	string		true	"language"
+//	@Param			chapter_title				formData	string		true	"draft chapter title"
+//	@Param			chapter_content				formData	string		true	"draft chapter content"
+//	@Param			release_schedule_day		formData	[]string	true	"release days (e.g. Monday, Tuesday)"
+//	@Param			release_schedule_chapter	formData	[]int		true	"chapters per day (e.g. 1, 2)"
+//	@Param			book_cover					formData	file		false	"book cover image (max 3MB)"
 //	@Failure		400							{object}	errorResponse
 //	@Failure		409							{object}	errorResponse
 //	@Failure		413							{object}	errorResponse
@@ -144,7 +145,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile("book_cover")
 
-	if err != nil && err != http.ErrMissingFile {
+	if err != nil && !errors.Is(err, http.ErrMissingFile) {
 		encode(w, http.StatusBadRequest, fmt.Errorf("error uploading image, %v", err))
 		return
 	}
@@ -155,7 +156,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 		fileData, err := io.ReadAll(file)
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("error reading bytes, %v", err))
-			encode(w, http.StatusInternalServerError, &errorResponse{Error: fmt.Sprintf("error reading bytes, %v", err)})
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
 
@@ -621,5 +622,146 @@ func (s *server) handleDeleteBook(w http.ResponseWriter, r *http.Request) {
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}
+	encode(w, http.StatusNoContent, nil)
+}
+
+// handleEditBook godoc
+//
+//	@Summary		Edit book
+//	@Description	Edit book
+//	@Accept			multipart/form-data
+//	@Produce		application/json
+//	@Param			bookID						path		string		true	"book id"
+//	@Param			name						formData	string		false	"name"
+//	@Param			description					formData	string		false	"description"
+//	@Param			release_schedule_day		formData	[]string	false	"Release days (e.g. Monday, Tuesday)"
+//	@Param			release_schedule_chapter	formData	[]int		false	"Chapters per day (e.g. 1, 2)"
+//	@Param			genres						formData	[]string	false	"genres"
+//	@Param			book_cover					formData	file		false	"book cover"
+//	@Failure		400							{object}	errorResponse
+//	@Failure		404							{object}	errorResponse
+//	@Failure		413							{object}	errorResponse
+//	@Failure		500							{object}	errorResponse
+//	@Success		204
+//	@Router			/books/{bookID} [patch]
+func (s *server) handleEditBook(w http.ResponseWriter, r *http.Request) {
+	bookID := chi.URLParam(r, "bookID")
+	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
+
+	if err := r.ParseMultipartForm(8 << 20); err != nil {
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: fmt.Sprintf("error parsing multipart form, %v", err)})
+		return
+	}
+	defer r.MultipartForm.RemoveAll()
+
+	days := strings.Split(r.FormValue("release_schedule_day"), ",")
+	chapters := strings.Split(r.FormValue("release_schedule_chapter"), ",")
+
+	if len(days) == 1 && days[0] == "" {
+		days = []string{}
+	}
+
+	if len(chapters) == 1 && chapters[0] == "" {
+		chapters = []string{}
+	}
+
+	if len(days) != len(chapters) {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "chapter length and days length must be the same"})
+		return
+	}
+
+	genres := strings.Split(r.FormValue("genres"), ",")
+
+	if len(genres) == 1 && genres[0] == "" {
+		genres = []string{}
+	}
+
+	file, header, err := r.FormFile("book_cover")
+
+	var url string
+
+	if err == nil {
+		defer file.Close()
+
+		fileData, err := io.ReadAll(file)
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("error reading bytes, %v", err))
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+			return
+		}
+
+		if len(fileData) > 3<<20 {
+			encode(w, http.StatusRequestEntityTooLarge, &errorResponse{Error: "book cover too large"})
+			return
+		}
+
+		if contentType := http.DetectContentType(fileData); !strings.HasPrefix(contentType, "image/") {
+			encode(w, http.StatusBadRequest, &errorResponse{Error: "invalid file type"})
+			return
+		}
+
+		url, err = s.objectStore.upload(r.Context(), fmt.Sprintf("%s_%s", bookID, header.Filename), bytes.NewReader(fileData))
+
+		if err != nil {
+			s.logger.Error(err.Error())
+			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+			return
+		}
+	}
+
+	if err != nil && !errors.Is(err, http.ErrMissingFile) {
+		encode(w, http.StatusBadRequest, fmt.Errorf("error uploading image, %v", err))
+		return
+	}
+
+	var image sql.NullString
+	if url != "" {
+		image = sql.NullString{String: url, Valid: true}
+	}
+
+	book := &book{
+		id:          bookID,
+		name:        r.FormValue("name"),
+		description: r.FormValue("description"),
+		genres:      genres,
+		authorID:    r.Context().Value("user").(string),
+		image:       image,
+	}
+
+	if len(days) > 0 && len(chapters) > 0 {
+		for i := range days {
+			ch, err := strconv.Atoi(chapters[i])
+
+			if err != nil {
+				encode(w, http.StatusBadRequest, &errorResponse{Error: "error converting type string to int"})
+				return
+			}
+
+			schedule := releaseSchedule{
+				Day:      days[i],
+				Chapters: ch,
+			}
+
+			book.releaseSchedule = append(book.releaseSchedule,
+				schedule)
+		}
+	}
+
+	if err := s.editBook(r.Context(), book); err != nil {
+		if errors.Is(err, errShouldAtLeastPassOneFieldToUpdate) {
+			encode(w, http.StatusBadRequest, err)
+			return
+		}
+
+		if errors.Is(err, errBookNotFound) {
+			encode(w, http.StatusNotFound, err)
+			return
+		}
+
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
 	encode(w, http.StatusNoContent, nil)
 }

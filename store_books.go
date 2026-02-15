@@ -11,14 +11,15 @@ import (
 )
 
 var (
-	errGenresNotFound               = errors.New("genres not found")
-	errBookNameAlreadyTaken         = errors.New("book name already taken")
-	errNoBooksUnderGenre            = errors.New("no books under genre")
-	errNoBooksUnderLanguage         = errors.New("no books under language")
-	errNoBooksUnderGenreAndLanguage = errors.New("no books under genre and language")
-	errUserHasNoBooks               = errors.New("user has no books")
-	errBookNotFound                 = errors.New("book not found")
-	errUserCannotDeleteBook         = errors.New("user cannot delete book")
+	errGenresNotFound                    = errors.New("genres not found")
+	errBookNameAlreadyTaken              = errors.New("book name already taken")
+	errNoBooksUnderGenre                 = errors.New("no books under genre")
+	errNoBooksUnderLanguage              = errors.New("no books under language")
+	errNoBooksUnderGenreAndLanguage      = errors.New("no books under genre and language")
+	errUserHasNoBooks                    = errors.New("user has no books")
+	errBookNotFound                      = errors.New("book not found")
+	errUserCannotDeleteBook              = errors.New("user cannot delete book")
+	errShouldAtLeastPassOneFieldToUpdate = errors.New("should at least pass one field to update")
 )
 
 func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
@@ -617,6 +618,10 @@ func (s *server) deleteBook(ctx context.Context, userID, bookID string) error {
 		return errUserCannotDeleteBook
 	}
 
+	return nil
+}
+
+func (s *server) editBook(ctx context.Context, book *book) error {
 	return nil
 }
 
