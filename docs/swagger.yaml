@@ -220,6 +220,33 @@ info:
   title: Pagesy
   version: "1.0"
 paths:
+  /api/v1/books/{bookID}/approval:
+    patch:
+      description: Approve book
+      parameters:
+      - description: book id
+        in: path
+        name: bookID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Approve book
+      tags:
+      - books
   /auth/google:
     get:
       description: Sign in with google
@@ -635,6 +662,10 @@ paths:
           description: No Content
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/main.errorResponse'
         "500":

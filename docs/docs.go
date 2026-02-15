@@ -15,6 +15,47 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/books/{bookID}/approval": {
+            "patch": {
+                "description": "Approve book",
+                "tags": [
+                    "books"
+                ],
+                "summary": "Approve book",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book id",
+                        "name": "bookID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/google": {
             "get": {
                 "description": "Sign in with google",
@@ -499,6 +540,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/main.errorResponse"
                         }

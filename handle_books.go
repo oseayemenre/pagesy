@@ -764,15 +764,16 @@ func (s *server) handleEditBook(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleApproveBook godoc
-// @Summary Approve book
-// @Description Approve book
-// @Tags books
-// @Param bookID path string true "book id"
-// @Failure 401 {object} errorResponse
-// @Failure 404 {object} errorResponse
-// @Failure 500 {object} errorResponse
-// @Success 204
-// @Router /api/v1/books/{bookID}/approval [patch]
+//
+//	@Summary		Approve book
+//	@Description	Approve book
+//	@Tags			books
+//	@Param			bookID	path		string	true	"book id"
+//	@Failure		401		{object}	errorResponse
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		204
+//	@Router			/api/v1/books/{bookID}/approval [patch]
 func (s *server) handleApproveBook(w http.ResponseWriter, r *http.Request) {
 	user, err := s.getUser(r.Context(), r.Context().Value("user").(string))
 	if err != nil {
