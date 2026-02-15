@@ -601,3 +601,16 @@ func (s *server) handleGetBook(w http.ResponseWriter, r *http.Request) {
 
 	encode(w, http.StatusOK, &response{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Genres: book.genres, Completed: book.completed, ChapterCount: book.chapterCount, Chapters: chaptersPreviews, Release_schedule: schedule})
 }
+
+func (s *server) handleDeleteBook(w http.ResponseWriter, r *http.Request) {
+	if err := s.deleteBook(r.Context(), r.Context().Value("user").(string), chi.URLParam(r, "bookID")); err != nil {
+		if errors.Is(err, errUserCannotDeleteBook) {
+			encode(w, http.StatusBadRequest, &errorResponse{Error: err.Error()})
+			return
+		}
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+	encode(w, http.StatusNoContent, nil)
+}

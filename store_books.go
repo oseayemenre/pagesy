@@ -18,6 +18,7 @@ var (
 	errNoBooksUnderGenreAndLanguage = errors.New("no books under genre and language")
 	errUserHasNoBooks               = errors.New("user has no books")
 	errBookNotFound                 = errors.New("book not found")
+	errUserCannotDeleteBook         = errors.New("user cannot delete book")
 )
 
 func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
@@ -595,6 +596,30 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 	}
 
 	return &book, nil
+}
+
+func (s *server) deleteBook(ctx context.Context, userID, bookID string) error {
+	query :=
+		`
+			SELECT 1 FROM books WHERE id = $1 AND author_id = 2;
+		`
+
+	if err := s.store.QueryRowContext(ctx, query, bookID, userID).Scan(nil); err != nil {
+		if err == sql.ErrNoRows {
+			return errUserCannotDeleteBook
+		}
+		return fmt.Errorf("error checking if book exists, %v", err)
+	}
+
+	query =
+		`
+			DELETE books WHERE id = $1 AND author_id = $2;
+		`
+
+	if _, err := s.store.ExecContext(ctx, query, bookID, userID); err != nil {
+		return fmt.Errorf("error deleting book, %v", err)
+	}
+	return nil
 }
 
 func (s *server) approveBook(ctx context.Context, bookID string) error {
