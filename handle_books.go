@@ -548,7 +548,6 @@ func (s *server) handleGetRecentlyUploadedBooks(w http.ResponseWriter, r *http.R
 //	@Success		200		{object}	main.handleGetBook.response
 //	@Router			/books/{bookID} [get]
 func (s *server) handleGetBook(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.URL.String())
 	type chaptersBookPreview struct {
 		ChapterNo  int    `json:"chapterNo"`
 		Title      string `json:"title"`
@@ -618,6 +617,7 @@ func (s *server) handleDeleteBook(w http.ResponseWriter, r *http.Request) {
 			encode(w, http.StatusBadRequest, &errorResponse{Error: err.Error()})
 			return
 		}
+		fmt.Printf("error, %v", err)
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return

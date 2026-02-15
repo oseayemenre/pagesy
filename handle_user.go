@@ -16,11 +16,11 @@ import (
 //	@Router			/users/me [get]
 func (s *server) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 	type response struct {
-		Email        string   `json:"email"`
-		Display_name string   `json:"display_name"`
-		Image        *string  `json:"image"`
-		About        *string  `json:"about"`
-		Roles        []string `json:"roles"`
+		Email       string   `json:"email"`
+		DisplayName string   `json:"displayName"`
+		Image       *string  `json:"image"`
+		About       *string  `json:"about"`
+		Roles       []string `json:"roles"`
 	}
 
 	id := r.Context().Value("user").(string)
@@ -43,5 +43,5 @@ func (s *server) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 		image = &user.image.String
 	}
 
-	encode(w, http.StatusOK, &response{Email: user.email, Display_name: user.displayName, Image: image, About: about, Roles: user.roles})
+	encode(w, http.StatusOK, &response{Email: user.email, DisplayName: user.displayName, Image: image, About: about, Roles: user.roles})
 }

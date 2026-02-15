@@ -601,24 +601,23 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 func (s *server) deleteBook(ctx context.Context, userID, bookID string) error {
 	query :=
 		`
-			SELECT 1 FROM books WHERE id = $1 AND author_id = 2;
+			DELETE FROM books WHERE id = $1 AND author_id = $2;
 		`
 
-	if err := s.store.QueryRowContext(ctx, query, bookID, userID).Scan(nil); err != nil {
-		if err == sql.ErrNoRows {
-			return errUserCannotDeleteBook
-		}
-		return fmt.Errorf("error checking if book exists, %v", err)
-	}
-
-	query =
-		`
-			DELETE books WHERE id = $1 AND author_id = $2;
-		`
-
-	if _, err := s.store.ExecContext(ctx, query, bookID, userID); err != nil {
+	results, err := s.store.ExecContext(ctx, query, bookID, userID)
+	if err != nil {
 		return fmt.Errorf("error deleting book, %v", err)
 	}
+
+	rows, err := results.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking number of rows affected, %v", err)
+	}
+
+	if rows == 0 {
+		return errUserCannotDeleteBook
+	}
+
 	return nil
 }
 

@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -34,8 +33,8 @@ func TestHandleUploadBook(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		cookie_name  string
-		cookie_value string
+		cookieName   string
+		cookieValue  string
 		req          map[string]string
 		expectedCode int
 	}{
@@ -45,14 +44,14 @@ func TestHandleUploadBook(t *testing.T) {
 		},
 		{
 			name:         "invalid/malformed token",
-			cookie_name:  "access_token",
-			cookie_value: "invalid token",
+			cookieName:   "access_token",
+			cookieValue:  "invalid token",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
-			name:         "chapter length and days not the same",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			name:        "chapter length and days not the same",
+			cookieName:  "access_token",
+			cookieValue: token,
 			req: map[string]string{
 				"name":                     "test book",
 				"description":              "test book description",
@@ -66,9 +65,9 @@ func TestHandleUploadBook(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 		},
 		{
-			name:         "chapter count is not convertible to int",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			name:        "chapter count is not convertible to int",
+			cookieName:  "access_token",
+			cookieValue: token,
 			req: map[string]string{
 				"name":                     "test book",
 				"description":              "test book description",
@@ -82,9 +81,9 @@ func TestHandleUploadBook(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 		},
 		{
-			name:         "validation error",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			name:        "validation error",
+			cookieName:  "access_token",
+			cookieValue: token,
 			req: map[string]string{
 				"name":                     "test book",
 				"description":              "test book description",
@@ -97,9 +96,9 @@ func TestHandleUploadBook(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 		},
 		{
-			name:         "book name taken",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			name:        "book name taken",
+			cookieName:  "access_token",
+			cookieValue: token,
 			req: map[string]string{
 				"name":                     "test book taken",
 				"description":              "test book description",
@@ -113,9 +112,9 @@ func TestHandleUploadBook(t *testing.T) {
 			expectedCode: http.StatusConflict,
 		},
 		{
-			name:         "genre not found",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			name:        "genre not found",
+			cookieName:  "access_token",
+			cookieValue: token,
 			req: map[string]string{
 				"name":                     "test book",
 				"description":              "test book description",
@@ -129,9 +128,9 @@ func TestHandleUploadBook(t *testing.T) {
 			expectedCode: http.StatusNotFound,
 		},
 		{
-			name:         "upload book",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			name:        "upload book",
+			cookieName:  "access_token",
+			cookieValue: token,
 			req: map[string]string{
 				"name":                     "test book",
 				"description":              "test book description",
@@ -157,7 +156,7 @@ func TestHandleUploadBook(t *testing.T) {
 
 			r := httptest.NewRequest(http.MethodPost, "/api/v1/books", body)
 			r.Header.Set("Content-Type", writer.FormDataContentType())
-			r.AddCookie(&http.Cookie{Name: tc.cookie_name, Value: tc.cookie_value})
+			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
 			svr := newServer(nil, db, nil)
@@ -239,8 +238,8 @@ func TestHandleGetBooksStats(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		cookie_name  string
-		cookie_value string
+		cookieName   string
+		cookieValue  string
 		path         string
 		expectedCode int
 	}{
@@ -251,29 +250,29 @@ func TestHandleGetBooksStats(t *testing.T) {
 		},
 		{
 			name:         "invalid/malformed token",
-			cookie_name:  "access_token",
-			cookie_value: "invalid token",
+			cookieName:   "access_token",
+			cookieValue:  "invalid token",
 			path:         "/api/v1/books/stats",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "offset isn't a valid number",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			path:         "/api/v1/books/stats?offset=invalid",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "limit isn't a valid number",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			path:         "/api/v1/books/stats?offset=1&limit=invalid",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "get books",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			path:         "/api/v1/books/stats?offset=1&limit=1",
 			expectedCode: http.StatusOK,
 		},
@@ -282,7 +281,7 @@ func TestHandleGetBooksStats(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
-			r.AddCookie(&http.Cookie{Name: tc.cookie_name, Value: tc.cookie_value})
+			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
 			svr := newServer(nil, db, nil)
@@ -307,8 +306,8 @@ func TestHandleGetRecentlyReadBooks(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		cookie_name  string
-		cookie_value string
+		cookieName   string
+		cookieValue  string
 		path         string
 		expectedCode int
 	}{
@@ -319,29 +318,29 @@ func TestHandleGetRecentlyReadBooks(t *testing.T) {
 		},
 		{
 			name:         "invalid/malformed token",
-			cookie_name:  "access_token",
-			cookie_value: "invalid token",
+			cookieName:   "access_token",
+			cookieValue:  "invalid token",
 			path:         "/api/v1/books/recently-read",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "offset isn't a valid number",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			path:         "/api/v1/books/recently-read?offset=invalid",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "limit isn't a valid number",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			path:         "/api/v1/books/recently-read?offset=1&limit=invalid",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "get recently read books",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			path:         "/api/v1/books/recently-read?offset=1&limit=1",
 			expectedCode: http.StatusOK,
 		},
@@ -350,7 +349,7 @@ func TestHandleGetRecentlyReadBooks(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
-			r.AddCookie(&http.Cookie{Name: tc.cookie_name, Value: tc.cookie_value})
+			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
 			svr := newServer(nil, db, nil)
@@ -375,8 +374,8 @@ func TestHandleGetRecentlyUploadedBooks(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		cookie_name  string
-		cookie_value string
+		cookieName   string
+		cookieValue  string
 		admin        bool
 		path         string
 		expectedCode int
@@ -388,38 +387,38 @@ func TestHandleGetRecentlyUploadedBooks(t *testing.T) {
 		},
 		{
 			name:         "invalid/malformed token",
-			cookie_name:  "access_token",
-			cookie_value: "invalid token",
+			cookieName:   "access_token",
+			cookieValue:  "invalid token",
 			path:         "/api/v1/books/recently-uploaded",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "role is not admin",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			path:         "/api/v1/books/recently-uploaded",
 			expectedCode: http.StatusUnauthorized,
 		},
 		{
 			name:         "offset isn't a valid number",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			admin:        true,
 			path:         "/api/v1/books/recently-uploaded?offset=invalid",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "limit isn't a valid number",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			admin:        true,
 			path:         "/api/v1/books/recently-uploaded?offset=1&limit=invalid",
 			expectedCode: http.StatusBadRequest,
 		},
 		{
 			name:         "get recently read books",
-			cookie_name:  "access_token",
-			cookie_value: token,
+			cookieName:   "access_token",
+			cookieValue:  token,
 			admin:        true,
 			path:         "/api/v1/books/recently-uploaded?offset=1&limit=1",
 			expectedCode: http.StatusOK,
@@ -438,7 +437,7 @@ func TestHandleGetRecentlyUploadedBooks(t *testing.T) {
 				}
 			}
 			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
-			r.AddCookie(&http.Cookie{Name: tc.cookie_name, Value: tc.cookie_value})
+			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
 			svr := newServer(nil, db, nil)
@@ -490,10 +489,68 @@ func TestHandleGetBook(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/books/%v", tc.bookID), nil)
 			rr := httptest.NewRecorder()
 
-			ctx := chi.NewRouteContext()
-			ctx.URLParams.Add("bookID", tc.bookID)
+			svr.router.ServeHTTP(rr, r)
 
-			svr.router.ServeHTTP(rr, r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx)))
+			if rr.Code != tc.expectedCode {
+				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
+			}
+		})
+	}
+}
+
+func TestHandleDeleteBook(t *testing.T) {
+	db := connectTestDb(t)
+	userID := createAndCleanUpUser(t, db)
+	token, err := createJWTToken(userID)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	bookID := createBook(t, userID, db)
+
+	tests := []struct {
+		name         string
+		cookieName   string
+		cookieValue  string
+		bookID       string
+		expectedCode int
+	}{
+		{
+			name:         "no access token cookie",
+			bookID:       uuid.NewString(),
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "invalid/malformed token",
+			cookieName:   "access_token",
+			cookieValue:  "invalid token",
+			bookID:       uuid.NewString(),
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "book not found/book does not belong to user",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			bookID:       uuid.NewString(),
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "delete book",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			bookID:       bookID,
+			expectedCode: http.StatusNoContent,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/books/%v", tc.bookID), nil)
+			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
+			rr := httptest.NewRecorder()
+
+			svr := newServer(nil, db, nil)
+			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
 				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
