@@ -791,8 +791,18 @@ func (s *server) approveBook(ctx context.Context, bookID string) error {
 			UPDATE books SET approved = 'true' WHERE id = $1;
 		`
 
-	if _, err := s.store.ExecContext(ctx, query, bookID); err != nil {
+	results, err := s.store.ExecContext(ctx, query, bookID)
+	if err != nil {
 		return fmt.Errorf("error approving book, %v", err)
 	}
+
+	rows, err := results.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking number of rows affected, %v", err)
+	}
+	if rows == 0 {
+		return errBookNotFound
+	}
+
 	return nil
 }
