@@ -135,7 +135,7 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 		return "", fmt.Errorf("error inserting in recently uploaded book, %v", err)
 	}
 
-	if err = tx.Commit(); err != nil {
+	if err := tx.Commit(); err != nil {
 		return "", fmt.Errorf("error commititng transaction, %v", err)
 	}
 
@@ -545,7 +545,7 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 		var genre string
 
 		if err := genreRows.Scan(&genre); err != nil {
-			return nil, fmt.Errorf("error scanning genre: %v", err)
+			return nil, fmt.Errorf("error scanning genre, %v", err)
 		}
 
 		book.genres = append(book.genres, genre)
@@ -567,7 +567,7 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 		var schedule releaseSchedule
 
 		if err := releaseScheduleRows.Scan(&schedule.Day, &schedule.Chapters); err != nil {
-			return nil, fmt.Errorf("error scanning release schedule: %v", err)
+			return nil, fmt.Errorf("error scanning release schedule, %v", err)
 		}
 
 		book.releaseSchedule = append(book.releaseSchedule, schedule)
@@ -580,7 +580,7 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 	chaptersRows, err := s.store.QueryContext(ctx, query, bookID)
 
 	if err != nil {
-		return nil, fmt.Errorf("error getting chapters: %v", err)
+		return nil, fmt.Errorf("error getting chapters, %v", err)
 	}
 
 	defer chaptersRows.Close()
@@ -589,7 +589,7 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 		var chapter chapter
 
 		if err := chaptersRows.Scan(&chapter.title, &chapter.chapterNo, &chapter.createdAt); err != nil {
-			return nil, fmt.Errorf("error scanning chapters: %v", err)
+			return nil, fmt.Errorf("error scanning chapters, %v", err)
 		}
 
 		book.chapters = append(book.chapters, chapter)
@@ -613,7 +613,6 @@ func (s *server) deleteBook(ctx context.Context, userID, bookID string) error {
 	if err != nil {
 		return fmt.Errorf("error checking number of rows affected, %v", err)
 	}
-
 	if rows == 0 {
 		return errUserCannotDeleteBook
 	}
@@ -622,6 +621,148 @@ func (s *server) deleteBook(ctx context.Context, userID, bookID string) error {
 }
 
 func (s *server) editBook(ctx context.Context, book *book) error {
+	index := 0
+	clauses := []string{}
+	arguments := []interface{}{}
+
+	if book.name != "" {
+		index++
+		clauses = append(clauses, fmt.Sprintf("name=$%d", index))
+		arguments = append(arguments, book.name)
+	}
+
+	if book.description != "" {
+		index++
+		clauses = append(clauses, fmt.Sprintf("description=$%d", index))
+		arguments = append(arguments, book.description)
+	}
+
+	if book.image.Valid != false {
+		index++
+		clauses = append(clauses, fmt.Sprintf("image=$%d", index))
+		arguments = append(arguments, book.image.String)
+	}
+
+	arguments = append(arguments, book.id, book.authorID)
+
+	if len(clauses) < 1 && len(book.releaseSchedule) < 1 && len(book.genres) < 1 {
+		return errShouldAtLeastPassOneFieldToUpdate
+	}
+
+	tx, err := s.store.Begin()
+
+	if err != nil {
+		return fmt.Errorf("error starting transaction, %v", err)
+	}
+
+	defer tx.Rollback()
+
+	query := fmt.Sprintf(`UPDATE books SET %v WHERE id = $%d AND author_id = $%d;`, strings.Join(clauses, ","), index+1, index+2)
+
+	if len(clauses) > 0 {
+		results, err := tx.ExecContext(ctx, query, arguments...)
+		if err != nil {
+			return fmt.Errorf("error updating book, %v", err)
+		}
+
+		rows, err := results.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("error checking number of rows affected, %v", err)
+		}
+		if rows == 0 {
+			return errBookNotFound
+		}
+	}
+
+	if len(book.releaseSchedule) > 0 {
+		query = `
+				DELETE FROM release_schedule WHERE book_id = $1;
+		`
+
+		_, err = tx.ExecContext(ctx, query, book.id)
+
+		clauses = []string{}
+		arguments = []interface{}{}
+		index = 1
+
+		for _, sched := range book.releaseSchedule {
+			clauses = append(clauses, fmt.Sprintf("($%d, $%d, $%d)", index, index+1, index+2))
+			arguments = append(arguments, book.id, sched.Day, sched.Chapters)
+			index += 3
+		}
+
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(`
+			INSERT INTO release_schedule(book_id, day, no_of_chapters)
+			VALUES %s; 
+			`, strings.Join(clauses, ",")), arguments...)
+
+		if err != nil {
+			return fmt.Errorf("error inserting release_schedule, %v", err)
+		}
+	}
+
+	if len(book.genres) > 0 {
+		query = `
+				DELETE FROM books_genres WHERE book_id = $1;
+		`
+
+		_, err = tx.ExecContext(ctx, query, book.id)
+
+		var genreIDs []string
+
+		var rows *sql.Rows
+
+		query := `
+				SELECT id FROM genres WHERE genres = ANY($1);
+		`
+
+		rows, err = tx.QueryContext(ctx, query, pq.Array(book.genres))
+
+		if err != nil {
+			return fmt.Errorf("error retrieving genre ids, %v", err)
+		}
+
+		defer rows.Close()
+
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("error scanning genre ids, %v", err)
+			}
+			genreIDs = append(genreIDs, id)
+		}
+
+		if len(genreIDs) != len(book.genres) {
+			return errGenresNotFound
+		}
+
+		clauses = []string{}
+		arguments = []interface{}{}
+		index = 1
+
+		for _, genreId := range genreIDs {
+			clauses = append(clauses, fmt.Sprintf("($%d, $%d)", index, index+1))
+			arguments = append(arguments, book.id, genreId)
+			index += 2
+		}
+
+		query = fmt.Sprintf(`
+				INSERT INTO books_genres(book_id, genre_id)
+				VALUES %s
+				ON CONFLICT DO NOTHING;
+				`, strings.Join(clauses, ","))
+
+		_, err = tx.ExecContext(ctx, query, arguments...)
+
+		if err != nil {
+			return fmt.Errorf("error inserting into book_genres, %v", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error commititng transaction, %v", err)
+	}
+
 	return nil
 }
 
