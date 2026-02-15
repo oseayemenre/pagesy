@@ -37,7 +37,7 @@ CREATE TYPE genre_type AS ENUM(
 
 CREATE TABLE IF NOT EXISTS books(
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  name TEXT NOT NULL,
+  name TEXT UNIQUE NOT NULL,
   description TEXT NOT NULL,
   image TEXT,
   views INT NOT NULL DEFAULT 0,

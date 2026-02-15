@@ -31,23 +31,22 @@ func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
 	defer tx.Rollback()
 
 	var id string
+
 	query :=
 		`
-				SELECT id FROM books WHERE name = $1;
+				INSERT INTO books (name, description, author_id, language) 
+				VALUES ($1, $2, $3, $4) 
+				ON CONFLICT (name) DO NOTHING
+				RETURNING id;
 			`
-	if err := tx.QueryRowContext(ctx, query, &book.name).Scan(&id); err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return "", fmt.Errorf("error checking book existence, %v", err)
-	}
-	if id != "" {
+
+	err = tx.QueryRowContext(ctx, query, &book.name, &book.description, &book.authorID, &book.language).Scan(&id)
+
+	if errors.Is(err, sql.ErrNoRows) {
 		return "", errBookNameAlreadyTaken
 	}
 
-	query =
-		`
-				INSERT INTO books (name, description, author_id, language) VALUES ($1, $2, $3, $4) RETURNING id;
-			`
-
-	if err := tx.QueryRowContext(ctx, query, &book.name, &book.description, &book.authorID, &book.language).Scan(&id); err != nil {
+	if err != nil {
 		return "", fmt.Errorf("error inserting book, %v", err)
 	}
 
@@ -518,7 +517,7 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 			GROUP BY b.id, u.display_name;
 		`
 	if err := s.store.QueryRowContext(ctx, query, bookID).Scan(&book.id, &book.name, &book.description, &book.image, &book.views, &book.rating, &book.language, &book.completed, &book.createdAt, &book.authorName, &book.chapterCount); err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errBookNotFound
 		}
 

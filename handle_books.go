@@ -617,7 +617,6 @@ func (s *server) handleDeleteBook(w http.ResponseWriter, r *http.Request) {
 			encode(w, http.StatusBadRequest, &errorResponse{Error: err.Error()})
 			return
 		}
-		fmt.Printf("error, %v", err)
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
