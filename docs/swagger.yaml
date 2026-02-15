@@ -619,6 +619,8 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Edit book
+      tags:
+      - books
   /books/bookID:
     delete:
       description: Delete book
@@ -641,7 +643,7 @@ paths:
             $ref: '#/definitions/main.errorResponse'
       summary: Delete book
       tags:
-      - book
+      - books
   /books/recently-read:
     get:
       description: Get recently read books

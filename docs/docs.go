@@ -481,7 +481,7 @@ const docTemplate = `{
             "delete": {
                 "description": "Delete book",
                 "tags": [
-                    "book"
+                    "books"
                 ],
                 "summary": "Delete book",
                 "parameters": [
@@ -697,6 +697,9 @@ const docTemplate = `{
                 ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "books"
                 ],
                 "summary": "Edit book",
                 "parameters": [

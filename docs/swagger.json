@@ -473,7 +473,7 @@
             "delete": {
                 "description": "Delete book",
                 "tags": [
-                    "book"
+                    "books"
                 ],
                 "summary": "Delete book",
                 "parameters": [
@@ -689,6 +689,9 @@
                 ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "books"
                 ],
                 "summary": "Edit book",
                 "parameters": [

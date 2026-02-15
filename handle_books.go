@@ -606,7 +606,7 @@ func (s *server) handleGetBook(w http.ResponseWriter, r *http.Request) {
 //
 //	@Summary		Delete book
 //	@Description	Delete book
-//	@Tags			book
+//	@Tags			books
 //	@Param			bookID	path		string	true	"book id"
 //	@Failure		400		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
@@ -629,6 +629,7 @@ func (s *server) handleDeleteBook(w http.ResponseWriter, r *http.Request) {
 //
 //	@Summary		Edit book
 //	@Description	Edit book
+//	@Tags			books
 //	@Accept			multipart/form-data
 //	@Produce		application/json
 //	@Param			bookID						path		string		true	"book id"
