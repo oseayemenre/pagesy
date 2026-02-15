@@ -762,3 +762,48 @@ func (s *server) handleEditBook(w http.ResponseWriter, r *http.Request) {
 
 	encode(w, http.StatusNoContent, nil)
 }
+
+// handleApproveBook godoc
+// @Summary Approve book
+// @Description Approve book
+// @Tags books
+// @Param bookID path string true "book id"
+// @Failure 401 {object} errorResponse
+// @Failure 404 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Success 204
+// @Router /api/v1/books/{bookID}/approval [patch]
+func (s *server) handleApproveBook(w http.ResponseWriter, r *http.Request) {
+	user, err := s.getUser(r.Context(), r.Context().Value("user").(string))
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	var isAdmin bool
+	for _, role := range user.roles {
+		if role == "ADMIN" {
+			isAdmin = true
+			break
+		}
+	}
+
+	if !isAdmin {
+		encode(w, http.StatusUnauthorized, &errorResponse{Error: "role is not admin"})
+		return
+	}
+
+	if err := s.approveBook(r.Context(), chi.URLParam(r, "bookID")); err != nil {
+		if errors.Is(err, errBookNotFound) {
+			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
+			return
+		}
+
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	encode(w, http.StatusNoContent, nil)
+}
