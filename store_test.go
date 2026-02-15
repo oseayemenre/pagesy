@@ -43,24 +43,15 @@ func createAndCleanUpUser(t *testing.T, db *sql.DB) string {
 	return id
 }
 
-func createAndCleanUpBook(t *testing.T, author_id string, db *sql.DB) string {
+func createBook(t *testing.T, author_id string, db *sql.DB) string {
 	var id string
 	query :=
 		`
-			INSERT INTO books(name, description, author_id) VALUES ('test book taken', 'test book description', $1) RETURNING id;
+			INSERT INTO books(name, description, author_id, approved) VALUES ('test book taken', 'test book description', $1, 'true') RETURNING id;
 		`
 	if err := db.QueryRowContext(context.Background(), query, author_id).Scan(&id); err != nil {
 		t.Errorf("error creating new book, %v", err)
 	}
 
-	t.Cleanup(func() {
-		query :=
-			`
-				DELETE FROM books WHERE name = 'test book taken';
-			`
-		if _, err := db.ExecContext(context.Background(), query); err != nil {
-			t.Errorf("error deleting book, %v", err)
-		}
-	})
 	return id
 }

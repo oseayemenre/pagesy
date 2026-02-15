@@ -273,7 +273,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 
 	if len(genre) > 0 && len(language) < 1 {
 		books, err := s.getBooksByGenre(r.Context(), genre, offset, limit, sort, order)
-		if err != nil && errors.Is(err, errNoBooksUnderGenre) {
+		if err != nil && !errors.Is(err, errNoBooksUnderGenre) {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
@@ -285,7 +285,8 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 
 	if len(genre) < 1 && len(language) > 0 {
 		books, err := s.getBooksByLanguage(r.Context(), language, offset, limit, sort, order)
-		if err != nil && errors.Is(err, errNoBooksUnderLanguage) {
+		if err != nil && !errors.Is(err, errNoBooksUnderLanguage) {
+			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
 		}
@@ -296,7 +297,7 @@ func (s *server) handleGetBooks(w http.ResponseWriter, r *http.Request) {
 
 	if len(genre) > 0 && len(language) > 0 {
 		books, err := s.getBooksByGenreAndLanguage(r.Context(), genre, language, offset, limit, sort, order)
-		if err != nil && errors.Is(err, errNoBooksUnderGenreAndLanguage) {
+		if err != nil && !errors.Is(err, errNoBooksUnderGenreAndLanguage) {
 			s.logger.Error(err.Error())
 			encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 			return
@@ -547,6 +548,7 @@ func (s *server) handleGetRecentlyUploadedBooks(w http.ResponseWriter, r *http.R
 //	@Success		200		{object}	main.handleGetBook.response
 //	@Router			/books/{bookID} [get]
 func (s *server) handleGetBook(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(r.URL.String())
 	type chaptersBookPreview struct {
 		ChapterNo  int    `json:"chapterNo"`
 		Title      string `json:"title"`

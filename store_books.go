@@ -514,7 +514,7 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 			JOIN chapters c ON (c.book_id = b.id)
 			WHERE b.id = $1 
 			AND b.approved = true
-			GROUP BY b.id, u.display_name; 
+			GROUP BY b.id, u.display_name;
 		`
 	if err := s.store.QueryRowContext(ctx, query, bookID).Scan(&book.id, &book.name, &book.description, &book.image, &book.views, &book.rating, &book.language, &book.completed, &book.createdAt, &book.authorName, &book.chapterCount); err != nil {
 		if err == sql.ErrNoRows {
@@ -595,4 +595,16 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 	}
 
 	return &book, nil
+}
+
+func (s *server) approveBook(ctx context.Context, bookID string) error {
+	query :=
+		`
+			UPDATE books SET approved = 'true' WHERE id = $1;
+		`
+
+	if _, err := s.store.ExecContext(ctx, query, bookID); err != nil {
+		return fmt.Errorf("error approving book, %v", err)
+	}
+	return nil
 }

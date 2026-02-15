@@ -3,10 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 func TestHandleUploadBook(t *testing.T) {
@@ -26,7 +30,7 @@ func TestHandleUploadBook(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	createAndCleanUpBook(t, id, db)
+	createBook(t, id, db)
 
 	tests := []struct {
 		name         string
@@ -169,7 +173,7 @@ func TestHandleUploadBook(t *testing.T) {
 func TestHandleGetBooks(t *testing.T) {
 	db := connectTestDb(t)
 	id := createAndCleanUpUser(t, db)
-	createAndCleanUpBook(t, id, db)
+	createBook(t, id, db)
 
 	tests := []struct {
 		name         string
@@ -231,7 +235,7 @@ func TestHandleGetBooksStats(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	createAndCleanUpBook(t, id, db)
+	createBook(t, id, db)
 
 	tests := []struct {
 		name         string
@@ -299,7 +303,7 @@ func TestHandleGetRecentlyReadBooks(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	createAndCleanUpBook(t, id, db)
+	createBook(t, id, db)
 
 	tests := []struct {
 		name         string
@@ -367,7 +371,7 @@ func TestHandleGetRecentlyUploadedBooks(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	createAndCleanUpBook(t, id, db)
+	createBook(t, id, db)
 
 	tests := []struct {
 		name         string
@@ -439,6 +443,57 @@ func TestHandleGetRecentlyUploadedBooks(t *testing.T) {
 
 			svr := newServer(nil, db, nil)
 			svr.router.ServeHTTP(rr, r)
+
+			if rr.Code != tc.expectedCode {
+				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
+			}
+		})
+	}
+}
+
+func TestHandleGetBook(t *testing.T) {
+	db := connectTestDb(t)
+	userID := createAndCleanUpUser(t, db)
+
+	tests := []struct {
+		name         string
+		bookID       string
+		expectedCode int
+	}{
+		{
+			name:         "book not found",
+			bookID:       uuid.NewString(),
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "get book",
+			expectedCode: http.StatusOK,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			svr := newServer(nil, db, nil)
+
+			if tc.bookID == "" {
+				bookID, err := svr.uploadBook(context.Background(), &book{name: "test-book", description: "test-book description", authorID: userID, genres: []string{"Action"}, draftChapter: draftChapter{Title: "draft chapter title", Content: "draft chapter content"}, language: "English", releaseSchedule: []releaseSchedule{{Day: "Monday", Chapters: 1}}})
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if err := svr.approveBook(context.Background(), bookID); err != nil {
+					t.Fatal(err)
+				}
+				tc.bookID = bookID
+			}
+
+			r := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/books/%v", tc.bookID), nil)
+			rr := httptest.NewRecorder()
+
+			ctx := chi.NewRouteContext()
+			ctx.URLParams.Add("bookID", tc.bookID)
+
+			svr.router.ServeHTTP(rr, r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, ctx)))
 
 			if rr.Code != tc.expectedCode {
 				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)

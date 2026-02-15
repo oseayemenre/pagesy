@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 )
 
@@ -26,6 +27,7 @@ func (s *server) handleGetProfile(w http.ResponseWriter, r *http.Request) {
 
 	user, err := s.getUser(r.Context(), id)
 	if err != nil {
+		fmt.Printf("error, %v", err)
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
