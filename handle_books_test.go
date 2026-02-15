@@ -559,7 +559,7 @@ func TestHandleDeleteBook(t *testing.T) {
 	}
 }
 
-func TestEditBook(t *testing.T) {
+func TestHandleEditBook(t *testing.T) {
 	db := connectTestDb(t)
 	userID := createAndCleanUpUser(t, db)
 	token, err := createJWTToken(userID)
@@ -653,6 +653,85 @@ func TestEditBook(t *testing.T) {
 			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
+			svr.router.ServeHTTP(rr, r)
+
+			if rr.Code != tc.expectedCode {
+				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
+			}
+		})
+	}
+}
+
+func TestHandleApproveBook(t *testing.T) {
+	db := connectTestDb(t)
+	userID := createAndCleanUpUser(t, db)
+	token, err := createJWTToken(userID)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	tests := []struct {
+		name         string
+		cookieName   string
+		cookieValue  string
+		bookID       string
+		admin        bool
+		expectedCode int
+	}{
+		{
+			name:         "no access token cookie",
+			bookID:       uuid.NewString(),
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "invalid/malformed token",
+			cookieName:   "access_token",
+			cookieValue:  "invalid token",
+			bookID:       uuid.NewString(),
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "role is not admin",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			bookID:       uuid.NewString(),
+			expectedCode: http.StatusUnauthorized,
+		},
+		{
+			name:         "book not found",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			bookID:       uuid.NewString(),
+			admin:        true,
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "approve book",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			bookID:       createBook(t, userID, db),
+			admin:        true,
+			expectedCode: http.StatusNoContent,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.admin == true {
+				query :=
+					`
+						UPDATE users SET roles = ARRAY['ADMIN']::role_type[] WHERE display_name = 'test_display';
+					`
+				if _, err := db.ExecContext(context.Background(), query); err != nil {
+					t.Fatalf("error updating users, %v", err)
+				}
+			}
+
+			r := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/books/%v/approval", tc.bookID), nil)
+			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
+			rr := httptest.NewRecorder()
+
+			svr := newServer(nil, db, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
