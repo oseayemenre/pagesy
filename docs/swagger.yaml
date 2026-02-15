@@ -220,33 +220,6 @@ info:
   title: Pagesy
   version: "1.0"
 paths:
-  /api/v1/books/{bookID}/approval:
-    patch:
-      description: Approve book
-      parameters:
-      - description: book id
-        in: path
-        name: bookID
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No Content
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/main.errorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/main.errorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/main.errorResponse'
-      summary: Approve book
-      tags:
-      - books
   /auth/google:
     get:
       description: Sign in with google
@@ -646,6 +619,56 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Edit book
+      tags:
+      - books
+  /books/{bookID}/approve:
+    patch:
+      description: Approve book
+      parameters:
+      - description: book id
+        in: path
+        name: bookID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Approve book
+      tags:
+      - books
+  /books/{bookID}/complete:
+    patch:
+      description: Complete book
+      parameters:
+      - description: book id
+        in: path
+        name: bookID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Complete book
       tags:
       - books
   /books/bookID:

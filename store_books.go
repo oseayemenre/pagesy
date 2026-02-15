@@ -806,3 +806,7 @@ func (s *server) approveBook(ctx context.Context, bookID string) error {
 
 	return nil
 }
+
+func (s *server) completeBook(ctx context.Context, bookID string) error {
+	return nil
+}

@@ -773,7 +773,7 @@ func (s *server) handleEditBook(w http.ResponseWriter, r *http.Request) {
 //	@Failure		404		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
 //	@Success		204
-//	@Router			/api/v1/books/{bookID}/approval [patch]
+//	@Router			/books/{bookID}/approve [patch]
 func (s *server) handleApproveBook(w http.ResponseWriter, r *http.Request) {
 	user, err := s.getUser(r.Context(), r.Context().Value("user").(string))
 	if err != nil {
@@ -796,6 +796,31 @@ func (s *server) handleApproveBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.approveBook(r.Context(), chi.URLParam(r, "bookID")); err != nil {
+		if errors.Is(err, errBookNotFound) {
+			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
+			return
+		}
+
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	encode(w, http.StatusNoContent, nil)
+}
+
+// handleCompleteBook godoc
+//
+//	@Summary		Complete book
+//	@Description	Complete book
+//	@Tags			books
+//	@Param			bookID	path		string	true	"book id"
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		204
+//	@Router			/books/{bookID}/complete [patch]
+func (s *server) handleCompleteBook(w http.ResponseWriter, r *http.Request) {
+	if err := s.completeBook(r.Context(), r.Context().Value("user").(string)); err != nil {
 		if errors.Is(err, errBookNotFound) {
 			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
 			return
