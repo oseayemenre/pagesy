@@ -62,7 +62,7 @@ func (s *server) handleUploadBook(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 
 	if err := r.ParseMultipartForm(8 << 20); err != nil {
-		encode(w, http.StatusInternalServerError, &errorResponse{Error: fmt.Sprintf("error parsing multipart form, %v", err)})
+		encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("error parsing multipart form, %v", err)})
 		return
 	}
 	defer r.MultipartForm.RemoveAll()
@@ -609,13 +609,14 @@ func (s *server) handleGetBook(w http.ResponseWriter, r *http.Request) {
 //	@Tags			books
 //	@Param			bookID	path		string	true	"book id"
 //	@Failure		400		{object}	errorResponse
+//	@Failure		404		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
 //	@Success		204
 //	@Router			/books/bookID [delete]
 func (s *server) handleDeleteBook(w http.ResponseWriter, r *http.Request) {
 	if err := s.deleteBook(r.Context(), r.Context().Value("user").(string), chi.URLParam(r, "bookID")); err != nil {
-		if errors.Is(err, errUserCannotDeleteBook) {
-			encode(w, http.StatusBadRequest, &errorResponse{Error: err.Error()})
+		if errors.Is(err, errBookNotFound) {
+			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
 			return
 		}
 		s.logger.Error(err.Error())
@@ -650,7 +651,7 @@ func (s *server) handleEditBook(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
 
 	if err := r.ParseMultipartForm(8 << 20); err != nil {
-		encode(w, http.StatusInternalServerError, &errorResponse{Error: fmt.Sprintf("error parsing multipart form, %v", err)})
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "should at least pass one field to update"})
 		return
 	}
 	defer r.MultipartForm.RemoveAll()
@@ -749,13 +750,8 @@ func (s *server) handleEditBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.editBook(r.Context(), book); err != nil {
-		if errors.Is(err, errShouldAtLeastPassOneFieldToUpdate) {
-			encode(w, http.StatusBadRequest, err)
-			return
-		}
-
 		if errors.Is(err, errBookNotFound) {
-			encode(w, http.StatusNotFound, err)
+			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
 			return
 		}
 

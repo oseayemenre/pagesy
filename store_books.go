@@ -11,15 +11,13 @@ import (
 )
 
 var (
-	errGenresNotFound                    = errors.New("genres not found")
-	errBookNameAlreadyTaken              = errors.New("book name already taken")
-	errNoBooksUnderGenre                 = errors.New("no books under genre")
-	errNoBooksUnderLanguage              = errors.New("no books under language")
-	errNoBooksUnderGenreAndLanguage      = errors.New("no books under genre and language")
-	errUserHasNoBooks                    = errors.New("user has no books")
-	errBookNotFound                      = errors.New("book not found")
-	errUserCannotDeleteBook              = errors.New("user cannot delete book")
-	errShouldAtLeastPassOneFieldToUpdate = errors.New("should at least pass one field to update")
+	errGenresNotFound               = errors.New("genres not found")
+	errBookNameAlreadyTaken         = errors.New("book name already taken")
+	errNoBooksUnderGenre            = errors.New("no books under genre")
+	errNoBooksUnderLanguage         = errors.New("no books under language")
+	errNoBooksUnderGenreAndLanguage = errors.New("no books under genre and language")
+	errUserHasNoBooks               = errors.New("user has no books")
+	errBookNotFound                 = errors.New("book not found")
 )
 
 func (s *server) uploadBook(ctx context.Context, book *book) (string, error) {
@@ -551,9 +549,10 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 		book.genres = append(book.genres, genre)
 	}
 
-	query = `
+	query =
+		`
 			SELECT day, no_of_chapters FROM release_schedule WHERE book_id = $1;
-	`
+		`
 
 	releaseScheduleRows, err := s.store.QueryContext(ctx, query, bookID)
 
@@ -573,9 +572,10 @@ func (s *server) getBook(ctx context.Context, bookID string) (*book, error) {
 		book.releaseSchedule = append(book.releaseSchedule, schedule)
 	}
 
-	query = `
+	query =
+		`
 			SELECT title, chapter_no, created_at FROM chapters WHERE book_id = $1;
-	`
+		`
 
 	chaptersRows, err := s.store.QueryContext(ctx, query, bookID)
 
@@ -614,7 +614,7 @@ func (s *server) deleteBook(ctx context.Context, userID, bookID string) error {
 		return fmt.Errorf("error checking number of rows affected, %v", err)
 	}
 	if rows == 0 {
-		return errUserCannotDeleteBook
+		return errBookNotFound
 	}
 
 	return nil
@@ -645,10 +645,6 @@ func (s *server) editBook(ctx context.Context, book *book) error {
 
 	arguments = append(arguments, book.id, book.authorID)
 
-	if len(clauses) < 1 && len(book.releaseSchedule) < 1 && len(book.genres) < 1 {
-		return errShouldAtLeastPassOneFieldToUpdate
-	}
-
 	tx, err := s.store.Begin()
 
 	if err != nil {
@@ -675,11 +671,23 @@ func (s *server) editBook(ctx context.Context, book *book) error {
 	}
 
 	if len(book.releaseSchedule) > 0 {
-		query = `
+		query =
+			`
 				DELETE FROM release_schedule WHERE book_id = $1;
-		`
+			`
 
-		_, err = tx.ExecContext(ctx, query, book.id)
+		results, err := tx.ExecContext(ctx, query, book.id)
+		if err != nil {
+			return fmt.Errorf("error deleting release schedule, %v", err)
+		}
+
+		rows, err := results.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("error checking number of rows affected, %v", err)
+		}
+		if rows == 0 {
+			return errBookNotFound
+		}
 
 		clauses = []string{}
 		arguments = []interface{}{}
@@ -702,31 +710,42 @@ func (s *server) editBook(ctx context.Context, book *book) error {
 	}
 
 	if len(book.genres) > 0 {
-		query = `
+		query =
+			`
 				DELETE FROM books_genres WHERE book_id = $1;
-		`
+			`
 
-		_, err = tx.ExecContext(ctx, query, book.id)
+		results, err := tx.ExecContext(ctx, query, book.id)
+		if err != nil {
+			return fmt.Errorf("error deleting book genres, %v", err)
+		}
+
+		rows, err := results.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("error checking number of rows affected, %v", err)
+		}
+		if rows == 0 {
+			return errBookNotFound
+		}
 
 		var genreIDs []string
 
-		var rows *sql.Rows
-
-		query := `
+		query :=
+			`
 				SELECT id FROM genres WHERE genres = ANY($1);
-		`
+			`
 
-		rows, err = tx.QueryContext(ctx, query, pq.Array(book.genres))
+		genreRows, err := tx.QueryContext(ctx, query, pq.Array(book.genres))
 
 		if err != nil {
 			return fmt.Errorf("error retrieving genre ids, %v", err)
 		}
 
-		defer rows.Close()
+		defer genreRows.Close()
 
-		for rows.Next() {
+		for genreRows.Next() {
 			var id string
-			if err := rows.Scan(&id); err != nil {
+			if err := genreRows.Scan(&id); err != nil {
 				return fmt.Errorf("error scanning genre ids, %v", err)
 			}
 			genreIDs = append(genreIDs, id)
