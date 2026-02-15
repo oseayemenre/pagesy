@@ -602,6 +602,16 @@ func (s *server) handleGetBook(w http.ResponseWriter, r *http.Request) {
 	encode(w, http.StatusOK, &response{Name: book.name, Description: book.description, Image: image, Views: book.views, Rating: book.rating, Genres: book.genres, Completed: book.completed, ChapterCount: book.chapterCount, Chapters: chaptersPreviews, Release_schedule: schedule})
 }
 
+// handleDeleteBook
+//
+//	@Summary		Delete book
+//	@Description	Delete book
+//	@Tags			book
+//	@Param			bookID	path		string	true	"book id"
+//	@Failure		400		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		204
+//	@Router			/books/bookID [delete]
 func (s *server) handleDeleteBook(w http.ResponseWriter, r *http.Request) {
 	if err := s.deleteBook(r.Context(), r.Context().Value("user").(string), chi.URLParam(r, "bookID")); err != nil {
 		if errors.Is(err, errUserCannotDeleteBook) {
