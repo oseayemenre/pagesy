@@ -785,13 +785,13 @@ func (s *server) editBook(ctx context.Context, book *book) error {
 	return nil
 }
 
-func (s *server) approveBook(ctx context.Context, bookID string) error {
+func (s *server) approveBook(ctx context.Context, bookID string, approve bool) error {
 	query :=
 		`
-			UPDATE books SET approved = 'true' WHERE id = $1;
+			UPDATE books SET approved = $1 WHERE id = $2;
 		`
 
-	results, err := s.store.ExecContext(ctx, query, bookID)
+	results, err := s.store.ExecContext(ctx, query, approve, bookID)
 	if err != nil {
 		return fmt.Errorf("error approving book, %v", err)
 	}
@@ -807,13 +807,13 @@ func (s *server) approveBook(ctx context.Context, bookID string) error {
 	return nil
 }
 
-func (s *server) completeBook(ctx context.Context, userID, bookID string) error {
+func (s *server) completeBook(ctx context.Context, userID, bookID string, complete bool) error {
 	query :=
 		`
-			UPDATE books SET completed = 'true' WHERE id = $1 AND author_id = $2;
+			UPDATE books SET completed = $1 WHERE id = $2 AND author_id = $3;
 		`
 
-	results, err := s.store.ExecContext(ctx, query, bookID, userID)
+	results, err := s.store.ExecContext(ctx, query, complete, bookID, userID)
 	if err != nil {
 		return fmt.Errorf("error marking book as complete, %v", err)
 	}

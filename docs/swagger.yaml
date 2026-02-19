@@ -61,6 +61,13 @@ definitions:
       views:
         type: integer
     type: object
+  main.handleApproveBook.request:
+    properties:
+      approve:
+        type: boolean
+    required:
+    - approve
+    type: object
   main.handleAuthLogin.request:
     properties:
       email:
@@ -91,6 +98,13 @@ definitions:
     required:
     - email
     - password
+    type: object
+  main.handleCompleteBook.request:
+    properties:
+      complete:
+        type: boolean
+    required:
+    - complete
     type: object
   main.handleGetBook.chaptersBookPreview:
     properties:
@@ -204,6 +218,24 @@ definitions:
         type: string
     type: object
   main.handleUploadBook.response:
+    properties:
+      id:
+        type: string
+    type: object
+  main.handleUploadChapter.request:
+    properties:
+      chapterNo:
+        type: integer
+      content:
+        type: string
+      title:
+        type: string
+    required:
+    - chapterNo
+    - content
+    - title
+    type: object
+  main.handleUploadChapter.response:
     properties:
       id:
         type: string
@@ -630,9 +662,19 @@ paths:
         name: bookID
         required: true
         type: string
+      - description: approve book body
+        in: body
+        name: param
+        required: true
+        schema:
+          $ref: '#/definitions/main.handleApproveBook.request'
       responses:
         "204":
           description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
         "401":
           description: Unauthorized
           schema:
@@ -648,6 +690,40 @@ paths:
       summary: Approve book
       tags:
       - books
+  /books/{bookID}/chapters:
+    post:
+      consumes:
+      - application/json
+      description: Upload chapter
+      parameters:
+      - description: upload chapter body
+        in: body
+        name: param
+        required: true
+        schema:
+          $ref: '#/definitions/main.handleUploadChapter.request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.handleUploadChapter.response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Upload chapter
+      tags:
+      - chapters
   /books/{bookID}/complete:
     patch:
       description: Complete book
@@ -657,9 +733,19 @@ paths:
         name: bookID
         required: true
         type: string
+      - description: complete book body
+        in: body
+        name: param
+        required: true
+        schema:
+          $ref: '#/definitions/main.handleCompleteBook.request'
       responses:
         "204":
           description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
         "404":
           description: Not Found
           schema:

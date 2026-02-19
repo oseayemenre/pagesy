@@ -27,6 +27,14 @@ services:
       - RUSTFS_CONSOLE_ENABLE=true
     volumes:
       - rustfs-data:/data
+
+  queue:
+    image: rabbitmq:4.2.4-management-alpine
+    container_name: pagesy_queue
+    restart: unless-stopped
+    ports:
+      - 5672:5672
+      - 15672:15672
     
 volumes:
   db:

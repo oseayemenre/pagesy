@@ -768,13 +768,19 @@ func (s *server) handleEditBook(w http.ResponseWriter, r *http.Request) {
 //	@Summary		Approve book
 //	@Description	Approve book
 //	@Tags			books
-//	@Param			bookID	path		string	true	"book id"
+//	@Param			bookID	path		string							true	"book id"
+//	@Param			param	body		main.handleApproveBook.request	true	"approve book body"
+//	@Failure		400		{object}	errorResponse
 //	@Failure		401		{object}	errorResponse
 //	@Failure		404		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
 //	@Success		204
 //	@Router			/books/{bookID}/approve [patch]
 func (s *server) handleApproveBook(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		Approve bool `json:"approve" validate:"required"`
+	}
+
 	user, err := s.getUser(r.Context(), r.Context().Value("user").(string))
 	if err != nil {
 		s.logger.Error(err.Error())
@@ -795,7 +801,17 @@ func (s *server) handleApproveBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.approveBook(r.Context(), chi.URLParam(r, "bookID")); err != nil {
+	var params request
+	if err := decode(r, &params); err != nil {
+		if errors.Is(err, errValidation) {
+			encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("invalid data, %v", err)})
+			return
+		}
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "invalid json"})
+		return
+	}
+
+	if err := s.approveBook(r.Context(), chi.URLParam(r, "bookID"), params.Approve); err != nil {
 		if errors.Is(err, errBookNotFound) {
 			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
 			return
@@ -814,13 +830,29 @@ func (s *server) handleApproveBook(w http.ResponseWriter, r *http.Request) {
 //	@Summary		Complete book
 //	@Description	Complete book
 //	@Tags			books
-//	@Param			bookID	path		string	true	"book id"
+//	@Param			bookID	path		string							true	"book id"
+//	@Param			param	body		main.handleCompleteBook.request	true	"complete book body"
+//	@Failure		400		{object}	errorResponse
 //	@Failure		404		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
 //	@Success		204
 //	@Router			/books/{bookID}/complete [patch]
 func (s *server) handleCompleteBook(w http.ResponseWriter, r *http.Request) {
-	if err := s.completeBook(r.Context(), r.Context().Value("user").(string), chi.URLParam(r, "bookID")); err != nil {
+	type request struct {
+		Complete bool `json:"complete" validate:"required"`
+	}
+
+	var params request
+	if err := decode(r, &params); err != nil {
+		if errors.Is(err, errValidation) {
+			encode(w, http.StatusBadRequest, &errorResponse{Error: fmt.Sprintf("invalid data, %v", err)})
+			return
+		}
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "invalid json"})
+		return
+	}
+
+	if err := s.completeBook(r.Context(), r.Context().Value("user").(string), chi.URLParam(r, "bookID"), params.Complete); err != nil {
 		if errors.Is(err, errBookNotFound) {
 			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
 			return

@@ -38,7 +38,7 @@ func (s *server) routes() {
 	s.router.Patch("/api/v1/books/{bookID}/approve", authenticatedUser(s.handleApproveBook))
 	s.router.Patch("/api/v1/books/{bookID}/complete", authenticatedUser(s.handleCompleteBook))
 
-	s.router.Post("/api/v1/books/{bookID}/chapters", nil)
+	s.router.Post("/api/v1/books/{bookID}/chapters", authenticatedUser(s.handleUploadChapter))
 	s.router.Get("/api/v1/books/{bookID}/chapters/{chapterID}", nil)
 	s.router.Delete("/api/v1/books/{bookID}/chapters/{chapterID}", nil)
 	s.router.Get("/api/v1/books/{bookID}/chapters/{chapterID}/pages/{pageNumber}", nil)
@@ -62,6 +62,7 @@ func (s *server) routes() {
 	s.router.HandleFunc("/api/v1/ws", authenticatedUser(s.handleWS))
 	s.router.Post("/webhook", nil)
 	s.router.Patch("/users/{userID}/ban", nil)
+	s.router.Get("/users/{userID}/notifications", nil)
 }
 
 func authenticatedUser(next http.HandlerFunc) http.HandlerFunc {

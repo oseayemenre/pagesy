@@ -810,14 +810,81 @@ const docTemplate = `{
                         "name": "bookID",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "approve book body",
+                        "name": "param",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.handleApproveBook.request"
+                        }
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "No Content"
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/books/{bookID}/chapters": {
+            "post": {
+                "description": "Upload chapter",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chapters"
+                ],
+                "summary": "Upload chapter",
+                "parameters": [
+                    {
+                        "description": "upload chapter body",
+                        "name": "param",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.handleUploadChapter.request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.handleUploadChapter.response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/main.errorResponse"
                         }
@@ -851,11 +918,26 @@ const docTemplate = `{
                         "name": "bookID",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "complete book body",
+                        "name": "param",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.handleCompleteBook.request"
+                        }
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
                     },
                     "404": {
                         "description": "Not Found",
@@ -993,6 +1075,17 @@ const docTemplate = `{
                 }
             }
         },
+        "main.handleApproveBook.request": {
+            "type": "object",
+            "required": [
+                "approve"
+            ],
+            "properties": {
+                "approve": {
+                    "type": "boolean"
+                }
+            }
+        },
         "main.handleAuthLogin.request": {
             "type": "object",
             "required": [
@@ -1037,6 +1130,17 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "minLength": 8
+                }
+            }
+        },
+        "main.handleCompleteBook.request": {
+            "type": "object",
+            "required": [
+                "complete"
+            ],
+            "properties": {
+                "complete": {
+                    "type": "boolean"
                 }
             }
         },
@@ -1212,6 +1316,33 @@ const docTemplate = `{
             }
         },
         "main.handleUploadBook.response": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.handleUploadChapter.request": {
+            "type": "object",
+            "required": [
+                "chapterNo",
+                "content",
+                "title"
+            ],
+            "properties": {
+                "chapterNo": {
+                    "type": "integer"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.handleUploadChapter.response": {
             "type": "object",
             "properties": {
                 "id": {

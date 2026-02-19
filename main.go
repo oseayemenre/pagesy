@@ -22,6 +22,11 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/oseayemenre/pagesy/docs"
+	amqp "github.com/rabbitmq/amqp091-go"
+)
+
+const (
+	queueChapterUploaded = "book.chapter_uploaded"
 )
 
 type server struct {
@@ -30,15 +35,17 @@ type server struct {
 	store       *sql.DB
 	objectStore objectStore
 	hub         *hub
+	ch          *amqp.Channel
 }
 
-func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore) *server {
+func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore, ch *amqp.Channel) *server {
 	s := &server{
 		router:      chi.NewRouter(),
 		logger:      logger,
 		store:       store,
 		objectStore: objectStore,
 		hub:         newHub(),
+		ch:          ch,
 	}
 	go s.run()
 	s.routes()
@@ -89,12 +96,37 @@ func main() {
 		logger.Error(fmt.Sprintf("error pinging db, %v", err))
 		os.Exit(1)
 	}
+	defer db.Close()
 	logger.Info("db connected")
 
 	docs.SwaggerInfo.Host = os.Getenv("SWAGGER_HOST")
 	docs.SwaggerInfo.Schemes = []string{os.Getenv("SWAGGER_SCHEME")}
 
-	svr := newServer(logger, db, objectStore)
+	logger.Info("connecting to queue...")
+	conn, err := amqp.Dial(os.Getenv("RABBIT_MQ_CONN"))
+	if err != nil {
+		logger.Error(fmt.Sprintf("error connecting to rabbitmq, %v", err))
+		os.Exit(1)
+	}
+	defer conn.Close()
+	logger.Info("queue connected")
+
+	logger.Info("opening channel...")
+	ch, err := conn.Channel()
+	if err != nil {
+		logger.Error(fmt.Sprintf("error opening channel, %v", err))
+		os.Exit(1)
+	}
+	defer ch.Close()
+	logger.Info("channel opened")
+
+	_, err = ch.QueueDeclare(queueChapterUploaded, true, false, false, false, nil)
+	if err != nil {
+		logger.Error(fmt.Sprintf("error declaring queue, %v", err))
+		os.Exit(1)
+	}
+
+	svr := newServer(logger, db, objectStore, ch)
 	port := *flag.String("a", ":3000", "server address")
 	flag.Parse()
 	httpSvr := &http.Server{

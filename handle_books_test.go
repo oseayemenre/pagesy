@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -159,7 +160,7 @@ func TestHandleUploadBook(t *testing.T) {
 			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
@@ -216,7 +217,7 @@ func TestHandleGetBooks(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, tc.path, nil)
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
@@ -284,7 +285,7 @@ func TestHandleGetBooksStats(t *testing.T) {
 			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
@@ -352,7 +353,7 @@ func TestHandleGetRecentlyReadBooks(t *testing.T) {
 			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
@@ -440,7 +441,7 @@ func TestHandleGetRecentlyUploadedBooks(t *testing.T) {
 			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
@@ -472,7 +473,7 @@ func TestHandleGetBook(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 
 			if tc.bookID == "" {
 				bookID, err := svr.uploadBook(context.Background(), &book{name: "test-book", description: "test-book description", authorID: userID, genres: []string{"Action"}, draftChapter: draftChapter{Title: "draft chapter title", Content: "draft chapter content"}, language: "English", releaseSchedule: []releaseSchedule{{Day: "Monday", Chapters: 1}}})
@@ -480,7 +481,7 @@ func TestHandleGetBook(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if err := svr.approveBook(context.Background(), bookID); err != nil {
+				if err := svr.approveBook(context.Background(), bookID, true); err != nil {
 					t.Fatal(err)
 				}
 				tc.bookID = bookID
@@ -549,7 +550,7 @@ func TestHandleDeleteBook(t *testing.T) {
 			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
@@ -638,7 +639,7 @@ func TestHandleEditBook(t *testing.T) {
 				writer.Close()
 			}
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 
 			if tc.bookID == "" {
 				bookID, err := svr.uploadBook(context.Background(), &book{name: "test-book", description: "test-book description", authorID: userID, genres: []string{"Action"}, draftChapter: draftChapter{Title: "draft chapter title", Content: "draft chapter content"}, language: "English", releaseSchedule: []releaseSchedule{{Day: "Monday", Chapters: 1}}})
@@ -676,6 +677,7 @@ func TestHandleApproveBook(t *testing.T) {
 		cookieValue  string
 		bookID       string
 		admin        bool
+		body         any
 		expectedCode int
 	}{
 		{
@@ -698,19 +700,34 @@ func TestHandleApproveBook(t *testing.T) {
 			expectedCode: http.StatusUnauthorized,
 		},
 		{
-			name:         "book not found",
+			name:         "validation error",
 			cookieName:   "access_token",
 			cookieValue:  token,
 			bookID:       uuid.NewString(),
 			admin:        true,
+			body:         struct{ name string }{name: "invalid structure"},
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:        "book not found",
+			cookieName:  "access_token",
+			cookieValue: token,
+			bookID:      uuid.NewString(),
+			admin:       true,
+			body: struct {
+				Approve bool `json:"approve"`
+			}{Approve: true},
 			expectedCode: http.StatusNotFound,
 		},
 		{
-			name:         "approve book",
-			cookieName:   "access_token",
-			cookieValue:  token,
-			bookID:       createBook(t, userID, db),
-			admin:        true,
+			name:        "approve book",
+			cookieName:  "access_token",
+			cookieValue: token,
+			bookID:      createBook(t, userID, db),
+			admin:       true,
+			body: struct {
+				Approve bool `json:"approve"`
+			}{Approve: true},
 			expectedCode: http.StatusNoContent,
 		},
 	}
@@ -727,11 +744,12 @@ func TestHandleApproveBook(t *testing.T) {
 				}
 			}
 
-			r := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/books/%v/approve", tc.bookID), nil)
+			body, _ := json.Marshal(tc.body)
+			r := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/books/%v/approve", tc.bookID), bytes.NewReader(body))
 			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
@@ -754,6 +772,7 @@ func TestHandleCompleteBook(t *testing.T) {
 		cookieName   string
 		cookieValue  string
 		bookID       string
+		body         any
 		expectedCode int
 	}{
 		{
@@ -769,28 +788,43 @@ func TestHandleCompleteBook(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 		},
 		{
-			name:         "book not found",
+			name:         "validation error",
 			cookieName:   "access_token",
 			cookieValue:  token,
 			bookID:       uuid.NewString(),
+			body:         struct{ name string }{name: "invalid structure"},
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:        "book not found",
+			cookieName:  "access_token",
+			cookieValue: token,
+			bookID:      uuid.NewString(),
+			body: struct {
+				Complete bool `json:"complete"`
+			}{Complete: true},
 			expectedCode: http.StatusNotFound,
 		},
 		{
-			name:         "mark book as complete",
-			cookieName:   "access_token",
-			cookieValue:  token,
-			bookID:       createBook(t, userID, db),
+			name:        "mark book as complete",
+			cookieName:  "access_token",
+			cookieValue: token,
+			bookID:      createBook(t, userID, db),
+			body: struct {
+				Complete bool `json:"complete"`
+			}{Complete: true},
 			expectedCode: http.StatusNoContent,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			r := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/books/%v/complete", tc.bookID), nil)
+			body, _ := json.Marshal(tc.body)
+			r := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/books/%v/complete", tc.bookID), bytes.NewReader(body))
 			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
 			rr := httptest.NewRecorder()
 
-			svr := newServer(nil, db, nil)
+			svr := newServer(nil, db, nil, nil)
 			svr.router.ServeHTTP(rr, r)
 
 			if rr.Code != tc.expectedCode {
