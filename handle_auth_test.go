@@ -98,7 +98,7 @@ func TestHandleAuthLogin(t *testing.T) {
 		{
 			name:         "log in user",
 			body:         request{Email: "test@test.com", Password: "test_password"},
-			expectedCode: http.StatusOK,
+			expectedCode: http.StatusNoContent,
 		},
 	}
 

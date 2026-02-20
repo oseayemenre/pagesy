@@ -29,16 +29,20 @@ const (
 	queueChapterUploaded = "book.chapter_uploaded"
 )
 
+type channel interface {
+	PublishWithContext(context.Context, string, string, bool, bool, amqp.Publishing) error
+}
+
 type server struct {
 	router      chi.Router
 	logger      *slog.Logger
 	store       *sql.DB
 	objectStore objectStore
 	hub         *hub
-	ch          *amqp.Channel
+	ch          channel
 }
 
-func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore, ch *amqp.Channel) *server {
+func newServer(logger *slog.Logger, store *sql.DB, objectStore objectStore, ch channel) *server {
 	s := &server{
 		router:      chi.NewRouter(),
 		logger:      logger,
