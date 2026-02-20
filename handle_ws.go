@@ -89,12 +89,7 @@ func (s *server) handleNewBookEvent(event *event) {
 		return
 	}
 	for _, client := range s.hub.admins {
-		select {
-		case client.send <- body:
-		default:
-			delete(s.hub.admins, client.id)
-			close(client.send)
-		}
+		client.send <- body
 	}
 }
 
@@ -103,12 +98,7 @@ func (s *server) handleNewChapterUploadedEvent(event *event) {
 
 	if room, ok := s.hub.rooms[payload.BookId]; ok {
 		for _, client := range room {
-			select {
-			case client.send <- []byte(payload.Message):
-			default:
-				delete(s.hub.rooms[payload.BookId], client.id)
-				close(client.send)
-			}
+			client.send <- []byte(payload.Message)
 		}
 	}
 }
@@ -183,7 +173,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	newClient := &client{id: userID, conn: conn, send: make(chan []byte, 256)}
+	newClient := &client{id: userID, conn: conn, send: make(chan []byte)}
 	go newClient.writePump()
 
 	if isAdmin == true {

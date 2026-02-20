@@ -85,7 +85,6 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 //	@Failure		413				{object}	errorResponse
 //	@Failure		500				{object}	errorResponse
 //	@Success		201				{object}	main.handleAuthOnboarding.response
-//	@Header			201				{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
 //	@Router			/auth/onboarding [post]
 func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 	type request struct {
@@ -229,7 +228,6 @@ func (s *server) handleAuthOnboarding(w http.ResponseWriter, r *http.Request) {
 //	@Failure		409		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
 //	@Success		302
-//	@Header			302	{string}	Set-Cookie	"app_session"
 //	@Router			/auth/register [post]
 func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 	type request struct {
@@ -270,7 +268,7 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 
 	session, _ := gothic.Store.Get(r, "app_session")
 	session.Values["user_email"] = user.Email
-	session.Values["user_password"] = hash
+	session.Values["user_password"] = string(hash)
 	session.Save(r, w)
 	http.Redirect(w, r, "/healthz", http.StatusFound) //TODO: put a proper redirect link here when there's a frontend
 }
@@ -287,8 +285,7 @@ func (s *server) handleAuthRegister(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401		{object}	errorResponse
 //	@Failure		404		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
-//	@Success		200
-//	@Header			200	{string}	Set-Cookie	"access_token=12345 refresh_token=12345"
+//	@Success		204
 //	@Router			/auth/login [post]
 func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	type request struct {
@@ -336,7 +333,7 @@ func (s *server) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	encode(w, http.StatusOK, nil)
+	encode(w, http.StatusNoContent, nil)
 }
 
 // handleAuthLogout godoc

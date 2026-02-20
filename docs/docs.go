@@ -57,14 +57,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
-                        "headers": {
-                            "Set-Cookie": {
-                                "type": "string",
-                                "description": "access_token=12345 refresh_token=12345"
-                            }
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -153,12 +147,6 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/main.handleAuthOnboarding.response"
-                        },
-                        "headers": {
-                            "Set-Cookie": {
-                                "type": "string",
-                                "description": "access_token=12345 refresh_token=12345"
-                            }
                         }
                     },
                     "400": {
@@ -249,13 +237,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "302": {
-                        "description": "Found",
-                        "headers": {
-                            "Set-Cookie": {
-                                "type": "string",
-                                "description": "app_session"
-                            }
-                        }
+                        "description": "Found"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -866,6 +848,13 @@ const docTemplate = `{
                 ],
                 "summary": "Upload chapter",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book id",
+                        "name": "bookID",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "description": "upload chapter body",
                         "name": "param",

@@ -74,7 +74,6 @@ func main() {
 
 	for d := range msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		defer cancel()
 		var userIDs []string
 
 		var newMsg message
@@ -90,23 +89,27 @@ func main() {
 
 		rows, err := db.QueryContext(ctx, query, newMsg.BookID)
 		if err != nil {
+			cancel()
 			logger.Error(fmt.Sprintf("error querying library, %v", err))
 			d.Nack(false, true)
 			continue
 		}
-		defer rows.Close()
 
 		for rows.Next() {
 			var userID string
 			if err := rows.Scan(&userID); err != nil {
+				rows.Close()
+				cancel()
 				logger.Error(fmt.Sprintf("error scanning user id, %v", err))
 				d.Nack(false, true)
 				continue
 			}
 			userIDs = append(userIDs, userID)
 		}
+		rows.Close()
 
 		if len(userIDs) == 0 {
+			cancel()
 			d.Nack(false, false)
 			continue
 		}
@@ -121,10 +124,11 @@ func main() {
 			count += 3
 		}
 
-		query = fmt.Sprintf("INSERT INTO notifications (user_id, book_id, message) VALUES %v;", strings.Join(values, ","))
+		query = fmt.Sprintf("INSERT INTO notifications (user_id, book_id, message) VALUES %v ON CONFLICT DO NOTHING;", strings.Join(values, ","))
 
 		_, err = db.ExecContext(ctx, query, args...)
 		if err != nil {
+			cancel()
 			logger.Error(fmt.Sprintf("error inserting user notifications, %v", err))
 			d.Nack(false, true)
 			continue
@@ -132,6 +136,7 @@ func main() {
 		cancel()
 
 		if err := d.Ack(false); err != nil {
+			cancel()
 			logger.Error(fmt.Sprintf("error acknowledging message, %v", err))
 			d.Nack(false, true)
 			continue

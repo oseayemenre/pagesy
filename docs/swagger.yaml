@@ -278,12 +278,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
-          headers:
-            Set-Cookie:
-              description: access_token=12345 refresh_token=12345
-              type: string
+        "204":
+          description: No Content
         "400":
           description: Bad Request
           schema:
@@ -341,10 +337,6 @@ paths:
       responses:
         "201":
           description: Created
-          headers:
-            Set-Cookie:
-              description: access_token=12345 refresh_token=12345
-              type: string
           schema:
             $ref: '#/definitions/main.handleAuthOnboarding.response'
         "400":
@@ -406,10 +398,6 @@ paths:
       responses:
         "302":
           description: Found
-          headers:
-            Set-Cookie:
-              description: app_session
-              type: string
         "400":
           description: Bad Request
           schema:
@@ -696,6 +684,11 @@ paths:
       - application/json
       description: Upload chapter
       parameters:
+      - description: book id
+        in: path
+        name: bookID
+        required: true
+        type: string
       - description: upload chapter body
         in: body
         name: param

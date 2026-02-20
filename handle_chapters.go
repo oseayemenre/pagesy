@@ -17,6 +17,7 @@ import (
 //	@Tags			chapters
 //	@Accept			json
 //	@Produce		json
+//	@Param			bookID	path		string								true	"book id"
 //	@Param			param	body		main.handleUploadChapter.request	true	"upload chapter body"
 //	@Failure		400		{object}	errorResponse
 //	@Failure		404		{object}	errorResponse
@@ -88,7 +89,7 @@ func (s *server) handleUploadChapter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.hub.broadcast <- &event{Type: CHAPTER_UPLOADED, Payload: &chapterUploadEvent{BookId: bookID, Message: message}}
+	s.hub.broadcast <- &event{Type: CHAPTER_UPLOADED, Payload: chapterUploadEvent{BookId: bookID, Message: message}}
 
 	encode(w, http.StatusCreated, &response{Id: id})
 }
