@@ -108,6 +108,7 @@ func (s *server) run() {
 		select {
 		case client := <-s.hub.connectAdmin:
 			s.hub.admins[client.id] = client
+			s.hub.regular[client.id] = client
 		case client := <-s.hub.connectRegular:
 			s.hub.regular[client.id] = client
 		case ru := <-s.hub.joinRoom:
@@ -121,6 +122,10 @@ func (s *server) run() {
 		case id := <-s.hub.disconnectAdmin:
 			if client, ok := s.hub.admins[id]; ok {
 				delete(s.hub.admins, id)
+				client.conn.Close()
+			}
+			if client, ok := s.hub.regular[id]; ok {
+				delete(s.hub.regular, id)
 				client.conn.Close()
 			}
 		case id := <-s.hub.disconnectRegular:

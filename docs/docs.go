@@ -133,13 +133,6 @@ const docTemplate = `{
                         "description": "profile_picture",
                         "name": "image",
                         "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "app_session=12345",
-                        "name": "Cookie",
-                        "in": "header",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -459,30 +452,29 @@ const docTemplate = `{
                 }
             }
         },
-        "/books/bookID": {
-            "delete": {
-                "description": "Delete book",
-                "tags": [
-                    "books"
+        "/books/chapters/{chapterID}": {
+            "get": {
+                "description": "Get chapter",
+                "produces": [
+                    "application/json"
                 ],
-                "summary": "Delete book",
+                "tags": [
+                    "chapters"
+                ],
+                "summary": "Get chapter",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "book id",
-                        "name": "bookID",
-                        "in": "path",
-                        "required": true
+                        "description": "chapter id",
+                        "name": "chapterID",
+                        "in": "path"
                     }
                 ],
                 "responses": {
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "description": "Bad Request",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/main.errorResponse"
+                            "$ref": "#/definitions/main.handleGetChapter.response"
                         }
                     },
                     "404": {
@@ -662,6 +654,45 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/main.handleGetBook.response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete book",
+                "tags": [
+                    "books"
+                ],
+                "summary": "Delete book",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book id",
+                        "name": "bookID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
                         }
                     },
                     "404": {
@@ -1225,6 +1256,20 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/main.bookStats"
                     }
+                }
+            }
+        },
+        "main.handleGetChapter.response": {
+            "type": "object",
+            "properties": {
+                "chapterNo": {
+                    "type": "integer"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },

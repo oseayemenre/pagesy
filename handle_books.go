@@ -612,7 +612,7 @@ func (s *server) handleGetBook(w http.ResponseWriter, r *http.Request) {
 //	@Failure		404		{object}	errorResponse
 //	@Failure		500		{object}	errorResponse
 //	@Success		204
-//	@Router			/books/bookID [delete]
+//	@Router			/books/{bookID} [delete]
 func (s *server) handleDeleteBook(w http.ResponseWriter, r *http.Request) {
 	if err := s.deleteBook(r.Context(), r.Context().Value("user").(string), chi.URLParam(r, "bookID")); err != nil {
 		if errors.Is(err, errBookNotFound) {

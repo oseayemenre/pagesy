@@ -168,6 +168,15 @@ definitions:
           $ref: '#/definitions/main.bookStats'
         type: array
     type: object
+  main.handleGetChapter.response:
+    properties:
+      chapterNo:
+        type: integer
+      content:
+        type: string
+      title:
+        type: string
+    type: object
   main.handleGetProfile.response:
     properties:
       about:
@@ -327,11 +336,6 @@ paths:
         in: formData
         name: image
         type: file
-      - description: app_session=12345
-        in: header
-        name: Cookie
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -550,6 +554,32 @@ paths:
       tags:
       - books
   /books/{bookID}:
+    delete:
+      description: Delete book
+      parameters:
+      - description: book id
+        in: path
+        name: bookID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Delete book
+      tags:
+      - books
     get:
       description: Get a single book
       parameters:
@@ -750,22 +780,21 @@ paths:
       summary: Complete book
       tags:
       - books
-  /books/bookID:
-    delete:
-      description: Delete book
+  /books/chapters/{chapterID}:
+    get:
+      description: Get chapter
       parameters:
-      - description: book id
+      - description: chapter id
         in: path
-        name: bookID
-        required: true
+        name: chapterID
         type: string
+      produces:
+      - application/json
       responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
+        "200":
+          description: OK
           schema:
-            $ref: '#/definitions/main.errorResponse'
+            $ref: '#/definitions/main.handleGetChapter.response'
         "404":
           description: Not Found
           schema:
@@ -774,9 +803,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/main.errorResponse'
-      summary: Delete book
+      summary: Get chapter
       tags:
-      - books
+      - chapters
   /books/recently-read:
     get:
       description: Get recently read books

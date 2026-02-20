@@ -54,12 +54,10 @@ func (s *server) handleUploadChapter(w http.ResponseWriter, r *http.Request) {
 		content:   params.Content,
 		bookID:    bookID,
 	})
-
 	if errors.Is(err, errBookNotFound) {
 		encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
 		return
 	}
-
 	if err != nil {
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
@@ -92,4 +90,36 @@ func (s *server) handleUploadChapter(w http.ResponseWriter, r *http.Request) {
 	s.hub.broadcast <- &event{Type: CHAPTER_UPLOADED, Payload: chapterUploadEvent{BookId: bookID, Message: message}}
 
 	encode(w, http.StatusCreated, &response{Id: id})
+}
+
+// handleGetChapter godoc
+//
+//	@Summary		Get chapter
+//	@Description	Get chapter
+//	@Tags			chapters
+//	@Produce		json
+//	@Param			chapterID	path		string	truex	"chapter id"
+//	@Failure		404			{object}	errorResponse
+//	@Failure		500			{object}	errorResponse
+//	@Success		200			{object}	main.handleGetChapter.response
+//	@Router			/books/chapters/{chapterID} [get]
+func (s *server) handleGetChapter(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		ChapterNo int    `json:"chapterNo"`
+		Title     string `json:"title"`
+		Content   string `json:"content"`
+	}
+
+	ch, err := s.getChapter(r.Context(), chi.URLParam(r, "chapterID"))
+	if errors.Is(err, errChapterNotFound) {
+		encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
+		return
+	}
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	encode(w, http.StatusOK, &response{Title: ch.title, ChapterNo: ch.chapterNo, Content: ch.content})
 }

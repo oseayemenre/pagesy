@@ -2,7 +2,13 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+)
+
+var (
+	errChapterNotFound = errors.New("chapter not found")
 )
 
 func (s *server) uploadChapter(ctx context.Context, userID string, ch *chapter) (string, error) {
@@ -33,4 +39,28 @@ func (s *server) uploadChapter(ctx context.Context, userID string, ch *chapter) 
 	}
 
 	return id, nil
+}
+
+func (s *server) getChapter(ctx context.Context, bookID string) (*chapter, error) {
+	var ch chapter
+
+	query :=
+		`
+			SELECT 
+				chapter_no, 
+				title, 
+				content 
+			FROM chapters c
+			JOIN books b ON (c.book_id = b.id)
+			WHERE c.id = $1 AND b.approved = true;
+		`
+
+	if err := s.store.QueryRowContext(ctx, query, bookID).Scan(&ch.chapterNo, &ch.title, &ch.content); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errChapterNotFound
+		}
+		return nil, fmt.Errorf("error scanning chapter, %v", err)
+	}
+
+	return &ch, nil
 }

@@ -79,7 +79,6 @@ func (s *server) handleAuthGoogleCallback(w http.ResponseWriter, r *http.Request
 //	@Param			display_name	formData	string	true	"display name"
 //	@Param			about			formData	string	false	"about"
 //	@Param			image			formData	file	false	"profile_picture"
-//	@Param			Cookie			header		string	true	"app_session=12345"
 //	@Failure		400				{object}	errorResponse
 //	@Failure		404				{object}	errorResponse
 //	@Failure		413				{object}	errorResponse

@@ -38,10 +38,10 @@ func (s *server) routes() {
 	s.router.Patch("/api/v1/books/{bookID}/approve", authenticatedUser(s.handleApproveBook))
 	s.router.Patch("/api/v1/books/{bookID}/complete", authenticatedUser(s.handleCompleteBook))
 
-	s.router.Post("/api/v1/books/{bookID}/chapters", authenticatedUser(s.handleUploadChapter))
-	s.router.Get("/api/v1/books/{bookID}/chapters/{chapterID}", nil)
+	s.router.Post("/api/v1/books/chapters", authenticatedUser(s.handleUploadChapter))
+	s.router.Get("/api/v1/books/chapters/{chapterID}", authenticatedUser(s.handleGetChapter))
 	s.router.Delete("/api/v1/books/{bookID}/chapters/{chapterID}", nil)
-	s.router.Get("/api/v1/books/{bookID}/chapters/{chapterID}/pages/{pageNumber}", nil)
+	s.router.Get("/api/v1/books/chapters/{chapterID}/pages/{pageNumber}", nil)
 
 	s.router.Post("/api/v1/books/{bookID}/comments", nil)
 	s.router.Get("/api/v1/books/{bookID}/comments", nil)
