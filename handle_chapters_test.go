@@ -107,3 +107,69 @@ func TestHandleUploadChapter(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleGetChapter(t *testing.T) {
+	db := connectTestDb(t)
+	userID := createAndCleanUpUser(t, db)
+	token, err := createJWTToken(userID)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	svr := newServer(nil, db, nil, nil)
+	chapterID, err := svr.uploadChapter(context.Background(), userID, &chapter{title: "test chapter", chapterNo: 1, content: "test chapter content", bookID: createBook(t, userID, db)})
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	tests := []struct {
+		name         string
+		cookieName   string
+		cookieValue  string
+		chapterID    string
+		mockChannel  channel
+		expectedCode int
+	}{
+		{
+			name:         "no access token cookie",
+			chapterID:    uuid.NewString(),
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "invalid/malformed token",
+			cookieName:   "access_token",
+			cookieValue:  "invalid token",
+			chapterID:    uuid.NewString(),
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "chapter not found",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			chapterID:    uuid.NewString(),
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "get chapter",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			chapterID:    chapterID,
+			expectedCode: http.StatusOK,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/books/chapters/%v", tc.chapterID), nil)
+			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
+			rr := httptest.NewRecorder()
+
+			svr.router.ServeHTTP(rr, r)
+
+			if rr.Code != tc.expectedCode {
+				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
+			}
+		})
+	}
+
+}
