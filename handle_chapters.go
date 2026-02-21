@@ -110,13 +110,14 @@ func (s *server) handleGetChapter(w http.ResponseWriter, r *http.Request) {
 		Content   string `json:"content"`
 	}
 
-	ch, err := s.getChapter(r.Context(), chi.URLParam(r, "chapterID"))
+	ch, err := s.getChapter(r.Context(), r.Context().Value("user").(string), chi.URLParam(r, "chapterID"))
 	if errors.Is(err, errChapterNotFound) {
 		encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
 		return
 	}
 	if err != nil {
-		s.logger.Error(err.Error())
+		fmt.Printf("get chapter error: %v\n", err)
+		// s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}

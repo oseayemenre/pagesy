@@ -51,12 +51,13 @@ func (s *server) uploadChapter(ctx context.Context, userID string, ch *chapter) 
 	return id, nil
 }
 
-func (s *server) getChapter(ctx context.Context, bookID string) (*chapter, error) {
+func (s *server) getChapter(ctx context.Context, userID, bookID string) (*chapter, error) {
 	var ch chapter
 
 	query :=
 		`
-			SELECT 
+			SELECT
+				book_id,
 				chapter_no, 
 				title, 
 				content 
@@ -65,11 +66,25 @@ func (s *server) getChapter(ctx context.Context, bookID string) (*chapter, error
 			WHERE c.id = $1 AND b.approved = true;
 		`
 
-	if err := s.store.QueryRowContext(ctx, query, bookID).Scan(&ch.chapterNo, &ch.title, &ch.content); err != nil {
+	if err := s.store.QueryRowContext(ctx, query, bookID).Scan(&ch.bookID, &ch.chapterNo, &ch.title, &ch.content); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errChapterNotFound
 		}
 		return nil, fmt.Errorf("error scanning chapter, %v", err)
+	}
+
+	query =
+		`
+			INSERT INTO recent_books(user_id, book_id, chapter)
+			VALUES ($1, $2, $3)
+			ON CONFLICT (user_id, book_id)
+			DO UPDATE SET 
+				chapter = EXCLUDED.chapter, 
+				updated_at = NOW();
+		`
+
+	if _, err := s.store.ExecContext(ctx, query, userID, ch.bookID, ch.chapterNo); err != nil {
+		return nil, fmt.Errorf("error inserting into recent books, %v", err)
 	}
 
 	return &ch, nil
