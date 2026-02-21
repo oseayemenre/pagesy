@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -25,7 +26,7 @@ func TestHandleUploadBook(t *testing.T) {
 
 	db := connectTestDb(t)
 	id := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(id)
+	token, err := createJWTToken(id, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -230,7 +231,7 @@ func TestHandleGetBooks(t *testing.T) {
 func TestHandleGetBooksStats(t *testing.T) {
 	db := connectTestDb(t)
 	id := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(id)
+	token, err := createJWTToken(id, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -298,7 +299,7 @@ func TestHandleGetBooksStats(t *testing.T) {
 func TestHandleGetRecentlyReadBooks(t *testing.T) {
 	db := connectTestDb(t)
 	id := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(id)
+	token, err := createJWTToken(id, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -366,7 +367,7 @@ func TestHandleGetRecentlyReadBooks(t *testing.T) {
 func TestHandleGetRecentlyUploadedBooks(t *testing.T) {
 	db := connectTestDb(t)
 	id := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(id)
+	token, err := createJWTToken(id, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -502,7 +503,7 @@ func TestHandleGetBook(t *testing.T) {
 func TestHandleDeleteBook(t *testing.T) {
 	db := connectTestDb(t)
 	userID := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(userID)
+	token, err := createJWTToken(userID, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -563,7 +564,7 @@ func TestHandleDeleteBook(t *testing.T) {
 func TestHandleEditBook(t *testing.T) {
 	db := connectTestDb(t)
 	userID := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(userID)
+	token, err := createJWTToken(userID, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -666,7 +667,7 @@ func TestHandleEditBook(t *testing.T) {
 func TestHandleApproveBook(t *testing.T) {
 	db := connectTestDb(t)
 	userID := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(userID)
+	token, err := createJWTToken(userID, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -762,7 +763,7 @@ func TestHandleApproveBook(t *testing.T) {
 func TestHandleCompleteBook(t *testing.T) {
 	db := connectTestDb(t)
 	userID := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(userID)
+	token, err := createJWTToken(userID, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

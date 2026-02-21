@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"io"
 	"net/http"
@@ -387,7 +388,7 @@ func (s *server) handleAuthRefreshToken(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	access_token, err := createJWTToken(id)
+	access_token, err := createJWTToken(id, 24*time.Hour)
 	if err != nil {
 		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})

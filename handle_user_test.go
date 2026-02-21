@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestHandleGetProfile(t *testing.T) {
@@ -14,7 +15,7 @@ func TestHandleGetProfile(t *testing.T) {
 
 	db := connectTestDb(t)
 	id := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(id)
+	token, err := createJWTToken(id, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

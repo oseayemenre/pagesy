@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -22,7 +23,7 @@ func (*mc) PublishWithContext(_ context.Context, _, _ string, _, _ bool, _ amqp.
 func TestHandleUploadChapter(t *testing.T) {
 	db := connectTestDb(t)
 	userID := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(userID)
+	token, err := createJWTToken(userID, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -111,7 +112,7 @@ func TestHandleUploadChapter(t *testing.T) {
 func TestHandleGetChapter(t *testing.T) {
 	db := connectTestDb(t)
 	userID := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(userID)
+	token, err := createJWTToken(userID, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -176,7 +177,7 @@ func TestHandleGetChapter(t *testing.T) {
 func TestHandleDeleteChapter(t *testing.T) {
 	db := connectTestDb(t)
 	userID := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(userID)
+	token, err := createJWTToken(userID, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -254,7 +255,7 @@ func TestHandleDeleteChapter(t *testing.T) {
 func TestHandleEditChapter(t *testing.T) {
 	db := connectTestDb(t)
 	userID := createAndCleanUpUser(t, db)
-	token, err := createJWTToken(userID)
+	token, err := createJWTToken(userID, 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

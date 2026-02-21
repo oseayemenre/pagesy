@@ -14,12 +14,12 @@ type userClaims struct {
 	jwt.RegisteredClaims
 }
 
-func createJWTToken(id string) (string, error) {
+func createJWTToken(id string, t time.Duration) (string, error) {
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &userClaims{
 		Id: id,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "pagesy",
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(t)),
 		},
 	}).SignedString([]byte(os.Getenv("JWT_SECRET")))
 
@@ -42,12 +42,12 @@ func decodeJWTToken(token string) (string, error) {
 }
 
 func createAccessAndRefreshTokens(w http.ResponseWriter, id string) error {
-	accessToken, err := createJWTToken(id)
+	accessToken, err := createJWTToken(id, 24*time.Hour)
 	if err != nil {
 		return err
 	}
 
-	refreshToken, err := createJWTToken(id)
+	refreshToken, err := createJWTToken(id, 30*24*time.Hour)
 	if err != nil {
 		return err
 	}

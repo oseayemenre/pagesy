@@ -3,10 +3,11 @@ package main
 import (
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestCreateJWTToken(t *testing.T) {
-	token, err := createJWTToken("123")
+	token, err := createJWTToken("123", 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -23,7 +24,7 @@ func TestCreateJWTToken(t *testing.T) {
 }
 
 func TestDecodeJWTToken(t *testing.T) {
-	token, err := createJWTToken("123")
+	token, err := createJWTToken("123", 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

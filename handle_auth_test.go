@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestHandleAuthRegister(t *testing.T) {
@@ -152,7 +153,7 @@ func TestHandleAuthRefreshToken(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh-token", nil)
 	rr := httptest.NewRecorder()
 
-	token, err := createJWTToken("123")
+	token, err := createJWTToken("123", 5*time.Second)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
