@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -87,6 +88,45 @@ func (s *server) deleteChapter(ctx context.Context, userID, bookID, chapterID st
 	results, err := s.store.ExecContext(ctx, query, chapterID)
 	if err != nil {
 		return fmt.Errorf("error deleting chapter, %v", err)
+	}
+
+	rows, err := results.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking number of rows affected, %v", err)
+	}
+	if rows == 0 {
+		return errChapterNotFound
+	}
+
+	return nil
+}
+
+func (s *server) editChapter(ctx context.Context, userID string, ch *chapter) error {
+	if err := s.checkIfBookBelongsToUser(ctx, ch.bookID, userID); err != nil {
+		return err
+	}
+
+	index := 1
+	var values []string
+	var args []any
+
+	if ch.content != "" {
+		values = append(values, fmt.Sprintf("content=$%v", index))
+		args = append(args, ch.content)
+		index++
+	}
+	if ch.title != "" {
+		values = append(values, fmt.Sprintf("title=$%v", index))
+		args = append(args, ch.title)
+		index++
+	}
+
+	query := fmt.Sprintf("UPDATE chapters SET %v WHERE id = $%v;", strings.Join(values, ","), index)
+	args = append(args, ch.id)
+
+	results, err := s.store.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("error updating chapter chapter, %v", err)
 	}
 
 	rows, err := results.RowsAffected()

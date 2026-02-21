@@ -106,6 +106,13 @@ definitions:
     required:
     - complete
     type: object
+  main.handleEditChapter.request:
+    properties:
+      content:
+        type: string
+      title:
+        type: string
+    type: object
   main.handleGetBook.chaptersBookPreview:
     properties:
       chapterNo:
@@ -775,6 +782,44 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Delete chapter
+      tags:
+      - chapters
+    patch:
+      description: Edit chapter
+      parameters:
+      - description: book id
+        in: path
+        name: bookID
+        required: true
+        type: string
+      - description: chapter id
+        in: path
+        name: chapterID
+        required: true
+        type: string
+      - description: edit chapter body
+        in: body
+        name: param
+        schema:
+          $ref: '#/definitions/main.handleEditChapter.request'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Edit chapter
       tags:
       - chapters
   /books/{bookID}/complete:

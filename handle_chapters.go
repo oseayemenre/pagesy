@@ -149,3 +149,47 @@ func (s *server) handleDeleteChapter(w http.ResponseWriter, r *http.Request) {
 
 	encode(w, http.StatusNoContent, nil)
 }
+
+// handleEditChapter godoc
+//
+//	@Summary		Edit chapter
+//	@Description	Edit chapter
+//	@Tags			chapters
+//	@Produce		json
+//	@Param			bookID		path		string							true	"book id"
+//	@Param			chapterID	path		string							true	"chapter id"
+//	@Param			param		body		main.handleEditChapter.request	false	"edit chapter body"
+//	@Failure		400			{object}	errorResponse
+//	@Failure		404			{object}	errorResponse
+//	@Failure		500			{object}	errorResponse
+//	@Success		204
+//	@Router			/books/{bookID}/chapters/{chapterID} [patch]
+func (s *server) handleEditChapter(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	}
+
+	var params request
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "invalid json"})
+		return
+	}
+
+	if params.Title == "" && params.Content == "" {
+		encode(w, http.StatusBadRequest, &errorResponse{Error: "should at least pass one field to update"})
+		return
+	}
+
+	if err := s.editChapter(r.Context(), r.Context().Value("user").(string), &chapter{id: chi.URLParam(r, "chapterID"), title: params.Title, content: params.Content, bookID: chi.URLParam(r, "bookID")}); err != nil {
+		if errors.Is(err, errBookNotFound) || errors.Is(err, errChapterNotFound) {
+			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
+			return
+		}
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	encode(w, http.StatusNoContent, nil)
+}

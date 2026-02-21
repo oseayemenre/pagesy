@@ -26,6 +26,7 @@ type draftChapter struct {
 }
 
 type chapter struct {
+	id        string
 	title     string
 	chapterNo int
 	content   string
