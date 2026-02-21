@@ -747,6 +747,36 @@ paths:
       summary: Upload chapter
       tags:
       - chapters
+  /books/{bookID}/chapters/{chapterID}:
+    delete:
+      description: Delete chapter
+      parameters:
+      - description: book id
+        in: path
+        name: bookID
+        required: true
+        type: string
+      - description: chapter id
+        in: path
+        name: chapterID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Delete chapter
+      tags:
+      - chapters
   /books/{bookID}/complete:
     patch:
       description: Complete book
@@ -787,6 +817,7 @@ paths:
       - description: chapter id
         in: path
         name: chapterID
+        required: true
         type: string
       produces:
       - application/json

@@ -40,7 +40,7 @@ func (s *server) routes() {
 
 	s.router.Post("/api/v1/books/{bookID}/chapters", authenticatedUser(s.handleUploadChapter))
 	s.router.Get("/api/v1/books/chapters/{chapterID}", authenticatedUser(s.handleGetChapter))
-	s.router.Delete("/api/v1/books/{bookID}/chapters/{chapterID}", nil)
+	s.router.Delete("/api/v1/books/{bookID}/chapters/{chapterID}", authenticatedUser(s.handleDeleteChapter))
 	s.router.Get("/api/v1/books/chapters/{chapterID}/pages/{pageNumber}", nil)
 
 	s.router.Post("/api/v1/books/{bookID}/comments", nil)

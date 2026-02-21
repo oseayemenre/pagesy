@@ -467,7 +467,8 @@ const docTemplate = `{
                         "type": "string",
                         "description": "chapter id",
                         "name": "chapterID",
-                        "in": "path"
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -908,6 +909,51 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/main.errorResponse"
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/books/{bookID}/chapters/{chapterID}": {
+            "delete": {
+                "description": "Delete chapter",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chapters"
+                ],
+                "summary": "Delete chapter",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "book id",
+                        "name": "bookID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "chapter id",
+                        "name": "chapterID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     },
                     "404": {
                         "description": "Not Found",

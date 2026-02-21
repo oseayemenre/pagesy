@@ -98,7 +98,7 @@ func (s *server) handleUploadChapter(w http.ResponseWriter, r *http.Request) {
 //	@Description	Get chapter
 //	@Tags			chapters
 //	@Produce		json
-//	@Param			chapterID	path		string	truex	"chapter id"
+//	@Param			chapterID	path		string	true	"chapter id"
 //	@Failure		404			{object}	errorResponse
 //	@Failure		500			{object}	errorResponse
 //	@Success		200			{object}	main.handleGetChapter.response
@@ -122,4 +122,30 @@ func (s *server) handleGetChapter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	encode(w, http.StatusOK, &response{Title: ch.title, ChapterNo: ch.chapterNo, Content: ch.content})
+}
+
+// handleDeleteChapter godoc
+//
+//	@Summary		Delete chapter
+//	@Description	Delete chapter
+//	@Tags			chapters
+//	@Produce		json
+//	@Param			bookID		path		string	true	"book id"
+//	@Param			chapterID	path		string	true	"chapter id"
+//	@Failure		404			{object}	errorResponse
+//	@Failure		500			{object}	errorResponse
+//	@Success		204
+//	@Router			/books/{bookID}/chapters/{chapterID} [delete]
+func (s *server) handleDeleteChapter(w http.ResponseWriter, r *http.Request) {
+	if err := s.deleteChapter(r.Context(), r.Context().Value("user").(string), chi.URLParam(r, "bookID"), chi.URLParam(r, "chapterID")); err != nil {
+		if errors.Is(err, errBookNotFound) || errors.Is(err, errChapterNotFound) {
+			encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
+			return
+		}
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	encode(w, http.StatusNoContent, nil)
 }

@@ -11,8 +11,7 @@ var (
 	errChapterNotFound = errors.New("chapter not found")
 )
 
-func (s *server) uploadChapter(ctx context.Context, userID string, ch *chapter) (string, error) {
-	var id string
+func (s *server) checkIfBookBelongsToUser(ctx context.Context, bookID, userID string) error {
 	var exists bool
 
 	query :=
@@ -20,15 +19,25 @@ func (s *server) uploadChapter(ctx context.Context, userID string, ch *chapter) 
 			SELECT EXISTS(SELECT 1 FROM books WHERE id = $1 AND author_id = $2);
 		`
 
-	if err := s.store.QueryRowContext(ctx, query, ch.bookID, userID).Scan(&exists); err != nil {
-		return "", fmt.Errorf("error checking if books exist, %v", err)
+	if err := s.store.QueryRowContext(ctx, query, bookID, userID).Scan(&exists); err != nil {
+		return fmt.Errorf("error checking if books exist, %v", err)
 	}
 
 	if !exists {
-		return "", errBookNotFound
+		return errBookNotFound
 	}
 
-	query =
+	return nil
+}
+
+func (s *server) uploadChapter(ctx context.Context, userID string, ch *chapter) (string, error) {
+	var id string
+
+	if err := s.checkIfBookBelongsToUser(ctx, ch.bookID, userID); err != nil {
+		return "", err
+	}
+
+	query :=
 		`
 			INSERT INTO chapters (chapter_no, title, content, book_id)
 			VALUES ($1, $2, $3, $4) RETURNING id;
@@ -63,4 +72,30 @@ func (s *server) getChapter(ctx context.Context, bookID string) (*chapter, error
 	}
 
 	return &ch, nil
+}
+
+func (s *server) deleteChapter(ctx context.Context, userID, bookID, chapterID string) error {
+	if err := s.checkIfBookBelongsToUser(ctx, bookID, userID); err != nil {
+		return err
+	}
+
+	query :=
+		`
+			DELETE FROM chapters WHERE id = $1;
+		`
+
+	results, err := s.store.ExecContext(ctx, query, chapterID)
+	if err != nil {
+		return fmt.Errorf("error deleting chapter, %v", err)
+	}
+
+	rows, err := results.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking number of rows affected, %v", err)
+	}
+	if rows == 0 {
+		return errChapterNotFound
+	}
+
+	return nil
 }
