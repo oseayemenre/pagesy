@@ -1170,12 +1170,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/main.errorResponse"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/main.errorResponse"
-                        }
-                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
