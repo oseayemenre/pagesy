@@ -1182,6 +1182,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/{userID}/following": {
+            "get": {
+                "description": "Get user following",
+                "tags": [
+                    "followers"
+                ],
+                "summary": "Get user following",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "user id",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.handleGetUserFollowing.response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{userID}/unfollow": {
             "delete": {
                 "description": "Unfollow user",
@@ -1577,8 +1615,55 @@ const docTemplate = `{
                 }
             }
         },
+        "main.handleGetUserFollowers.follower": {
+            "type": "object",
+            "properties": {
+                "about": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                }
+            }
+        },
         "main.handleGetUserFollowers.response": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "followers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.handleGetUserFollowers.follower"
+                    }
+                }
+            }
+        },
+        "main.handleGetUserFollowing.following": {
+            "type": "object",
+            "properties": {
+                "about": {
+                    "type": "string"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "image": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.handleGetUserFollowing.response": {
+            "type": "object",
+            "properties": {
+                "following": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/main.handleGetUserFollowing.following"
+                    }
+                }
+            }
         },
         "main.handleUploadBook.response": {
             "type": "object",

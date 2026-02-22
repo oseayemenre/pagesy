@@ -130,3 +130,52 @@ func (s *server) handleGetUserFollowers(w http.ResponseWriter, r *http.Request) 
 
 	encode(w, http.StatusOK, &response{Followers: followers})
 }
+
+// handleGetUserFollowing godoc
+//
+//	@Summary		Get user following
+//	@Description	Get user following
+//	@Tags			followers
+//	@Param			userID	path		string	true	"user id"
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		200		{object}	main.handleGetUserFollowing.response
+//	@Router			/users/{userID}/following [get]
+func (s *server) handleGetUserFollowing(w http.ResponseWriter, r *http.Request) {
+	type following struct {
+		DisplayName string  `json:"displayName"`
+		Image       *string `json:"image"`
+		About       *string `json:"about"`
+	}
+
+	type response struct {
+		Following []following `json:"following"`
+	}
+
+	users, err := s.getUserFollowing(r.Context(), chi.URLParam(r, "userID"))
+	if errors.Is(err, errUserNotFound) {
+		encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
+		return
+	}
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	var f []following
+
+	for _, u := range users {
+		var image *string
+		if u.image.Valid {
+			image = &u.image.String
+		}
+		var about *string
+		if u.about.Valid {
+			about = &u.about.String
+		}
+		f = append(f, following{DisplayName: u.displayName, Image: image, About: about})
+	}
+
+	encode(w, http.StatusOK, &response{Following: f})
+}

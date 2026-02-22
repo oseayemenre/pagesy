@@ -52,7 +52,7 @@ func (s *server) routes() {
 	s.router.Post("/api/v1/users/{userID}/follow", authenticatedUser(s.handleFollowUser))
 	s.router.Delete("/api/v1/users/{userID}/unfollow", authenticatedUser(s.handleUnfollowUser))
 	s.router.Get("/api/v1/users/{userID}/followers", authenticatedUser(s.handleGetUserFollowers))
-	s.router.Get("/api/v1/users/{userID}/following", nil)
+	s.router.Get("/api/v1/users/{userID}/following", authenticatedUser(s.handleGetUserFollowing))
 	s.router.Get("/api/v1/users/me", authenticatedUser(s.handleGetProfile))
 	s.router.Get("/api/v1/users/me/following", nil)
 	s.router.Get("/api/v1/users/me/followers", nil)

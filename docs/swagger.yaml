@@ -233,7 +233,37 @@ definitions:
       name:
         type: string
     type: object
+  main.handleGetUserFollowers.follower:
+    properties:
+      about:
+        type: string
+      displayName:
+        type: string
+      image:
+        type: string
+    type: object
   main.handleGetUserFollowers.response:
+    properties:
+      followers:
+        items:
+          $ref: '#/definitions/main.handleGetUserFollowers.follower'
+        type: array
+    type: object
+  main.handleGetUserFollowing.following:
+    properties:
+      about:
+        type: string
+      displayName:
+        type: string
+      image:
+        type: string
+    type: object
+  main.handleGetUserFollowing.response:
+    properties:
+      following:
+        items:
+          $ref: '#/definitions/main.handleGetUserFollowing.following'
+        type: array
     type: object
   main.handleUploadBook.response:
     properties:
@@ -1028,6 +1058,31 @@ paths:
           schema:
             $ref: '#/definitions/main.errorResponse'
       summary: Get user followers
+      tags:
+      - followers
+  /users/{userID}/following:
+    get:
+      description: Get user following
+      parameters:
+      - description: user id
+        in: path
+        name: userID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.handleGetUserFollowing.response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Get user following
       tags:
       - followers
   /users/{userID}/unfollow:
