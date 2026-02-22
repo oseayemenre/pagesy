@@ -39,7 +39,9 @@ func (s *server) handleFollowUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.hub.regular[userID].send <- fmt.Appendf([]byte{}, "%v followed you", displayName)
+	if client, ok := s.hub.regular[userID]; ok {
+		client.send <- fmt.Appendf([]byte{}, "%v followed you", displayName)
+	}
 
 	encode(w, http.StatusNoContent, nil)
 }
