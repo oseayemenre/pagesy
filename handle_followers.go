@@ -81,3 +81,52 @@ func (s *server) handleUnfollowUser(w http.ResponseWriter, r *http.Request) {
 
 	encode(w, http.StatusNoContent, nil)
 }
+
+// handleGetUserFollowers godoc
+//
+//	@Summary		Get user followers
+//	@Description	Get user followers
+//	@Tags			followers
+//	@Param			userID	path		string	true	"user id"
+//	@Failure		404		{object}	errorResponse
+//	@Failure		500		{object}	errorResponse
+//	@Success		200		{object}	main.handleGetUserFollowers.response
+//	@Router			/users/{userID}/followers [get]
+func (s *server) handleGetUserFollowers(w http.ResponseWriter, r *http.Request) {
+	type follower struct {
+		DisplayName string  `json:"displayName"`
+		Image       *string `json:"image"`
+		About       *string `json:"about"`
+	}
+
+	type response struct {
+		Followers []follower `json:"followers"`
+	}
+
+	users, err := s.getUserFollowers(r.Context(), chi.URLParam(r, "userID"))
+	if errors.Is(err, errUserNotFound) {
+		encode(w, http.StatusNotFound, &errorResponse{Error: err.Error()})
+		return
+	}
+	if err != nil {
+		s.logger.Error(err.Error())
+		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
+		return
+	}
+
+	var followers []follower
+
+	for _, u := range users {
+		var image *string
+		if u.image.Valid {
+			image = &u.image.String
+		}
+		var about *string
+		if u.about.Valid {
+			about = &u.about.String
+		}
+		followers = append(followers, follower{DisplayName: u.displayName, Image: image, About: about})
+	}
+
+	encode(w, http.StatusOK, &response{Followers: followers})
+}

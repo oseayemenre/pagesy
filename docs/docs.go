@@ -1144,6 +1144,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/{userID}/followers": {
+            "get": {
+                "description": "Get user followers",
+                "tags": [
+                    "followers"
+                ],
+                "summary": "Get user followers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "user id",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.handleGetUserFollowers.response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/main.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{userID}/unfollow": {
             "delete": {
                 "description": "Unfollow user",
@@ -1538,6 +1576,9 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "main.handleGetUserFollowers.response": {
+            "type": "object"
         },
         "main.handleUploadBook.response": {
             "type": "object",
