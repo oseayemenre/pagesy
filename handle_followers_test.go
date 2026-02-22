@@ -250,3 +250,62 @@ func TestHandleGetUserFollowers(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleGetUserFollowing(t *testing.T) {
+	db := connectTestDb(t)
+	userID := createAndCleanUpUser(t, db)
+	token, err := createJWTToken(userID, 5*time.Second)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	tests := []struct {
+		name         string
+		cookieName   string
+		cookieValue  string
+		userID       string
+		expectedCode int
+	}{
+		{
+			name:         "no access token cookie",
+			userID:       uuid.NewString(),
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "invalid/malformed token",
+			cookieName:   "access_token",
+			cookieValue:  "invalid token",
+			userID:       uuid.NewString(),
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "user not found",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			userID:       uuid.NewString(),
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "get user following",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			userID:       userID,
+			expectedCode: http.StatusOK,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/users/%v/following", tc.userID), nil)
+			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
+			rr := httptest.NewRecorder()
+
+			svr := newServer(nil, db, nil, nil)
+			svr.router.ServeHTTP(rr, r)
+
+			if rr.Code != tc.expectedCode {
+				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
+			}
+		})
+	}
+}
