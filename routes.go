@@ -49,7 +49,7 @@ func (s *server) routes() {
 	s.router.Delete("/api/v1/books/{bookID}/comments/{commentID}", nil)
 	s.router.Patch("/api/v1/books/{bookID}/comments/{commentID}", nil)
 
-	s.router.Post("/api/v1/users/{userID}/follow", nil)
+	s.router.Post("/api/v1/users/{userID}/follow", authenticatedUser(s.handleFollowUser))
 	s.router.Delete("/api/v1/users/{userID}/unfollow", nil)
 	s.router.Get("/api/v1/users/{userID}/followers", nil)
 	s.router.Get("/api/v1/users/{userID}/following", nil)

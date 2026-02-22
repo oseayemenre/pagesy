@@ -116,8 +116,7 @@ func (s *server) handleGetChapter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		fmt.Printf("get chapter error: %v\n", err)
-		// s.logger.Error(err.Error())
+		s.logger.Error(err.Error())
 		encode(w, http.StatusInternalServerError, &errorResponse{Error: "internal server error"})
 		return
 	}

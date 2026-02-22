@@ -1,8 +1,7 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 CREATE TABLE IF NOT EXISTS notifications(
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    book_id UUID REFERENCES books(id) ON DELETE CASCADE,
     message TEXT NOT NULL,
-    PRIMARY KEY(user_id, book_id)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

@@ -124,7 +124,7 @@ func main() {
 			count += 3
 		}
 
-		query = fmt.Sprintf("INSERT INTO notifications (user_id, book_id, message) VALUES %v ON CONFLICT DO NOTHING;", strings.Join(values, ","))
+		query = fmt.Sprintf("INSERT INTO notifications (user_id, book_id, message) VALUES %v;", strings.Join(values, ","))
 
 		_, err = db.ExecContext(ctx, query, args...)
 		if err != nil {
