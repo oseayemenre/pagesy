@@ -105,3 +105,89 @@ func TestHandleFollowUser(t *testing.T) {
 		})
 	}
 }
+
+func TestHandleUnfollowUser(t *testing.T) {
+	db := connectTestDb(t)
+	followerID := createAndCleanUpUser(t, db)
+	token, err := createJWTToken(followerID, 5*time.Second)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	userID := createAndCleanUpFollowed(t, db)
+
+	tests := []struct {
+		name         string
+		cookieName   string
+		cookieValue  string
+		followerID   string
+		userID       string
+		userFollowed bool
+		expectedCode int
+	}{
+		{
+			name:         "no access token cookie",
+			userID:       uuid.NewString(),
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "invalid/malformed token",
+			cookieName:   "access_token",
+			cookieValue:  "invalid token",
+			userID:       uuid.NewString(),
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "user cannot unfollow themselves",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			followerID:   followerID,
+			userID:       followerID,
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "user not found",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			followerID:   followerID,
+			userID:       uuid.NewString(),
+			expectedCode: http.StatusNotFound,
+		},
+		{
+			name:         "user not followed",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			followerID:   followerID,
+			userID:       userID,
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "unfollow user",
+			cookieName:   "access_token",
+			cookieValue:  token,
+			followerID:   followerID,
+			userID:       userID,
+			userFollowed: true,
+			expectedCode: http.StatusNoContent,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/users/%v/unfollow", tc.userID), nil)
+			r.AddCookie(&http.Cookie{Name: tc.cookieName, Value: tc.cookieValue})
+			rr := httptest.NewRecorder()
+
+			svr := newServer(nil, db, nil, nil)
+			if tc.userFollowed {
+				if _, err := svr.followUser(context.Background(), followerID, tc.userID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			svr.router.ServeHTTP(rr, r)
+
+			if rr.Code != tc.expectedCode {
+				t.Fatalf("expected %d, got %d", tc.expectedCode, rr.Code)
+			}
+		})
+	}
+}
