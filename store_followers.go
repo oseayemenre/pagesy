@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	errUserNotFound = errors.New("user not found")
+	errUserNotFound    = errors.New("user not found")
+	errUserNotFollowed = errors.New("user not followed")
 )
 
 func (s *server) checkIfUserExistsByID(ctx context.Context, userID string) error {
@@ -54,6 +55,7 @@ func (s *server) followUser(ctx context.Context, followerID, userID string) (str
 	if err != nil {
 		return "", fmt.Errorf("error inserting in followers table, %v", err)
 	}
+
 	rows, err := results.RowsAffected()
 	if err != nil {
 		return "", fmt.Errorf("error checking number of rows affected, %v", err)
@@ -70,6 +72,15 @@ func (s *server) followUser(ctx context.Context, followerID, userID string) (str
 
 		query =
 			`
+				UPDATE users SET following = following + 1 WHERE id = $1;
+			`
+
+		if _, err := s.store.ExecContext(ctx, query, followerID); err != nil {
+			return "", fmt.Errorf("error updating user followers count, %v", err)
+		}
+
+		query =
+			`
 				INSERT INTO notifications (user_id, message) VALUES ($1, $2);
 			`
 
@@ -79,4 +90,48 @@ func (s *server) followUser(ctx context.Context, followerID, userID string) (str
 	}
 
 	return displayName, nil
+}
+
+func (s *server) unfollowUser(ctx context.Context, followerID, userID string) error {
+	if err := s.checkIfUserExistsByID(ctx, userID); err != nil {
+		return err
+	}
+
+	query :=
+		`
+			DELETE FROM followers WHERE user_id = $1 AND follower_id = $2;
+		`
+
+	results, err := s.store.ExecContext(ctx, query, userID, followerID)
+	if err != nil {
+		return fmt.Errorf("error deleting follower, %v", err)
+	}
+
+	rows, err := results.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking number of rows affected, %v", err)
+	}
+	if rows == 0 {
+		return errUserNotFollowed
+	}
+
+	query =
+		`
+			UPDATE users SET followers = followers - 1 WHERE id = $1;
+		`
+
+	if _, err := s.store.ExecContext(ctx, query, userID); err != nil {
+		return fmt.Errorf("error updating user followers count, %v", err)
+	}
+
+	query =
+		`
+			UPDATE users SET following = following - 1 WHERE id = $1;
+		`
+
+	if _, err := s.store.ExecContext(ctx, query, followerID); err != nil {
+		return fmt.Errorf("error updating user followers count, %v", err)
+	}
+
+	return nil
 }

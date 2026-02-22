@@ -1003,6 +1003,33 @@ paths:
       summary: Follow user
       tags:
       - followers
+  /users/{userID}/unfollow:
+    delete:
+      description: Unfollow user
+      parameters:
+      - description: user id
+        in: path
+        name: userID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/main.errorResponse'
+      summary: Unfollow user
+      tags:
+      - followers
   /users/me:
     get:
       description: Get current user profile
